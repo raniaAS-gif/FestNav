@@ -1,7 +1,10 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import './DetailEventAdmin.css'
 
 function DetailEventAdmin() {
+  const navigate = useNavigate()
+
   // State Data Event
   const [eventData, setEventData] = useState({
     id: 1,
@@ -13,7 +16,7 @@ function DetailEventAdmin() {
     jenisEvent: 'Event Indoor & Outdoor',
     eventOrganizer: 'Universitas Udayana',
     sumber: 'Kerjasama Event Organizer',
-    status: 'Sudah Dipublish', // nilai bisa: 'Sudah Dipublish' atau 'Belum dipublish'
+    status: 'Sudah Dipublish',
     deskripsiSingkat:
       'ini adalah itu, itu adalah ini, lalu dia adalah saya, saya adalh kami, kami adalah rambut, rambut adalah bok, bok adalah sayuran, sayuran adalah nama gang, dan lain sebagainya.',
     denahList: [
@@ -30,23 +33,36 @@ function DetailEventAdmin() {
     ]
   })
 
-  // Cek apakah status event saat ini sudah dipublish
+  // State Overlay Modal: null, 'publish', 'unpublish', 'delete-warning', 'delete-success'
+  const [activeModal, setActiveModal] = useState(null)
+
   const isPublished = eventData.status === 'Sudah Dipublish'
 
-  // Handler untuk mengubah status menjadi Published
+  // Handler Publish & Unpublish
   const handlePublish = () => {
-    setEventData((prev) => ({
-      ...prev,
-      status: 'Sudah Dipublish'
-    }))
+    setEventData((prev) => ({ ...prev, status: 'Sudah Dipublish' }))
+    setActiveModal('publish')
   }
 
-  // Handler untuk mengubah status menjadi Unpublished
   const handleUnpublish = () => {
-    setEventData((prev) => ({
-      ...prev,
-      status: 'Belum dipublish'
-    }))
+    setEventData((prev) => ({ ...prev, status: 'Belum dipublish' }))
+    setActiveModal('unpublish')
+  }
+
+  // Handler Hapus Event
+  const handleOpenDeleteModal = () => {
+    setActiveModal('delete-warning')
+  }
+
+  const handleConfirmDelete = () => {
+    // Simulasi proses hapus data ke backend
+    setActiveModal('delete-success')
+  }
+
+  const handleCloseDeleteSuccess = () => {
+    setActiveModal(null)
+    // Kembali ke halaman daftar event setelah menghapus
+    navigate('/daftar-event')
   }
 
   return (
@@ -55,8 +71,8 @@ function DetailEventAdmin() {
       <header className="detail-navbar">
         <div className="nav-brand">FestNav</div>
         <div className="nav-actions">
-          <button className="btn-cyan">Lihat Daftar Event</button>
-          <button className="btn-cyan">+ Tambah Peta baru</button>
+          <button className="btn-cyan" onClick={() => navigate('/daftar-event')}>Lihat Daftar Event</button>
+          <button className="btn-cyan" onClick={() => navigate('/tambah-event')}>+ Tambah Peta baru</button>
           <div className="user-profile">
             <span className="user-name">Admin Esai</span>
             <div className="avatar-placeholder">👤</div>
@@ -83,15 +99,14 @@ function DetailEventAdmin() {
         <div className="detail-header-bar">
           <h2 className="event-main-title">{eventData.title}</h2>
           <div className="header-actions">
-            <button className="btn-danger-sm">Hapus</button>
-            <button className="btn-cyan-sm">Edit Detail</button>
+            <button className="btn-danger-sm" onClick={handleOpenDeleteModal}>Hapus</button>
+            <button className="btn-cyan-sm" onClick={() => navigate('/edit-event')}>Edit Detail</button>
           </div>
         </div>
 
         {/* Main Event Card */}
         <div className="detail-card">
           <div className="info-grid">
-            {/* Poster Box */}
             <div className="poster-container">
               {eventData.posterUrl ? (
                 <img src={eventData.posterUrl} alt="Event Poster" className="poster-img" />
@@ -102,7 +117,6 @@ function DetailEventAdmin() {
               )}
             </div>
 
-            {/* Event Meta Details */}
             <div className="info-details">
               <p><strong>Nama Event:</strong> {eventData.namaEvent}</p>
               <p><strong>Tanggal Event:</strong> {eventData.tanggalEvent}</p>
@@ -139,7 +153,6 @@ function DetailEventAdmin() {
                 </div>
 
                 <div className="map-actions">
-                  {/* Tombol Publish kecil di tiap denah HANYA muncul jika status isPublished = true */}
                   {isPublished && (
                     <button className="btn-cyan-wide" onClick={handlePublish}>
                       Publish
@@ -158,10 +171,9 @@ function DetailEventAdmin() {
             <button className="btn-green-lg" onClick={handlePublish}>
               Publish
             </button>
-            <button className="btn-cyan-lg">Tutup</button>
+            <button className="btn-cyan-lg" onClick={() => navigate('/daftar-event')}>Tutup</button>
           </div>
           
-          {/* Tombol Unpublish HANYA muncul jika event sedang dipublish */}
           {isPublished && (
             <button className="btn-red-lg" onClick={handleUnpublish}>
               Unpublish
@@ -169,6 +181,79 @@ function DetailEventAdmin() {
           )}
         </div>
       </main>
+
+      {/* OVERLAY MODAL 1: UNPUBLISHED */}
+      {activeModal === 'unpublish' && (
+        <div className="modal-overlay">
+          <div className="modal-card success-modal">
+            <div className="success-icon-wrapper">
+              <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+                <circle cx="32" cy="32" r="30" fill="#22c55e" />
+                <path d="M20 32L28 40L44 24" stroke="white" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <h3 className="success-message">Berhasil! Konten sudah di unpublish</h3>
+            <button className="btn-modal btn-kembali" onClick={() => setActiveModal(null)}>
+              Kembali
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* OVERLAY MODAL 2: PUBLISHED */}
+      {activeModal === 'publish' && (
+        <div className="modal-overlay">
+          <div className="modal-card success-modal">
+            <div className="success-icon-wrapper">
+              <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+                <circle cx="32" cy="32" r="30" fill="#22c55e" />
+                <path d="M20 32L28 40L44 24" stroke="white" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <h3 className="success-message">Berhasil! Konten sudah dipublish</h3>
+            <button className="btn-modal btn-kembali" onClick={() => setActiveModal(null)}>
+              Kembali
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* OVERLAY MODAL 3: PERINGATAN HAPUS EVENT */}
+      {activeModal === 'delete-warning' && (
+        <div className="modal-overlay">
+          <div className="modal-card warning-modal">
+            <h2 className="warning-title">Peringatan!</h2>
+            <h3 className="warning-subtitle">Yakin menghapus event?</h3>
+            <p className="warning-desc">Event yang dihapus tidak akan bisa dikembalikan lagi</p>
+            <div className="modal-btn-row">
+              <button className="btn-modal btn-cyan-modal" onClick={() => setActiveModal(null)}>
+                Batalkan
+              </button>
+              <button className="btn-modal btn-cyan-modal" onClick={handleConfirmDelete}>
+                Yakin
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* OVERLAY MODAL 4: BERHASIL DIHAPUS */}
+      {activeModal === 'delete-success' && (
+        <div className="modal-overlay">
+          <div className="modal-card success-modal">
+            <div className="success-icon-wrapper">
+              <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+                <circle cx="32" cy="32" r="30" fill="#22c55e" />
+                <path d="M20 32L28 40L44 24" stroke="white" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <h3 className="success-message">Berhasil! Konten sudah dihapus</h3>
+            <button className="btn-modal btn-kembali" onClick={handleCloseDeleteSuccess}>
+              Kembali
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

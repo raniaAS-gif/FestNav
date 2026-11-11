@@ -1,21 +1,23 @@
 import { useState } from 'react'
+import NavbarAdmin from '../components/NavbarAdmin'
 import './DaftarEventAdmin.css'
 
 function DaftarEventAdmin() {
-  // State Filter Tab (Kerjasama Event Organizer / Hasil Scrapping)
-  const [activeTab, setActiveTab] = useState('eo') // 'eo' atau 'scrapping'
+  // State Filter Tab ('eo' atau 'scrapping')
+  const [activeTab, setActiveTab] = useState('eo')
   const [searchTerm, setSearchTerm] = useState('')
 
-  // Mock Data Event (Simulasi data dari database MySQL)
+  // Mock Data Event (Gabungan EO & Scrapping dari Database MySQL)
   const [events, setEvents] = useState([
+    // --- DATA KERJASAMA EVENT ORGANIZER (EO) ---
     {
       id: 1,
       title: 'Dies Natalis Udayana 2026',
-      type: 'eo', // 'eo' atau 'scrapping'
+      type: 'eo',
       tags: [
         { label: 'Kerjasama Event Organizer', color: '#00bcd4' },
         { label: 'Event Outdoor', color: '#38bdf8' },
-        { label: 'Event Indoor', color: '#f87171' },
+        { label: 'Event Indoor', color: '#f87171' }
       ],
       status: 'Sudah Dipublish',
       statusColor: '#3b82f6',
@@ -68,10 +70,73 @@ function DaftarEventAdmin() {
       status: 'Sudah Dipublish',
       statusColor: '#3b82f6',
       dateRange: '15 Desember 2025'
+    },
+
+    // --- DATA HASIL SCRAPPING ---
+    {
+      id: 6,
+      title: 'Pameran Seni Buleleng',
+      type: 'scrapping',
+      tags: [
+        { label: 'Hasil Scrapping', color: '#00bcd4' },
+        { label: 'Event Indoor', color: '#f87171' },
+        { label: 'Event Outdoor', color: '#38bdf8' }
+      ],
+      status: 'Sudah Dipublish',
+      statusColor: '#3b82f6',
+      dateRange: '29 Februari 2024 – 3 Maret 2024'
+    },
+    {
+      id: 7,
+      title: 'Pagelaran Busana Tradisional',
+      type: 'scrapping',
+      tags: [
+        { label: 'Hasil Scrapping', color: '#00bcd4' },
+        { label: 'Event Indoor', color: '#f87171' }
+      ],
+      status: 'Draft',
+      statusColor: '#3730a3',
+      dateRange: '4 November 2026 – 5 November 2026'
+    },
+    {
+      id: 8,
+      title: 'Acara Ulang Tahun Novita',
+      type: 'scrapping',
+      tags: [
+        { label: 'Hasil Scrapping', color: '#00bcd4' },
+        { label: 'Event Outdoor', color: '#38bdf8' }
+      ],
+      status: 'Sudah Dipublish',
+      statusColor: '#3b82f6',
+      dateRange: '1 November 2026'
+    },
+    {
+      id: 9,
+      title: 'Lari Marathon 1 AU',
+      type: 'scrapping',
+      tags: [
+        { label: 'Hasil Scrapping', color: '#00bcd4' },
+        { label: 'Event Outdoor', color: '#38bdf8' }
+      ],
+      status: 'Draft',
+      statusColor: '#3730a3',
+      dateRange: '21 April 2025 – 31 Desember 2025'
+    },
+    {
+      id: 10,
+      title: 'Workshop Sintaks III',
+      type: 'scrapping',
+      tags: [
+        { label: 'Hasil Scrapping', color: '#00bcd4' },
+        { label: 'Event Indoor', color: '#f87171' }
+      ],
+      status: 'Sudah Dipublish',
+      statusColor: '#3b82f6',
+      dateRange: '5 Mei 2026'
     }
   ])
 
-  // Filter event berdasarkan tab aktif dan pencarian
+  // Filter event otomatis berdasarkan tab aktif & kata kunci pencarian
   const filteredEvents = events.filter((evt) => {
     const matchTab = evt.type === activeTab
     const matchSearch = evt.title.toLowerCase().includes(searchTerm.toLowerCase())
@@ -84,27 +149,25 @@ function DaftarEventAdmin() {
     }
   }
 
+  // Handler interaksi navbar (bisa diisi navigasi router atau logika lain)
+  const handleViewEvents = () => {
+    alert('Navigasi ke Daftar Event')
+  }
+
+  const handleAddMap = () => {
+    alert('Buka modal / halaman Tambah Peta Baru')
+  }
+
+  const handleLogout = () => {
+    if (confirm('Apakah Anda ingin keluar dari akun admin?')) {
+      alert('Berhasil Logout')
+    }
+  }
+
   return (
     <div className="event-container">
-      {/* Navbar */}
-      <header className="event-navbar">
-        <div className="nav-brand">FestNav</div>
-        <div className="nav-actions">
-          <button className="btn-cyan">Lihat Daftar Event</button>
-          <button className="btn-cyan">+ Tambah Peta baru</button>
-          <div className="user-profile">
-            <span className="user-name">Admin Esai</span>
-            <div className="avatar-placeholder">👤</div>
-            <button className="logout-btn" title="Logout">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                <polyline points="16 17 21 12 16 7"></polyline>
-                <line x1="21" y1="12" x2="9" y2="12"></line>
-              </svg>
-            </button>
-          </div>
-        </div>
-      </header>
+      {/* Menggunakan Navbar Admin Terpisah */}
+      <NavbarAdmin />
 
       {/* Hero Header */}
       <div className="event-hero">
@@ -123,7 +186,7 @@ function DaftarEventAdmin() {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
-          <button className="btn-cyan-add">+ Tambah Peta Baru</button>
+          <button className="btn-cyan-add" onClick={handleAddMap}>+ Tambah Peta Baru</button>
         </div>
 
         {/* Tab Selection */}
@@ -166,7 +229,6 @@ function DaftarEventAdmin() {
                       {evt.status}
                     </span>
                   </div>
-                  {/* Rincian asli tanggal event dari database */}
                   <p className="event-date">Tanggal Event: {evt.dateRange}</p>
                 </div>
 
@@ -180,7 +242,7 @@ function DaftarEventAdmin() {
               </div>
             ))
           ) : (
-            <div className="empty-state">Tidak ada event yang ditemukan.</div>
+            <div className="empty-state">Tidak ada event dalam kategori ini.</div>
           )}
         </div>
 
