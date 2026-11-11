@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "@geoman-io/leaflet-geoman-free": "^2.20.6",
+    "antd": "^6.7.0",
+    "leaflet": "^1.9.4",
+    "react-leaflet": "^5.0.0",
+    "react-router-dom": "^7.18.5"
+  }
+}

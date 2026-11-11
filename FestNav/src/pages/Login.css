@@ -1,0 +1,171 @@
+/* Background utama full screen dengan gradient biru-ungu */
+.login-container {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  background: linear-gradient(135deg, #4c46cc 0%, #2b2585 100%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  box-sizing: border-box;
+}
+
+/* Label kecil di pojok atas */
+.login-header-label {
+  position: absolute;
+  top: 15px;
+  left: 20px;
+  color: #b4b6cf;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+/* Kartu Pembungkus Utama */
+.login-card {
+  width: 100%;
+  max-width: 440px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Header FestNav */
+.brand-header {
+  text-align: center;
+  color: #ffffff;
+  margin-bottom: 25px;
+}
+
+.brand-title {
+  font-size: 42px;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: 1px;
+}
+
+.brand-subtitle {
+  font-size: 20px;
+  font-weight: 500;
+  margin-top: 4px;
+  color: #e0e0e0;
+}
+
+/* Toggle Switch Admin / Event Organizer */
+.role-toggle {
+  background-color: #ffffff;
+  border-radius: 25px;
+  display: flex;
+  width: 100%;
+  padding: 3px;
+  margin-bottom: 25px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+.toggle-btn {
+  flex: 1;
+  padding: 10px 0;
+  border: none;
+  background: transparent;
+  color: #00b4d8;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 22px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.toggle-btn.active {
+  background-color: #00b4d8;
+  color: #ffffff;
+}
+
+/* Form Styles */
+.login-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-group label {
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* Input Fields */
+.form-group input {
+  width: 100%;
+  padding: 14px 18px;
+  border-radius: 25px;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  box-sizing: border-box;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.form-group input::placeholder {
+  color: #a0a0a0;
+}
+
+/* Password Input Wrapper (dengan tombol mata) */
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input-wrapper input {
+  padding-right: 45px;
+}
+
+.eye-icon-btn {
+  position: absolute;
+  right: 15px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #555555;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.eye-icon-btn:hover {
+  color: #000000;
+}
+
+/* Tombol Login */
+.login-btn {
+  margin-top: 15px;
+  width: 65%;
+  align-self: center;
+  padding: 12px 0;
+  border-radius: 25px;
+  border: none;
+  background-color: #00b4d8;
+  color: #ffffff;
+  font-size: 20px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.login-btn:hover {
+  background-color: #0096c7;
+}
+
+.login-btn:active {
+  transform: scale(0.98);
+}

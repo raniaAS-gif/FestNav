@@ -1,0 +1,289 @@
+.event-container {
+  min-height: 100vh;
+  width: 100vw;
+  background-color: #262768;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  box-sizing: border-box;
+  padding-bottom: 50px;
+}
+
+/* Navbar */
+.event-navbar {
+  background-color: #1a1b4b;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 30px;
+}
+
+.nav-brand {
+  color: #ffffff;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.btn-cyan {
+  background-color: #00bcd4;
+  color: #ffffff;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #ffffff;
+}
+
+.user-name {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.avatar-placeholder {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.logout-btn {
+  background: none;
+  border: none;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+/* Hero Section */
+.event-hero {
+  text-align: center;
+  padding: 30px 20px 15px 20px;
+}
+
+.hero-title {
+  font-size: 48px;
+  font-weight: 800;
+  color: #4355f5;
+  margin: 0;
+}
+
+.hero-subtitle {
+  font-size: 26px;
+  font-weight: 700;
+  color: #4355f5;
+  margin-top: 5px;
+}
+
+/* Main Content Area */
+.event-content {
+  max-width: 950px;
+  margin: 0 auto;
+  padding: 0 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+/* Search Bar Wrapper */
+.search-bar-wrapper {
+  display: flex;
+  gap: 15px;
+}
+
+.search-input {
+  flex: 1;
+  padding: 12px 20px;
+  border-radius: 25px;
+  border: none;
+  outline: none;
+  font-size: 14px;
+}
+
+.btn-cyan-add {
+  background-color: #00bcd4;
+  color: #ffffff;
+  border: none;
+  padding: 0 24px;
+  border-radius: 25px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+/* Tab Navigation */
+.tabs-wrapper {
+  display: flex;
+  background-color: #ffffff;
+  border-radius: 30px;
+  overflow: hidden;
+  padding: 2px;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 10px 0;
+  border: none;
+  background: transparent;
+  color: #00bcd4;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  border-radius: 25px;
+  transition: all 0.3s ease;
+}
+
+.tab-btn.active {
+  background-color: #00bcd4;
+  color: #ffffff;
+}
+
+/* Event Cards List */
+.event-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.event-card {
+  background-color: #ffffff;
+  border-radius: 16px;
+  padding: 20px 25px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+.event-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #111111;
+  margin: 0 0 10px 0;
+}
+
+.tags-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.event-tag, .status-tag {
+  color: #ffffff;
+  padding: 4px 12px;
+  border-radius: 15px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.event-date {
+  font-size: 13px;
+  font-weight: 700;
+  color: #222222;
+  margin: 0;
+}
+
+/* Action Buttons */
+.event-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 180px;
+}
+
+.btn-action {
+  border: none;
+  padding: 8px 0;
+  border-radius: 12px;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: center;
+  width: 100%;
+}
+
+.btn-detail {
+  background-color: #00bcd4;
+}
+
+.btn-delete {
+  background-color: #dc2626;
+}
+
+.btn-digitasi {
+  background-color: #2563eb;
+}
+
+.empty-state {
+  text-align: center;
+  color: #ffffff;
+  padding: 4px 0;
+  font-weight: 600;
+}
+
+/* Footer Section */
+.event-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.btn-cyan-print {
+  background-color: #00bcd4;
+  color: #ffffff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.page-num {
+  background: transparent;
+  border: none;
+  color: #00bcd4;
+  font-weight: 700;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.page-num.active {
+  background-color: #00bcd4;
+  color: #ffffff;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.page-dots {
+  color: #00bcd4;
+  font-weight: 700;
+}

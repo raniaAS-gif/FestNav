@@ -1,0 +1,333 @@
+/* General Layout & Background */
+.dashboard-container {
+  min-height: 100vh;
+  width: 100vw;
+  background-color: #262768;
+  color: #333333;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  box-sizing: border-box;
+  padding-bottom: 40px;
+}
+
+/* Color Variables / Utilities */
+.text-cyan {
+  color: #00bcd4;
+}
+
+.btn-cyan {
+  background-color: #00bcd4;
+  color: #ffffff;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-cyan:hover {
+  background-color: #00a0b5;
+}
+
+.btn-cyan-small {
+  background-color: #00bcd4;
+  color: #ffffff;
+  border: none;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-cyan-action {
+  background-color: #00bcd4;
+  color: #ffffff;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 18px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Top Navigation Bar */
+.dash-navbar {
+  background-color: #1a1b4b;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 30px;
+}
+
+.nav-brand {
+  color: #ffffff;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #ffffff;
+  margin-left: 10px;
+}
+
+.user-name {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.avatar-placeholder {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.logout-btn {
+  background: none;
+  border: none;
+  color: #ffffff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  margin-left: 5px;
+}
+
+/* Hero Title Section */
+.dash-hero {
+  text-align: center;
+  padding: 30px 20px 20px 20px;
+}
+
+.hero-title {
+  font-size: 48px;
+  font-weight: 800;
+  color: #4355f5;
+  margin: 0;
+}
+
+.hero-subtitle {
+  font-size: 26px;
+  font-weight: 700;
+  color: #4355f5;
+  margin-top: 5px;
+}
+
+/* Content Container */
+.dash-content {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 0 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Cards Grid */
+.cards-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.dash-card {
+  background-color: #ffffff;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.dash-card.card-bordered {
+  border: 3px solid #00bcd4;
+}
+
+.card-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 10px 0;
+}
+
+.card-heading {
+  font-size: 18px;
+  font-weight: 800;
+  color: #111111;
+  margin: 0 0 15px 0;
+}
+
+.card-subtext {
+  font-size: 13px;
+  color: #666666;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+/* Legend items (Card 1) */
+.legend-group {
+  display: flex;
+  justify-content: space-around;
+  font-size: 13px;
+  font-weight: 600;
+  color: #444444;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.dot-blue { background-color: #00bcd4; }
+.dot-red { background-color: #ff4d4f; }
+
+/* Tags (Card 2) */
+.tags-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tag {
+  color: #ffffff;
+  padding: 6px 14px;
+  border-radius: 15px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* Bullet list (Card 3 & 4) */
+.bullet-list {
+  padding-left: 18px;
+  margin: 0;
+  font-size: 13px;
+  color: #444444;
+  line-height: 1.6;
+}
+
+.bullet-list.small {
+  font-size: 12px;
+}
+
+/* Scrapping Progress (Card 4) */
+.card-header-flex {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.progress-label {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111111;
+}
+
+.progress-percentage {
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.progress-bar-bg {
+  width: 100%;
+  height: 14px;
+  background-color: #2f343d;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 15px;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background-color: #00bcd4;
+  border-radius: 10px;
+  transition: width 0.4s ease;
+}
+
+.scraping-history-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #555555;
+  margin-bottom: 4px;
+}
+
+/* Sections (Draft & Request) */
+.dash-section-card {
+  background-color: #ffffff;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.section-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.list-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.list-item.simple {
+  padding: 10px 0;
+}
+
+.list-item:last-child {
+  border-bottom: none;
+}
+
+.item-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #333333;
+  margin: 0;
+}
+
+.item-sub {
+  font-size: 11px;
+  color: #888888;
+  margin: 2px 0 0 0;
+}
