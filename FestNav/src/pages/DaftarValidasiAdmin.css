@@ -1,0 +1,365 @@
+/* Layout & Background */
+.validasi-container {
+  min-height: 100vh;
+  width: 100vw;
+  background-color: #262768;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  box-sizing: border-box;
+  padding-bottom: 50px;
+}
+
+/* Navbar */
+.validasi-navbar {
+  background-color: #1a1b4b;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 30px;
+}
+
+.nav-brand {
+  color: #ffffff;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.btn-cyan {
+  background-color: #00bcd4;
+  color: #ffffff;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #ffffff;
+}
+
+.user-name {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.avatar-placeholder {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.logout-btn {
+  background: none;
+  border: none;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+/* Hero Section */
+.validasi-hero {
+  text-align: center;
+  padding: 30px 20px 15px 20px;
+}
+
+.hero-title {
+  font-size: 48px;
+  font-weight: 800;
+  color: #4355f5;
+  margin: 0;
+}
+
+.hero-subtitle {
+  font-size: 26px;
+  font-weight: 700;
+  color: #4355f5;
+  margin-top: 5px;
+}
+
+/* Content Area (Margin & Lebar 950px Simetris) */
+.validasi-content {
+  max-width: 950px;
+  margin: 0 auto;
+  padding: 0 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  box-sizing: border-box;
+}
+
+/* Search Input */
+.search-bar-wrapper {
+  width: 100%;
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px 20px;
+  border-radius: 25px;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+/* Validation Cards List */
+.validasi-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.validasi-card {
+  background-color: #ffffff;
+  border-radius: 20px;
+  padding: 20px 25px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+.eo-author-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.avatar-small {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background-color: #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+
+.eo-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.validasi-item-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 10px 0;
+}
+
+.tags-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.validasi-tag {
+  color: #ffffff;
+  padding: 4px 12px;
+  border-radius: 15px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.request-time {
+  font-size: 12px;
+  font-weight: 700;
+  color: #333333;
+  margin: 0;
+}
+
+/* Action Buttons */
+.validasi-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 180px;
+}
+
+.btn-action {
+  border: none;
+  padding: 8px 0;
+  border-radius: 12px;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: center;
+  width: 100%;
+}
+
+.btn-detail {
+  background-color: #00bcd4;
+}
+
+/* Gambar 1: Tombol Sebelum Diproses */
+.btn-validasi {
+  background-color: #10b981;
+}
+
+.btn-tolak {
+  background-color: #dc2626;
+}
+
+/* Gambar 2: Tombol Setelah Diproses / Penolakan Terkirim */
+.btn-ubah-keputusan {
+  background-color: #34d399;
+}
+
+.btn-tolak-processed {
+  background-color: #f87171;
+}
+
+/* Pagination */
+.validasi-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.page-num {
+  background: transparent;
+  border: none;
+  color: #00bcd4;
+  font-weight: 700;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.page-num.active {
+  background-color: #00bcd4;
+  color: #ffffff;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.page-dots {
+  color: #00bcd4;
+  font-weight: 700;
+}
+
+/* ========================================================= */
+/* OVERLAY MODAL STYLING (Gambar 3 & Gambar 4)               */
+/* ========================================================= */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+.modal-card {
+  background-color: #ffffff;
+  border-radius: 20px;
+  padding: 25px 30px;
+  width: 90%;
+  max-width: 550px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  box-sizing: border-box;
+}
+
+/* Modal Penolakan (Gambar 3) */
+.reject-modal .modal-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 15px 0;
+}
+
+.modal-textarea {
+  width: 100%;
+  background-color: #edf6ff;
+  border: 1px solid #cbd5e1;
+  border-radius: 16px;
+  padding: 15px;
+  font-size: 13px;
+  color: #333333;
+  outline: none;
+  resize: none;
+  font-family: inherit;
+  box-sizing: border-box;
+  margin-bottom: 20px;
+}
+
+.modal-btn-row {
+  display: flex;
+  gap: 15px;
+}
+
+.btn-modal {
+  flex: 1;
+  padding: 10px 0;
+  border-radius: 20px;
+  border: none;
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
+  cursor: pointer;
+  background-color: #00bcd4;
+  transition: background-color 0.2s;
+}
+
+.btn-modal:hover {
+  background-color: #00a0b5;
+}
+
+/* Modal Success (Gambar 4) */
+.success-modal {
+  text-align: center;
+  padding: 35px 30px;
+  max-width: 480px;
+}
+
+.success-icon-wrapper {
+  margin-bottom: 15px;
+  display: flex;
+  justify-content: center;
+}
+
+.success-message {
+  font-size: 22px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 25px 0;
+}
+
+.btn-kembali {
+  width: 60%;
+  margin: 0 auto;
+  display: block;
+}
