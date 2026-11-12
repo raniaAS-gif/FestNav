@@ -1,0 +1,41 @@
+/* FestNav - gaya bersama (navbar, tombol, modal, input) */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+:root{--bg:#0d1628;--nav:#1e293b;--panel:#1e293b;--line:#475569;--muted:#64748b;--text:#fff;--accent:#4f46e5;--cyan:#06b6d4;--red:#dc0000}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'Plus Jakarta Sans',system-ui,sans-serif}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+.fn-app{min-height:100vh;display:flex;flex-direction:column;position:relative}
+.fn-nav{height:87px;background:var(--nav);display:flex;align-items:center;justify-content:space-between;padding:0 24px}
+.fn-logo{font-size:40px;font-weight:700;letter-spacing:-1px}
+.fn-links{display:flex;gap:26px;font-weight:600;font-size:17px}
+.fn-links a{color:#fff;text-decoration:none;padding-bottom:4px;border-bottom:3px solid transparent}
+.fn-links a.active{color:var(--cyan);border-color:var(--cyan)}
+.fn-user{display:flex;align-items:center;gap:12px}
+.fn-avatar{width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,#a5b4fc,#e9d5ff)}
+.fn-logout{background:none;border:0;font-size:28px}
+.fn-sub{height:50px;border-bottom:1px solid #1e293b;display:flex;align-items:center;justify-content:space-between;padding:0 30px}
+.fn-title{font-size:21px;color:#94a3b8}
+.fn-actions{display:flex;gap:14px}
+.btn{height:36px;padding:0 24px;border-radius:10px;font-weight:600;background:transparent;border:1px solid}
+.btn-red{border-color:var(--red);color:var(--red)}.btn-red.on{background:var(--red);color:#fff}
+.btn-primary{border-color:var(--accent);color:#6366f1}.btn-primary.on,.btn-solid{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn-ghost{border-color:var(--accent);color:#fff;background:var(--nav)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.search{margin:10px 30px 0;width:calc(100% - 60px);height:56px;border-radius:14px;border:2px solid #1e293b;background:#0b1222;padding:0 20px;font-size:16px}
+.search::placeholder,.field::placeholder{color:var(--muted)}
+.overlay{position:fixed;inset:0;background:rgba(5,10,20,.72);display:grid;place-items:center;z-index:50}
+.modal{width:min(592px,92vw);background:var(--panel);border:2px solid var(--accent);border-radius:18px;padding:22px 24px}
+.modal.danger{border-color:var(--red)}
+.modal h2{margin:0 0 18px;font-size:32px}
+.modal label{display:block;margin:14px 0 6px;font-weight:700;font-size:18px;color:#64748b}
+.field{width:100%;height:48px;border-radius:14px;border:2px solid var(--accent);background:transparent;padding:0 18px;font-weight:600;display:block}
+.danger .field{border-color:var(--red)}
+.field option{background:#1e293b}
+.modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:22px}
+.dd{position:relative}.dd-list{position:absolute;left:0;right:0;top:52px;background:var(--panel);border:2px solid var(--accent);border-radius:14px;padding:6px;z-index:5}
+.dd-list button{display:flex;align-items:center;gap:10px;width:100%;background:none;border:0;padding:9px 12px;border-radius:8px;text-align:left}
+.dd-list button:hover{background:#334155}
+.dot{width:16px;height:16px;border-radius:4px;display:inline-block;flex:none}
+@media(max-width:760px){.fn-links{display:none}.fn-logo{font-size:30px}}
