@@ -1,43 +1,163 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
+import NavbarAdmin from '../components/NavbarAdmin'
+import NavbarEO from '../components/NavbarEO'
 import './EditEventAdmin.css'
 
-function EditEventAdmin() {
-  // State Form Utama (Diisi data existing dari Database MySQL)
-  const [formData, setFormData] = useState({
-    namaEvent: 'Dies Natalis Udayana 2026',
-    tanggalEvent: '21 Oktober 2025 - 31 Desember 2025',
-    lokasiEvent: 'Rektorat Universitas Udayana',
-    jenisEvent: 'Belum dipilih',
-    eventOrganizer: 'Universitas Udayana',
-    sumber: 'Belum dipilih',
-    deskripsiSingkat:
-      'ini adalah itu, itu adalah ini, lalu dia adalah saya, saya adalh kami, kami adalah rambut, rambut adalah bok, bok adalah sayuran, sayuran adalah nama gang, dan lain sebagainya.'
-  })
+const JENIS_EVENT_OPTIONS = [
+  'Event Indoor',
+  'Event Outdoor',
+  'Event Indoor & Outdoor'
+]
 
-  // State Poster Image Existing / Preview
-  const [posterFile, setPosterFile] = useState(null)
-  const [posterPreview, setPosterPreview] = useState('') // Isi path poster lokal jika ada, misal '/assets/poster.jpg'
+const SUMBER_EVENT_OPTIONS = [
+  'Kerjasama Event Organizer',
+  'Hasil Scrapping'
+]
 
-  // State List Denah Acara (Pre-filled dengan data Day 1 & Day 2)
-  const [denahList, setDenahList] = useState([
+const DEFAULT_EDIT_EVENT = {
+  id: 1,
+  namaEvent: 'Dies Natalis Udayana 2026',
+  tanggalEvent: '21 Oktober 2025 - 31 Desember 2025',
+  lokasiEvent: 'Rektorat Universitas Udayana',
+  jenisEvent: 'Event Indoor & Outdoor',
+  eventOrganizer: 'Universitas Udayana',
+  sumber: 'Kerjasama Event Organizer',
+  deskripsiSingkat:
+    'ini adalah itu, itu adalah ini, lalu dia adalah saya, saya adalh kami, kami adalah rambut, rambut adalah bok, bok adalah sayuran, sayuran adalah nama gang, dan lain sebagainya.',
+  posterUrl: '',
+  denahList: [
     {
       id: 1,
       namaDenah: 'Day 1: Lapangan Rektorat',
       imageFile: null,
-      imagePreview: '' // Path gambar denah Day 1 jika ada
+      imagePreview: ''
     },
     {
       id: 2,
       namaDenah: 'Day 2: Gedung Rektorat',
       imageFile: null,
-      imagePreview: '' // Path gambar denah Day 2 jika ada
+      imagePreview: ''
     }
-  ])
+  ]
+}
+
+function EditEventAdmin({ role = 'admin' }) {
+  const navigate = useNavigate()
+  const location = useLocation()
+
+  // Deteksi role baik dari prop maupun dari state navigasi DetailEventAdmin
+  const activeRole = location.state?.role || role
+  const isEO = activeRole === 'eo'
+  const incomingEvent = location.state?.eventData || null
+
+  // State Form Utama (Terisi otomatis dari event yang dipilih)
+  const [formData, setFormData] = useState(() => {
+    if (!incomingEvent) {
+      return {
+        namaEvent: DEFAULT_EDIT_EVENT.namaEvent,
+        tanggalEvent: DEFAULT_EDIT_EVENT.tanggalEvent,
+        lokasiEvent: DEFAULT_EDIT_EVENT.lokasiEvent,
+        jenisEvent: DEFAULT_EDIT_EVENT.jenisEvent,
+        eventOrganizer: DEFAULT_EDIT_EVENT.eventOrganizer,
+        sumber: isEO ? 'Kerjasama Event Organizer' : DEFAULT_EDIT_EVENT.sumber,
+        deskripsiSingkat: DEFAULT_EDIT_EVENT.deskripsiSingkat
+      }
+    }
+
+    const resolvedJenis = JENIS_EVENT_OPTIONS.includes(incomingEvent.jenisEvent)
+      ? incomingEvent.jenisEvent
+      : 'Belum dipilih'
+
+    const resolvedSumber = isEO
+      ? 'Kerjasama Event Organizer'
+      : SUMBER_EVENT_OPTIONS.includes(incomingEvent.sumber)
+      ? incomingEvent.sumber
+      : 'Belum dipilih'
+
+    return {
+      namaEvent: incomingEvent.namaEvent || incomingEvent.title || '',
+      tanggalEvent: incomingEvent.tanggalEvent || incomingEvent.dateRange || '',
+      lokasiEvent:
+        incomingEvent.lokasiEvent && incomingEvent.lokasiEvent !== '-'
+          ? incomingEvent.lokasiEvent
+          : '',
+      jenisEvent: resolvedJenis,
+      eventOrganizer:
+        incomingEvent.eventOrganizer && incomingEvent.eventOrganizer !== '-'
+          ? incomingEvent.eventOrganizer
+          : '',
+      sumber: resolvedSumber,
+      deskripsiSingkat:
+        incomingEvent.deskripsiSingkat && incomingEvent.deskripsiSingkat !== '-'
+          ? incomingEvent.deskripsiSingkat
+          : ''
+    }
+  })
+
+  // State Dropdown Terbuka ('jenis' | 'sumber' | null)
+  const [openDropdown, setOpenDropdown] = useState(null)
+  const jenisDropdownRef = useRef(null)
+  const sumberDropdownRef = useRef(null)
+
+  // State Poster Image Existing / Preview
+  const [posterFile, setPosterFile] = useState(null)
+  const [posterPreview, setPosterPreview] = useState(
+    incomingEvent?.posterUrl || DEFAULT_EDIT_EVENT.posterUrl
+  )
+
+  // State List Denah Acara (Terisi otomatis dari denah event yang dipilih)
+  const [denahList, setDenahList] = useState(() => {
+    if (!incomingEvent) {
+      return DEFAULT_EDIT_EVENT.denahList
+    }
+
+    if (Array.isArray(incomingEvent.denahList) && incomingEvent.denahList.length > 0) {
+      return incomingEvent.denahList.map((d, idx) => ({
+        id: d.id || idx + 1,
+        namaDenah: d.namaDenah || d.title || '',
+        imageFile: null,
+        imagePreview: d.imageUrl || d.mapUrl || ''
+      }))
+    }
+
+    return [
+      {
+        id: Date.now(),
+        namaDenah: '',
+        imageFile: null,
+        imagePreview: ''
+      }
+    ]
+  })
+
+  // Tutup dropdown otomatis jika klik di luar area dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        jenisDropdownRef.current &&
+        !jenisDropdownRef.current.contains(event.target) &&
+        sumberDropdownRef.current &&
+        !sumberDropdownRef.current.contains(event.target)
+      ) {
+        setOpenDropdown(null)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   // Handle Input Form Utama
   const handleInputChange = (e) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
+  }
+
+  // Handle Pilih Opsi Custom Dropdown
+  const handleSelectOption = (fieldName, value) => {
+    setFormData((prev) => ({ ...prev, [fieldName]: value }))
+    setOpenDropdown(null)
   }
 
   // Handle Ganti / Upload Poster
@@ -83,43 +203,98 @@ function EditEventAdmin() {
     ])
   }
 
-  // Hapus Denah (Opsional)
+  // Hapus Denah
   const handleRemoveDenahBlock = (id) => {
     if (confirm('Apakah Anda yakin ingin menghapus denah ini?')) {
       setDenahList((prev) => prev.filter((item) => item.id !== id))
     }
   }
 
-  // Handle Submit Edit Event
+  // Handle Submit Edit Event & Perbarui Data di localStorage
   const handleSubmit = (e) => {
     e.preventDefault()
-    console.log('Update Data Event:', formData)
+
+    const resolvedSumber = isEO
+      ? 'Kerjasama Event Organizer'
+      : formData.sumber === 'Belum dipilih'
+      ? 'Kerjasama Event Organizer'
+      : formData.sumber
+
+    const isScrapping = resolvedSumber === 'Hasil Scrapping'
+
+    const generatedTags = [{ label: resolvedSumber, color: '#00bcd4' }]
+    if (formData.jenisEvent === 'Event Indoor') {
+      generatedTags.push({ label: 'Event Indoor', color: '#f87171' })
+    } else if (formData.jenisEvent === 'Event Outdoor') {
+      generatedTags.push({ label: 'Event Outdoor', color: '#38bdf8' })
+    } else if (formData.jenisEvent === 'Event Indoor & Outdoor') {
+      generatedTags.push({ label: 'Event Outdoor', color: '#38bdf8' })
+      generatedTags.push({ label: 'Event Indoor', color: '#f87171' })
+    }
+
+    const resolvedTitle = formData.namaEvent.trim() || 'Event Tanpa Judul'
+    const resolvedDate = formData.tanggalEvent.trim() || 'Tanggal belum diatur'
+    const targetId = incomingEvent?.id || DEFAULT_EDIT_EVENT.id
+    const originalTitle = incomingEvent?.title || DEFAULT_EDIT_EVENT.namaEvent
+
+    const updatedFields = {
+      id: targetId,
+      title: resolvedTitle,
+      namaEvent: resolvedTitle,
+      type: isScrapping ? 'scrapping' : 'eo',
+      tags: generatedTags,
+      dateRange: resolvedDate,
+      tanggalEvent: resolvedDate,
+      eventDate: resolvedDate,
+      lokasiEvent: formData.lokasiEvent.trim() || '-',
+      jenisEvent:
+        formData.jenisEvent === 'Belum dipilih' ? 'Event Indoor' : formData.jenisEvent,
+      eventOrganizer: formData.eventOrganizer.trim() || (isEO ? 'EO Esai' : '-'),
+      sumber: resolvedSumber,
+      deskripsiSingkat: formData.deskripsiSingkat.trim() || '-',
+      posterUrl: posterPreview,
+      denahList: denahList.map((d, idx) => ({
+        id: d.id,
+        title: d.namaDenah.trim() || `Denah ${idx + 1}`,
+        namaDenah: d.namaDenah.trim() || `Denah ${idx + 1}`,
+        mapUrl: d.imagePreview || '',
+        imageUrl: d.imagePreview || ''
+      }))
+    }
+
+    // Perbarui item terkait di localStorage agar DaftarEvent & DetailEvent langsung terupdate
+    const storageKey = isEO ? 'festnav_eo_events' : 'festnav_admin_events'
+    try {
+      const savedList = JSON.parse(localStorage.getItem(storageKey) || '[]')
+      if (Array.isArray(savedList) && savedList.length > 0) {
+        const updatedList = savedList.map((item) =>
+          item.id === targetId || item.title === originalTitle
+            ? { ...item, ...updatedFields }
+            : item
+        )
+        localStorage.setItem(storageKey, JSON.stringify(updatedList))
+      }
+    } catch (err) {
+      console.error('Gagal menyimpan perubahan event:', err)
+    }
+
+    console.log('Role Pengirim:', activeRole)
+    console.log('Update Data Event:', updatedFields)
     console.log('Poster File Baru:', posterFile)
-    console.log('Update List Denah:', denahList)
-    alert('Perubahan event berhasil disimpan (Simulasi)!')
+
+    if (isEO) {
+      alert('Perubahan event berhasil disimpan dan diajukan untuk validasi!')
+      navigate('/daftar-event-eo')
+    } else {
+      alert('Perubahan event berhasil disimpan!')
+      navigate('/daftar-event')
+    }
   }
 
   return (
     <div className="edit-container">
-      {/* Navbar */}
-      <header className="edit-navbar">
-        <div className="nav-brand">FestNav</div>
-        <div className="nav-actions">
-          <button className="btn-cyan">Lihat Daftar Event</button>
-          <button className="btn-cyan">+ Tambah Peta baru</button>
-          <div className="user-profile">
-            <span className="user-name">Admin Esai</span>
-            <div className="avatar-placeholder">👤</div>
-            <button className="logout-btn" title="Logout">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                <polyline points="16 17 21 12 16 7"></polyline>
-                <line x1="21" y1="12" x2="9" y2="12"></line>
-              </svg>
-            </button>
-          </div>
-        </div>
-      </header>
+      {/* Navbar Dinamis sesuai Role */}
+      {isEO ? <NavbarEO /> : <NavbarAdmin />}
 
       {/* Hero Header */}
       <div className="edit-hero">
@@ -195,19 +370,57 @@ function EditEventAdmin() {
                   />
                 </div>
 
-                <div className="form-group">
+                {/* Custom Dropdown: Jenis Event */}
+                <div className="form-group" ref={jenisDropdownRef}>
                   <label>Jenis Event</label>
-                  <select
-                    name="jenisEvent"
-                    value={formData.jenisEvent}
-                    onChange={handleInputChange}
-                    className="form-input form-select"
-                  >
-                    <option value="Belum dipilih">Belum dipilih</option>
-                    <option value="Event Indoor">Event Indoor</option>
-                    <option value="Event Outdoor">Event Outdoor</option>
-                    <option value="Event Indoor & Outdoor">Event Indoor & Outdoor</option>
-                  </select>
+                  <div className="custom-dropdown-wrapper">
+                    <button
+                      type="button"
+                      className="form-input custom-dropdown-trigger"
+                      onClick={() =>
+                        setOpenDropdown(openDropdown === 'jenis' ? null : 'jenis')
+                      }
+                    >
+                      <span
+                        className={
+                          formData.jenisEvent === 'Belum dipilih'
+                            ? 'dropdown-placeholder'
+                            : 'dropdown-selected-text'
+                        }
+                      >
+                        {formData.jenisEvent}
+                      </span>
+                      <svg
+                        className={`dropdown-chevron ${openDropdown === 'jenis' ? 'open' : ''}`}
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="#64748b"
+                        strokeWidth="2.2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                      </svg>
+                    </button>
+
+                    {openDropdown === 'jenis' && (
+                      <div className="custom-dropdown-menu">
+                        {JENIS_EVENT_OPTIONS.map((option) => (
+                          <div
+                            key={option}
+                            className={`custom-dropdown-item ${
+                              formData.jenisEvent === option ? 'selected' : ''
+                            }`}
+                            onClick={() => handleSelectOption('jenisEvent', option)}
+                          >
+                            {option}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="form-group">
@@ -222,18 +435,57 @@ function EditEventAdmin() {
                   />
                 </div>
 
-                <div className="form-group">
+                {/* Custom Dropdown: Sumber */}
+                <div className="form-group" ref={sumberDropdownRef}>
                   <label>Sumber</label>
-                  <select
-                    name="sumber"
-                    value={formData.sumber}
-                    onChange={handleInputChange}
-                    className="form-input form-select"
-                  >
-                    <option value="Belum dipilih">Belum dipilih</option>
-                    <option value="Kerjasama Event Organizer">Kerjasama Event Organizer</option>
-                    <option value="Hasil Scrapping">Hasil Scrapping</option>
-                  </select>
+                  <div className="custom-dropdown-wrapper">
+                    <button
+                      type="button"
+                      className="form-input custom-dropdown-trigger"
+                      onClick={() =>
+                        setOpenDropdown(openDropdown === 'sumber' ? null : 'sumber')
+                      }
+                    >
+                      <span
+                        className={
+                          formData.sumber === 'Belum dipilih'
+                            ? 'dropdown-placeholder'
+                            : 'dropdown-selected-text'
+                        }
+                      >
+                        {formData.sumber}
+                      </span>
+                      <svg
+                        className={`dropdown-chevron ${openDropdown === 'sumber' ? 'open' : ''}`}
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="#64748b"
+                        strokeWidth="2.2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                      </svg>
+                    </button>
+
+                    {openDropdown === 'sumber' && (
+                      <div className="custom-dropdown-menu">
+                        {SUMBER_EVENT_OPTIONS.map((option) => (
+                          <div
+                            key={option}
+                            className={`custom-dropdown-item ${
+                              formData.sumber === option ? 'selected' : ''
+                            }`}
+                            onClick={() => handleSelectOption('sumber', option)}
+                          >
+                            {option}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -307,7 +559,7 @@ function EditEventAdmin() {
                 </div>
               ))}
 
-              {/* Dashed Box untuk Menambah Denah Baru (TETAP ADA) */}
+              {/* Dashed Box untuk Menambah Denah Baru */}
               <div className="add-denah-dashed-box" onClick={handleAddDenahBlock}>
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2">
                   <line x1="12" y1="5" x2="12" y2="19"></line>

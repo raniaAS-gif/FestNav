@@ -49,6 +49,15 @@
   text-align: center;
 }
 
+.profile-title-eo {
+  font-size: 44px;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0 0 6px 0;
+  text-align: left;
+  line-height: 1.1;
+}
+
 /* Main Grid Layout */
 .profile-form-grid {
   display: grid;
@@ -57,10 +66,12 @@
   align-items: center;
 }
 
-/* Avatar Circle & Overlay */
+/* Avatar Circle & Left Button Wrapper */
 .profile-avatar-wrapper {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
 }
 
 .avatar-circle {
@@ -114,13 +125,15 @@
   color: #ffffff;
   font-size: 13px;
   font-weight: 600;
+  text-align: center;
+  padding: 0 10px;
 }
 
 /* Form Fields */
 .profile-fields-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
 .profile-field-group {
@@ -174,7 +187,7 @@
   justify-content: center;
 }
 
-/* Bottom Action Button */
+/* Action Buttons */
 .profile-btn-row {
   margin-top: 15px;
 }
@@ -185,7 +198,7 @@
   color: #ffffff;
   border: none;
   padding: 12px 0;
-  border-radius: 25px;
+  border-radius: 14px;
   font-size: 16px;
   font-weight: 700;
   cursor: pointer;
@@ -193,6 +206,22 @@
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
 }
 
+.btn-avatar-bottom {
+  width: 220px;
+}
+
 .btn-cyan-profile:hover {
   background-color: #00a0b5;
+}
+
+/* Responsive Mobile */
+@media (max-width: 720px) {
+  .profile-form-grid {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+
+  .profile-title-eo {
+    text-align: center;
+  }
 }

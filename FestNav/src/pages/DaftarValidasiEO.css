@@ -1,0 +1,342 @@
+/* Container & Background */
+.validasi-eo-container {
+  min-height: 100vh;
+  width: 100vw;
+  background-color: #2c2fa3;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 50px;
+}
+
+/* Hero Banner */
+.validasi-eo-hero {
+  background-color: #181d38;
+  text-align: center;
+  padding: 25px 20px 45px 20px;
+}
+
+.hero-title {
+  font-size: 52px;
+  font-weight: 800;
+  color: #4654f6;
+  margin: 0;
+  line-height: 1.15;
+}
+
+.hero-subtitle {
+  font-size: 28px;
+  font-weight: 700;
+  color: #4654f6;
+  margin: 6px 0 0 0;
+}
+
+/* Main Content Wrapper */
+.validasi-eo-content {
+  width: 100%;
+  max-width: 950px;
+  margin: 26px auto 0 auto;
+  padding: 0 20px;
+  box-sizing: border-box;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Search Input */
+.validasi-search-row {
+  margin-bottom: 22px;
+}
+
+.validasi-search-input {
+  width: 100%;
+  background-color: #ffffff;
+  border: none;
+  border-radius: 25px;
+  padding: 13px 24px;
+  font-size: 14px;
+  color: #1e293b;
+  outline: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);
+  box-sizing: border-box;
+}
+
+.validasi-search-input::placeholder {
+  color: #94a3b8;
+}
+
+/* Cards List */
+.validasi-cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.validasi-eo-card {
+  background-color: #ffffff;
+  border-radius: 20px;
+  padding: 20px 26px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+  box-sizing: border-box;
+}
+
+/* Card Left Section */
+.validasi-card-left {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.validasi-eo-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.validasi-eo-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background-color: #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.validasi-eo-name {
+  font-size: 20px;
+  font-weight: 500;
+  color: #0f172a;
+}
+
+.validasi-event-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 2px 0 0 0;
+}
+
+.validasi-tags-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.validasi-badge {
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 16px;
+  border-radius: 20px;
+  display: inline-block;
+}
+
+.validasi-event-date {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 2px 0 0 0;
+}
+
+/* Card Right Section (Status & Buttons) */
+.validasi-card-right {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 195px;
+}
+
+.validasi-status-text {
+  font-size: 16px;
+  font-weight: 800;
+  margin-bottom: 2px;
+}
+
+.status-accepted {
+  color: #10b981;
+}
+
+.status-rejected {
+  color: #cc0000;
+}
+
+.btn-validasi-cyan {
+  width: 100%;
+  background-color: #00bcd4;
+  color: #ffffff;
+  border: none;
+  padding: 7px 18px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: center;
+  transition: background-color 0.2s ease;
+}
+
+.btn-validasi-cyan:hover {
+  background-color: #00a0b5;
+}
+
+/* Footer Pagination */
+.validasi-eo-footer {
+  margin-top: auto;
+  padding-top: 40px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.eo-pagination {
+  background-color: #ffffff;
+  border-radius: 25px;
+  padding: 4px 14px 4px 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+.eo-page-num {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: #00bcd4;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.eo-page-num.active {
+  background-color: #00bcd4;
+  color: #ffffff;
+}
+
+.eo-page-num:hover:not(.active) {
+  background-color: #e0f7fa;
+}
+
+.eo-page-dots {
+  color: #00bcd4;
+  font-weight: 700;
+  font-size: 14px;
+  padding: 0 4px;
+}
+
+/* ========================================================= */
+/* OVERLAY MODAL PESAN PENOLAKAN ADMIN                       */
+/* ========================================================= */
+.rejection-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.rejection-modal-card {
+  background-color: #ffffff;
+  border-radius: 20px;
+  padding: 26px 32px 30px 32px;
+  width: 100%;
+  max-width: 720px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+  box-sizing: border-box;
+  animation: modalPopIn 0.2s ease-out;
+}
+
+.rejection-modal-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #000000;
+  margin: 0 0 14px 0;
+  text-align: left;
+}
+
+.rejection-message-box {
+  background-color: #eaf3fb;
+  border-radius: 16px;
+  padding: 20px 22px;
+  min-height: 180px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+  box-sizing: border-box;
+}
+
+.rejection-message-box p {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.55;
+  color: #0f172a;
+}
+
+.rejection-modal-footer {
+  display: flex;
+  justify-content: center;
+  margin-top: 22px;
+}
+
+.btn-cyan-close-modal {
+  width: 100%;
+  max-width: 340px;
+  background-color: #00bcd4;
+  color: #ffffff;
+  border: none;
+  padding: 12px 0;
+  border-radius: 14px;
+  font-size: 20px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.btn-cyan-close-modal:hover {
+  background-color: #00a0b5;
+}
+
+@keyframes modalPopIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Responsive Mobile */
+@media (max-width: 680px) {
+  .validasi-eo-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .validasi-card-right {
+    width: 100%;
+    align-items: stretch;
+  }
+
+  .validasi-status-text {
+    text-align: left;
+  }
+}
