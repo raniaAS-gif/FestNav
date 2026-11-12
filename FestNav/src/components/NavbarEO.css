@@ -4,6 +4,8 @@
   justify-content: space-between;
   align-items: center;
   padding: 14px 30px;
+  position: relative;
+  z-index: 100;
 }
 
 .nav-brand {
@@ -37,8 +39,9 @@
   transition: background-color 0.2s ease;
 }
 
-.btn-cyan:hover {
-  background-color: #00a0b5;
+.btn-cyan:hover,
+.btn-cyan.active-nav {
+  background-color: #0097a7;
 }
 
 .user-profile {
@@ -64,6 +67,7 @@
 .user-name {
   font-size: 13px;
   font-weight: 500;
+  white-space: nowrap;
 }
 
 .avatar-placeholder {
@@ -75,16 +79,28 @@
   align-items: center;
   justify-content: center;
   font-size: 14px;
+  flex-shrink: 0;
 }
 
 .logout-btn {
-  background: none;
+  background: transparent;
   border: none;
+  padding: 4px;
+  margin: 0;
+  min-width: 28px;
+  min-height: 28px;
   color: #ffffff;
   cursor: pointer;
   display: flex;
   align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
   transition: opacity 0.2s ease;
+}
+
+.logout-btn svg {
+  display: block;
+  flex-shrink: 0;
 }
 
 .logout-btn:hover {
@@ -102,7 +118,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 9999;
 }
 
 .logout-modal-card {

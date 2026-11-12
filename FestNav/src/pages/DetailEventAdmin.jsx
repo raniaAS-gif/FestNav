@@ -1,36 +1,138 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
+import NavbarAdmin from '../components/NavbarAdmin'
 import './DetailEventAdmin.css'
+
+const DEFAULT_FALLBACK_EVENT = {
+  id: 1,
+  title: 'Dies Natalis Udayana 2026',
+  posterUrl: '',
+  namaEvent: 'Dies Natalis Udayana 2026',
+  tanggalEvent: '21 Oktober 2025 - 31 Desember 2025',
+  lokasiEvent: 'Rektorat Universitas Udayana',
+  jenisEvent: 'Event Indoor & Outdoor',
+  eventOrganizer: 'Universitas Udayana',
+  sumber: 'Kerjasama Event Organizer',
+  status: 'Sudah Dipublish',
+  deskripsiSingkat:
+    'ini adalah itu, itu adalah ini, lalu dia adalah saya, saya adalh kami, kami adalah rambut, rambut adalah bok, bok adalah sayuran, sayuran adalah nama gang, dan lain sebagainya.',
+  denahList: [
+    {
+      id: 'day-1',
+      title: 'Day 1: Lapangan Rektorat',
+      mapUrl: ''
+    },
+    {
+      id: 'day-2',
+      title: 'Day 2: Gedung Rektorat',
+      mapUrl: ''
+    }
+  ]
+}
+
+// Helper untuk menyusun jenis event dari array tags jika belum tersedia eksplisit
+function resolveJenisFromTags(tags = []) {
+  const labels = tags.map((t) => t.label)
+  const hasIndoor = labels.includes('Event Indoor')
+  const hasOutdoor = labels.includes('Event Outdoor')
+  if (hasIndoor && hasOutdoor) return 'Event Indoor & Outdoor'
+  if (hasIndoor) return 'Event Indoor'
+  if (hasOutdoor) return 'Event Outdoor'
+  return 'Event Indoor & Outdoor'
+}
 
 function DetailEventAdmin() {
   const navigate = useNavigate()
+  const location = useLocation()
 
-  // State Data Event
-  const [eventData, setEventData] = useState({
-    id: 1,
-    title: 'Dies Natalis Udayana 2026',
-    posterUrl: '', 
-    namaEvent: 'Dies Natalis Udayana 2026',
-    tanggalEvent: '21 Oktober 2025 - 31 Desember 2025',
-    lokasiEvent: 'Rektorat Universitas Udayana',
-    jenisEvent: 'Event Indoor & Outdoor',
-    eventOrganizer: 'Universitas Udayana',
-    sumber: 'Kerjasama Event Organizer',
-    status: 'Sudah Dipublish',
-    deskripsiSingkat:
-      'ini adalah itu, itu adalah ini, lalu dia adalah saya, saya adalh kami, kami adalah rambut, rambut adalah bok, bok adalah sayuran, sayuran adalah nama gang, dan lain sebagainya.',
-    denahList: [
-      {
-        id: 'day-1',
-        title: 'Day 1: Lapangan Rektorat',
-        mapUrl: '' 
-      },
-      {
-        id: 'day-2',
-        title: 'Day 2: Gedung Rektorat',
-        mapUrl: '' 
+  // State Data Event Dinamis (dari navigasi DaftarEventAdmin / localStorage)
+  const [eventData, setEventData] = useState(() => {
+    const navState = location.state || {}
+
+    // Cari data lengkap event di localStorage berdasarkan id atau title
+    let storedEvent = null
+    try {
+      const savedList = JSON.parse(localStorage.getItem('festnav_admin_events') || '[]')
+      if (Array.isArray(savedList)) {
+        storedEvent =
+          savedList.find(
+            (item) =>
+              (navState.eventId && item.id === navState.eventId) ||
+              (navState.eventTitle && item.title === navState.eventTitle)
+          ) || null
       }
-    ]
+    } catch {
+      storedEvent = null
+    }
+
+    const source = navState.eventData || storedEvent
+    const resolvedTitle =
+      navState.eventTitle || source?.title || DEFAULT_FALLBACK_EVENT.title
+    const isDefaultEvent = resolvedTitle === DEFAULT_FALLBACK_EVENT.title
+
+    if (!source && !navState.eventTitle) {
+      return DEFAULT_FALLBACK_EVENT
+    }
+
+    const resolvedDate =
+      navState.eventDate ||
+      source?.tanggalEvent ||
+      source?.dateRange ||
+      DEFAULT_FALLBACK_EVENT.tanggalEvent
+
+    const resolvedStatus =
+      navState.eventStatus || source?.status || DEFAULT_FALLBACK_EVENT.status
+
+    const resolvedSumber =
+      source?.sumber ||
+      source?.tags?.[0]?.label ||
+      (source?.type === 'scrapping'
+        ? 'Hasil Scrapping'
+        : 'Kerjasama Event Organizer')
+
+    const resolvedJenis =
+      source?.jenisEvent ||
+      (source?.tags ? resolveJenisFromTags(source.tags) : DEFAULT_FALLBACK_EVENT.jenisEvent)
+
+    const resolvedDenah =
+      Array.isArray(source?.denahList) && source.denahList.length > 0
+        ? source.denahList.map((d, idx) => ({
+            id: d.id || `denah-${idx + 1}`,
+            title: d.title || d.namaDenah || `Denah ${idx + 1}`,
+            mapUrl: d.mapUrl || d.imageUrl || ''
+          }))
+        : isDefaultEvent
+        ? DEFAULT_FALLBACK_EVENT.denahList
+        : [
+            {
+              id: 'denah-1',
+              title: `Denah Utama - ${resolvedTitle}`,
+              mapUrl: ''
+            }
+          ]
+
+    return {
+      id: source?.id || navState.eventId || Date.now(),
+      title: resolvedTitle,
+      posterUrl: source?.posterUrl || '',
+      namaEvent: source?.namaEvent || resolvedTitle,
+      tanggalEvent: resolvedDate,
+      lokasiEvent:
+        source?.lokasiEvent ||
+        (isDefaultEvent ? DEFAULT_FALLBACK_EVENT.lokasiEvent : 'Bali, Indonesia'),
+      jenisEvent: resolvedJenis,
+      eventOrganizer:
+        source?.eventOrganizer ||
+        (isDefaultEvent ? DEFAULT_FALLBACK_EVENT.eventOrganizer : 'Panitia Penyelenggara'),
+      sumber: resolvedSumber,
+      status: resolvedStatus,
+      deskripsiSingkat:
+        source?.deskripsiSingkat ||
+        (isDefaultEvent
+          ? DEFAULT_FALLBACK_EVENT.deskripsiSingkat
+          : `Informasi dan panduan denah resmi untuk kegiatan ${resolvedTitle}.`),
+      denahList: resolvedDenah
+    }
   })
 
   // State Overlay Modal: null, 'publish', 'unpublish', 'delete-warning', 'delete-success'
@@ -38,14 +140,33 @@ function DetailEventAdmin() {
 
   const isPublished = eventData.status === 'Sudah Dipublish'
 
+  // Sinkronkan perubahan status ke localStorage agar DaftarEventAdmin ikut terupdate
+  const syncStatusToStorage = (newStatus, newColor) => {
+    try {
+      const savedList = JSON.parse(localStorage.getItem('festnav_admin_events') || '[]')
+      if (Array.isArray(savedList) && savedList.length > 0) {
+        const updatedList = savedList.map((item) =>
+          item.id === eventData.id || item.title === eventData.title
+            ? { ...item, status: newStatus, statusColor: newColor }
+            : item
+        )
+        localStorage.setItem('festnav_admin_events', JSON.stringify(updatedList))
+      }
+    } catch (err) {
+      console.error('Gagal memperbarui status event:', err)
+    }
+  }
+
   // Handler Publish & Unpublish
   const handlePublish = () => {
     setEventData((prev) => ({ ...prev, status: 'Sudah Dipublish' }))
+    syncStatusToStorage('Sudah Dipublish', '#3b82f6')
     setActiveModal('publish')
   }
 
   const handleUnpublish = () => {
     setEventData((prev) => ({ ...prev, status: 'Belum dipublish' }))
+    syncStatusToStorage('Belum Dipublish', '#3730a3')
     setActiveModal('unpublish')
   }
 
@@ -55,37 +176,29 @@ function DetailEventAdmin() {
   }
 
   const handleConfirmDelete = () => {
-    // Simulasi proses hapus data ke backend
+    try {
+      const savedList = JSON.parse(localStorage.getItem('festnav_admin_events') || '[]')
+      if (Array.isArray(savedList) && savedList.length > 0) {
+        const updatedList = savedList.filter(
+          (item) => item.id !== eventData.id && item.title !== eventData.title
+        )
+        localStorage.setItem('festnav_admin_events', JSON.stringify(updatedList))
+      }
+    } catch (err) {
+      console.error('Gagal menghapus event:', err)
+    }
     setActiveModal('delete-success')
   }
 
   const handleCloseDeleteSuccess = () => {
     setActiveModal(null)
-    // Kembali ke halaman daftar event setelah menghapus
     navigate('/daftar-event')
   }
 
   return (
     <div className="detail-container">
       {/* Navbar */}
-      <header className="detail-navbar">
-        <div className="nav-brand">FestNav</div>
-        <div className="nav-actions">
-          <button className="btn-cyan" onClick={() => navigate('/daftar-event')}>Lihat Daftar Event</button>
-          <button className="btn-cyan" onClick={() => navigate('/tambah-event')}>+ Tambah Peta baru</button>
-          <div className="user-profile">
-            <span className="user-name">Admin Esai</span>
-            <div className="avatar-placeholder">👤</div>
-            <button className="logout-btn" title="Logout">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                <polyline points="16 17 21 12 16 7"></polyline>
-                <line x1="21" y1="12" x2="9" y2="12"></line>
-              </svg>
-            </button>
-          </div>
-        </div>
-      </header>
+      <NavbarAdmin />
 
       {/* Hero Header */}
       <div className="detail-hero">
@@ -99,8 +212,15 @@ function DetailEventAdmin() {
         <div className="detail-header-bar">
           <h2 className="event-main-title">{eventData.title}</h2>
           <div className="header-actions">
-            <button className="btn-danger-sm" onClick={handleOpenDeleteModal}>Hapus</button>
-            <button className="btn-cyan-sm" onClick={() => navigate('/edit-event')}>Edit Detail</button>
+            <button className="btn-danger-sm" onClick={handleOpenDeleteModal}>
+              Hapus
+            </button>
+            <button
+              className="btn-cyan-sm"
+              onClick={() => navigate('/edit-event', { state: { eventData, role: 'admin' } })}
+            >
+              Edit Detail
+            </button>
           </div>
         </div>
 
@@ -171,9 +291,11 @@ function DetailEventAdmin() {
             <button className="btn-green-lg" onClick={handlePublish}>
               Publish
             </button>
-            <button className="btn-cyan-lg" onClick={() => navigate('/daftar-event')}>Tutup</button>
+            <button className="btn-cyan-lg" onClick={() => navigate('/daftar-event')}>
+              Tutup
+            </button>
           </div>
-          
+
           {isPublished && (
             <button className="btn-red-lg" onClick={handleUnpublish}>
               Unpublish

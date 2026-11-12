@@ -6,7 +6,6 @@
   padding: 12px 30px;
 }
 
-/* Brand Logo (FestNav) */
 .nav-brand {
   color: #ffffff;
   font-size: 24px;
@@ -50,7 +49,6 @@
   margin-left: 10px;
 }
 
-/* Area Klik Nama & Foto Profil */
 .user-info-clickable {
   display: flex;
   align-items: center;
@@ -66,6 +64,7 @@
 .user-name {
   font-size: 13px;
   font-weight: 500;
+  white-space: nowrap;
 }
 
 .avatar-placeholder {
@@ -77,23 +76,36 @@
   align-items: center;
   justify-content: center;
   font-size: 14px;
+  flex-shrink: 0;
 }
 
+/* Dikunci ukurannya agar tidak hilang oleh CSS global button */
 .logout-btn {
-  background: none;
+  background: transparent;
   border: none;
+  padding: 4px;
+  margin: 0;
+  min-width: 28px;
+  min-height: 28px;
   color: #ffffff;
   cursor: pointer;
   display: flex;
   align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
   transition: opacity 0.2s ease;
+}
+
+.logout-btn svg {
+  display: block;
+  flex-shrink: 0;
 }
 
 .logout-btn:hover {
   opacity: 0.75;
 }
 
-/* Modal Overlay Styling */
+/* Modal Overlay Logout */
 .logout-modal-overlay {
   position: fixed;
   top: 0;
@@ -104,7 +116,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 9999;
 }
 
 .logout-modal-card {
