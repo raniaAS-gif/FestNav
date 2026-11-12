@@ -1,87 +1,72 @@
-/* Background utama full screen dengan gradient biru-ungu */
+/* Full Screen Gradient Background */
 .login-container {
-  position: relative;
+  min-height: 100vh;
   width: 100vw;
-  height: 100vh;
-  background: linear-gradient(135deg, #4c46cc 0%, #2b2585 100%);
+  background: linear-gradient(135deg, #4346d8 0%, #24256e 100%);
   display: flex;
-  justify-content: center;
   align-items: center;
+  justify-content: center;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  padding: 20px;
   box-sizing: border-box;
 }
 
-/* Label kecil di pojok atas */
-.login-header-label {
-  position: absolute;
-  top: 15px;
-  left: 20px;
-  color: #b4b6cf;
-  font-size: 16px;
-  font-weight: 500;
-}
-
-/* Kartu Pembungkus Utama */
-.login-card {
+.login-box {
   width: 100%;
-  max-width: 440px;
-  padding: 20px;
+  max-width: 480px;
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 
-/* Header FestNav */
-.brand-header {
-  text-align: center;
+/* Header Brand */
+.login-brand {
+  font-size: 54px;
+  font-weight: 800;
   color: #ffffff;
-  margin-bottom: 25px;
-}
-
-.brand-title {
-  font-size: 42px;
-  font-weight: 700;
   margin: 0;
-  letter-spacing: 1px;
+  line-height: 1.1;
+  letter-spacing: -0.5px;
 }
 
-.brand-subtitle {
-  font-size: 20px;
-  font-weight: 500;
-  margin-top: 4px;
-  color: #e0e0e0;
+.login-subtitle {
+  font-size: 24px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 4px 0 28px 0;
 }
 
-/* Toggle Switch Admin / Event Organizer */
-.role-toggle {
-  background-color: #ffffff;
-  border-radius: 25px;
-  display: flex;
+/* Pill Toggle Switcher (Admin | Event Organizer) */
+.role-toggle-wrapper {
   width: 100%;
-  padding: 3px;
-  margin-bottom: 25px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  background-color: #ffffff;
+  border-radius: 30px;
+  display: flex;
+  align-items: center;
+  margin-bottom: 22px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
 }
 
-.toggle-btn {
+.role-toggle-btn {
   flex: 1;
-  padding: 10px 0;
   border: none;
   background: transparent;
-  color: #00b4d8;
-  font-size: 15px;
-  font-weight: 600;
-  border-radius: 22px;
+  padding: 10px 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #00bcd4;
   cursor: pointer;
-  transition: all 0.3s ease;
+  border-radius: 30px;
+  transition: all 0.25s ease;
 }
 
-.toggle-btn.active {
-  background-color: #00b4d8;
+.role-toggle-btn.active {
+  background-color: #00bcd4;
   color: #ffffff;
 }
 
-/* Form Styles */
+/* Form Section */
 .login-form {
   width: 100%;
   display: flex;
@@ -89,83 +74,85 @@
   gap: 16px;
 }
 
-.form-group {
+.login-input-group {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.form-group label {
+.login-input-group label {
   color: #ffffff;
   font-size: 14px;
   font-weight: 500;
+  padding-left: 4px;
 }
 
-/* Input Fields */
-.form-group input {
+.login-input {
   width: 100%;
-  padding: 14px 18px;
-  border-radius: 25px;
+  background-color: #ffffff;
   border: none;
+  border-radius: 16px;
+  padding: 14px 20px;
+  font-size: 15px;
+  color: #1e293b;
   outline: none;
-  font-size: 14px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
   box-sizing: border-box;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
 }
 
-.form-group input::placeholder {
-  color: #a0a0a0;
+.login-input::placeholder {
+  color: #94a3b8;
 }
 
-/* Password Input Wrapper (dengan tombol mata) */
-.password-input-wrapper {
+/* Password Wrapper & Eye Icon */
+.login-password-wrapper {
   position: relative;
-  display: flex;
-  align-items: center;
+  width: 100%;
 }
 
-.password-input-wrapper input {
-  padding-right: 45px;
+.login-password-wrapper .login-input {
+  padding-right: 52px;
 }
 
-.eye-icon-btn {
+.login-eye-btn {
   position: absolute;
-  right: 15px;
-  background: none;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
   border: none;
   cursor: pointer;
-  color: #555555;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0;
+  padding: 4px;
 }
 
-.eye-icon-btn:hover {
-  color: #000000;
+/* Submit Button */
+.login-btn-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
 }
 
-/* Tombol Login */
-.login-btn {
-  margin-top: 15px;
-  width: 65%;
-  align-self: center;
-  padding: 12px 0;
-  border-radius: 25px;
-  border: none;
-  background-color: #00b4d8;
+.btn-login-submit {
+  width: 75%;
+  background-color: #00bcd4;
   color: #ffffff;
+  border: none;
+  padding: 13px 0;
+  border-radius: 16px;
   font-size: 20px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   transition: background-color 0.2s ease, transform 0.1s ease;
 }
 
-.login-btn:hover {
-  background-color: #0096c7;
+.btn-login-submit:hover {
+  background-color: #00a0b5;
 }
 
-.login-btn:active {
-  transform: scale(0.98);
+.btn-login-submit:active {
+  transform: scale(0.99);
 }
