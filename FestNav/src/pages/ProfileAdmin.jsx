@@ -1,40 +1,73 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import NavbarAdmin from '../components/NavbarAdmin'
 import NavbarEO from '../components/NavbarEO'
 import './ProfileAdmin.css'
 
+const getDefaultProfile = (isEO) => ({
+  displayName: isEO ? 'EO Esai' : 'Admin Esai',
+  username: isEO ? 'EO_Esai' : 'Adm_esai',
+  organization: 'Universitas Udayana',
+  password: 'password123'
+})
+
 function ProfileAdmin({ role = 'admin' }) {
   const navigate = useNavigate()
   const isEO = role === 'eo'
+  const storageKey = isEO ? 'festnav_profile_eo' : 'festnav_profile_admin'
 
-  // State Mode Edit (false = Preview Mode, true = Edit Mode)
+  // State Mode Edit (false = Preview Mode / Terkunci, true = Edit Mode)
   const [isEditing, setIsEditing] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showLogoutModal, setShowLogoutModal] = useState(false)
 
   // State Data Profil (Menyesuaikan Role Admin / EO)
-  const [profileData, setProfileData] = useState({
-    displayName: isEO ? 'EO Esai' : 'Admin Esai',
-    username: isEO ? 'EO_Esai' : 'Adm_esai',
-    organization: 'Universitas Udayana',
-    password: 'password123'
+  const [profileData, setProfileData] = useState(() => {
+    try {
+      const saved = localStorage.getItem(storageKey)
+      if (saved) return JSON.parse(saved)
+    } catch {
+      // Abaikan jika gagal membaca localStorage
+    }
+    return getDefaultProfile(isEO)
   })
 
   // State Avatar Image Preview
   const [avatarPreview, setAvatarPreview] = useState(null)
 
-  // Handle Input Form Change
+  // Reset mode edit & muat data sesuai role setiap kali berpindah Admin <-> EO
+  useEffect(() => {
+    setIsEditing(false)
+    setShowPassword(false)
+    try {
+      const saved = localStorage.getItem(storageKey)
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        setProfileData(parsed)
+        setAvatarPreview(parsed.avatarPreview || null)
+        return
+      }
+    } catch {
+      // Abaikan jika gagal membaca localStorage
+    }
+    setProfileData(getDefaultProfile(isEO))
+    setAvatarPreview(null)
+  }, [isEO, storageKey])
+
+  // Handle Input Form Change (Hanya berjalan saat isEditing === true)
   const handleInputChange = (e) => {
+    if (!isEditing) return
     const { name, value } = e.target
     setProfileData((prev) => ({ ...prev, [name]: value }))
   }
 
-  // Handle Upload Foto Avatar Baru
+  // Handle Upload Foto Avatar Baru (Hanya berjalan saat isEditing === true)
   const handleAvatarChange = (e) => {
+    if (!isEditing) return
     const file = e.target.files[0]
     if (file) {
-      setAvatarPreview(URL.createObjectURL(file))
+      const previewUrl = URL.createObjectURL(file)
+      setAvatarPreview(previewUrl)
     }
   }
 
@@ -42,6 +75,14 @@ function ProfileAdmin({ role = 'admin' }) {
   const handleProfileSubmit = (e) => {
     e.preventDefault()
     if (isEditing) {
+      try {
+        localStorage.setItem(
+          storageKey,
+          JSON.stringify({ ...profileData, avatarPreview })
+        )
+      } catch (err) {
+        console.error('Gagal menyimpan profil:', err)
+      }
       console.log(`Update Profil (${role}):`, profileData)
       alert('Profil berhasil diperbarui!')
       setIsEditing(false)
@@ -49,6 +90,17 @@ function ProfileAdmin({ role = 'admin' }) {
       setIsEditing(true)
     }
   }
+
+  // Style pengunci agar teks tetap tajam & tidak pudar saat input disabled
+  const lockedInputStyle = !isEditing
+    ? {
+        pointerEvents: 'none',
+        cursor: 'default',
+        color: '#1e293b',
+        WebkitTextFillColor: '#1e293b',
+        opacity: 1
+      }
+    : undefined
 
   return (
     <div className="profile-container">
@@ -128,6 +180,9 @@ function ProfileAdmin({ role = 'admin' }) {
                   value={profileData.displayName}
                   onChange={handleInputChange}
                   readOnly={!isEditing}
+                  disabled={!isEditing}
+                  tabIndex={isEditing ? 0 : -1}
+                  style={lockedInputStyle}
                   className={`profile-input ${!isEditing ? 'readonly-input' : ''}`}
                 />
               </div>
@@ -140,6 +195,9 @@ function ProfileAdmin({ role = 'admin' }) {
                   value={profileData.username}
                   onChange={handleInputChange}
                   readOnly={!isEditing}
+                  disabled={!isEditing}
+                  tabIndex={isEditing ? 0 : -1}
+                  style={lockedInputStyle}
                   className={`profile-input ${!isEditing ? 'readonly-input' : ''}`}
                 />
               </div>
@@ -154,6 +212,9 @@ function ProfileAdmin({ role = 'admin' }) {
                     value={profileData.organization}
                     onChange={handleInputChange}
                     readOnly={!isEditing}
+                    disabled={!isEditing}
+                    tabIndex={isEditing ? 0 : -1}
+                    style={lockedInputStyle}
                     className={`profile-input ${!isEditing ? 'readonly-input' : ''}`}
                   />
                 </div>
@@ -168,6 +229,9 @@ function ProfileAdmin({ role = 'admin' }) {
                     value={profileData.password}
                     onChange={handleInputChange}
                     readOnly={!isEditing}
+                    disabled={!isEditing}
+                    tabIndex={isEditing ? 0 : -1}
+                    style={lockedInputStyle}
                     className={`profile-input ${!isEditing ? 'readonly-input' : ''}`}
                   />
                   <button
