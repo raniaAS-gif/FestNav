@@ -1,5 +1,8 @@
 .admin-navbar {
-  background-color: #1a1b4b;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background-color: #1e293b;
   display: flex;
   justify-content: space-between;
   align-items: center;

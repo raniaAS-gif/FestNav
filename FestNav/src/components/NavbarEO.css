@@ -1,11 +1,12 @@
 .eo-navbar {
-  background-color: #181d38;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background-color: #1e293b;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 14px 30px;
-  position: relative;
-  z-index: 100;
+  padding: 12px 30px;
 }
 
 .nav-brand {

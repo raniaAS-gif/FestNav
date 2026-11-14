@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import './ScrapingMonitor.css';
+import NavbarScraping from '../components/NavbarScraping';
 
 /* ---------- data awal (ganti dengan data dari API) ---------- */
 const SUMBER_AWAL = [
@@ -25,14 +26,13 @@ const STATUS_CLS = { 'Menunggu Review': 'w', 'Sudah Ada': 'c2', Dibuang: 'r' };
 /* ---------- komponen kecil ---------- */
 function Header({ judul, sub = 'Festival Navigation' }) {
   return (
-    <header className="sc-head">
-      <div className="sc-bar">
-        <div className="sc-logo">FestNav</div>
-        <div className="sc-user"><span>Admin Esai</span><div className="sc-av" /><button className="sc-out" aria-label="Keluar">⎋</button></div>
-      </div>
-      <h1 className="sc-title" style={{ margin: '24px 0 0 32px' }}>{judul}</h1>
-      <div className="sc-sub">{sub}</div>
-    </header>
+    <>
+      <NavbarScraping userName="Admin Esai" />
+      <header className="sc-head">
+        <h1 className="sc-title" style={{ margin: '0 0 0 32px' }}>{judul}</h1>
+        <div className="sc-sub">{sub}</div>
+      </header>
+    </>
   );
 }
 function Pagination() {

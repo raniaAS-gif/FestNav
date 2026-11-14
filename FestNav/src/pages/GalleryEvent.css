@@ -1,10 +1,21 @@
+.gal-row{display:flex;gap:12px;margin:10px 30px 0}
+.gal-row .search{margin:0;flex:1;width:auto}
+.gal-filter{height:56px;border-radius:14px;border:2px solid #1e293b;background:#0b1222;padding:0 16px;min-width:150px}
+.gal-filter option{background:#1e293b}
 .gal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;padding:14px 30px}
-.gal-card{border-radius:14px;overflow:hidden;border:1px solid #1e293b;background:#1e1b5a}
-.gal-img{height:165px;background-size:cover;background-position:center}
-.gal-cap{height:60px;padding:10px 12px;display:flex;justify-content:space-between;font-weight:700;font-size:17px}
-.gal-check{width:28px;height:28px;border-radius:5px;border:2px solid var(--accent);background:#d4d4d8;color:#22a559;font-size:22px;font-weight:700;line-height:1;padding:0}
-.drop{height:300px;border:2px dashed var(--accent);border-radius:18px;display:grid;place-items:center;text-align:center;cursor:pointer;overflow:hidden;padding:0;background:none;width:100%}
+.gal-card{margin:0;border-radius:14px;overflow:hidden;border:1px solid #1e293b;background:#1e1b5a}
+.gal-img{display:block;width:100%;height:165px;object-fit:cover;background:#2a2670}
+.gal-img.ph{background-size:cover}
+.gal-cap{min-height:64px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.gal-name{font-weight:700;font-size:17px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gal-meta{margin-top:2px;font-size:12px;color:#a5b4fc;display:flex;gap:8px;align-items:center}
+.gal-badge{border-radius:6px;padding:1px 8px;background:#312e81;font-weight:600;text-transform:capitalize}
+.gal-check{flex:none;width:28px;height:28px;border-radius:5px;border:2px solid var(--accent);background:#d4d4d8;color:#22a559;font-size:22px;font-weight:700;line-height:1;padding:0}
+.gal-state{margin:40px 30px;text-align:center;color:var(--muted)}
+.gal-err{margin:10px 30px 0;padding:10px 16px;border-radius:10px;background:#450a0a;border:1px solid var(--red);color:#fecaca}
+.drop{height:260px;border:2px dashed var(--accent);border-radius:18px;place-items:center;text-align:center;cursor:pointer;overflow:hidden;padding:0;background:none;width:100%}
 .drop .plus{font-size:96px;font-weight:200;line-height:1}
 .drop img{width:100%;height:100%;object-fit:cover}
-.confirm-img{width:100%;height:210px;object-fit:cover;border-radius:14px;display:block;margin-bottom:14px}
-.confirm-img.ph{background-size:cover}
+.form-err{color:#fca5a5;font-size:14px;margin:8px 4px 0}
+.confirm-list{max-height:55vh;overflow:auto}
+.confirm-img{width:100%;height:190px;object-fit:cover;border-radius:14px;display:block;margin-bottom:10px}
