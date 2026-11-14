@@ -1,40 +1,219 @@
 /* FestNav - Monitor Scrapping (mandiri, semua class berawalan sc-) */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap');
-.sc-app{--cy:#06b6d4;--red:#d60000;--grn:#10b981;--org:#f59e0b;--ind:#4f46e5;--ink:#1e1b6b;
- min-height:100vh;font-family:Inter,system-ui,sans-serif;color:#0f172a;background:linear-gradient(180deg,#4338ca 0,#2e2688 60%);display:flex;flex-direction:column}
-.sc-app *{box-sizing:border-box}
-.sc-app button,.sc-app input,.sc-app select,.sc-app textarea{font:inherit}
-.sc-app button{cursor:pointer}
-.sc-app :focus-visible{outline:3px solid var(--cy);outline-offset:2px}
-.sc-head{background:#1e293b;color:#fff;padding:18px 24px 34px}
-.sc-bar{display:flex;justify-content:space-between;align-items:center}
-.sc-logo{font:700 34px 'Plus Jakarta Sans';letter-spacing:-1px}
-.sc-user{display:flex;align-items:center;gap:12px;font-size:16px}
-.sc-av{width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,#a5b4fc,#e9d5ff)}
-.sc-out{background:none;border:0;color:#fff;font-size:28px}
-.sc-title{margin:24px 0 0 32px;font:800 clamp(40px,8vw,88px)/1 'Plus Jakarta Sans';letter-spacing:-2px;background:linear-gradient(180deg,#6366f1,#3730a3);-webkit-background-clip:text;background-clip:text;color:transparent}
-.sc-sub{margin:4px 0 0 34px;font:700 clamp(24px,4vw,46px) 'Plus Jakarta Sans';background:linear-gradient(180deg,#6366f1,#3730a3);-webkit-background-clip:text;background-clip:text;color:transparent}
-.sc-tabs{background:#2e2688;display:flex;justify-content:center;gap:50px;padding:14px 0 10px;border-bottom:1px solid #1e1b6b}
-.sc-tab{background:none;border:0;color:#a5b4fc;font:600 24px 'Plus Jakarta Sans';padding:0 0 4px;border-bottom:3px solid transparent}
-.sc-tab.on{color:#fff;border-color:#fff}
-.sc-body{padding:22px 18px;display:flex;flex-direction:column;gap:18px;flex:1}
-.sc-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
-.sc-stat{background:#fff;border-radius:22px;padding:20px 20px 10px;box-shadow:0 4px 0 rgba(0,0,0,.25)}
-.sc-stat b{display:block;font:700 22px 'Plus Jakarta Sans'}
-.sc-stat span{font:700 52px 'Plus Jakarta Sans'}
-.sc-row{display:flex;gap:70px}
-.sc-search{flex:1;height:52px;border:0;border-radius:26px;padding:0 32px;font-size:18px;box-shadow:0 4px 0 rgba(0,0,0,.25)}
-.sc-btn{height:52px;border:0;border-radius:12px;padding:0 28px;font:700 22px 'Plus Jakarta Sans';color:#fff;background:var(--cy);box-shadow:0 4px 0 rgba(0,0,0,.2)}
-.sc-btn.red{background:var(--red)}.sc-btn.ind{background:var(--ind)}
-.sc-btn:disabled{opacity:.5;cursor:not-allowed}
-.sc-card{background:#fff;border-radius:14px;overflow:auto;border:1px solid #cbd5e1}
-.sc-table{width:100%;border-collapse:collapse;min-width:640px}
-.sc-table th{text-align:left;padding:18px 20px;font-size:15px;font-weight:600}
-.sc-table td{padding:14px 20px;border-top:1px solid #94a3b8;font-size:16px;vertical-align:middle}
-.sc-table .c{text-align:center}
-.sc-name{font-weight:700;color:var(--ink)}
-.sc-badge{display:inline-block;border-radius:5px;padding:2px 10px;color:#fff;font-size:14px;font-weight:600;white-space:nowrap}
-.g{background:var(--grn)}.r{background:var(--red)}.w{background:#44403c;color:var(--org)}.c2{background:var(--cy)}
+.sc-app{
+    --cy:#06b6d4;
+    --red:#d60000;
+    --grn:#10b981;
+    --org:#f59e0b;
+    --ind:#4f46e5;
+    --ink:#1e1b6b;
+    min-height:100vh;
+    font-family:Inter,system-ui,sans-serif;
+    color:#0f172a;
+    background:linear-gradient(180deg,#4338ca 0,#2e2688 60%);
+    display:flex;
+    flex-direction:column;
+}
+
+.sc-app *{
+    box-sizing:border-box;
+}
+
+.sc-app button,.sc-app input,.sc-app select,.sc-app textarea{
+    font:inherit;
+}
+
+.sc-app button{
+    cursor:pointer;
+}
+
+.sc-app :focus-visible{
+    outline:3px solid var(--cy);
+    outline-offset:2px;
+}
+
+.sc-head{
+    background:#1e293b;
+    color:#fff;
+    padding:24px 24px 34px;
+}
+
+.sc-title{
+    margin:24px 0 0 32px;
+    font:800 clamp(40px,8vw,88px)/1 'Plus Jakarta Sans';
+    letter-spacing:-2px;
+    background:linear-gradient(180deg,#6366f1,#3730a3);
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent
+}
+
+.sc-sub{
+    margin:4px 0 0 34px;
+    font:700 clamp(24px,4vw,46px) 'Plus Jakarta Sans';
+    background:linear-gradient(180deg,#6366f1,#3730a3);
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+}
+
+.sc-tabs{
+  position: sticky;
+  top: 54px;
+  z-index: 900;
+  background: #2e2688;
+  display: flex;
+  justify-content: center;
+  gap: 50px;
+  padding: 14px 0 10px;
+  border-bottom: 1px solid #1e1b6b;
+}
+
+.sc-tab{
+    background:none;
+    border:0;
+    color:#a5b4fc;
+    font:600 24px 'Plus Jakarta Sans';
+    padding:0 0 4px;
+    border-bottom:3px solid transparent;
+}
+
+.sc-tab.on{
+    color:#fff;
+    border-color:#fff;
+}
+
+.sc-body{
+    padding:22px 18px;
+    display:flex;
+    flex-direction:column;
+    gap:18px;
+    flex:1;
+}
+
+.sc-stats{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:16px;
+}
+
+.sc-stat{
+    background:#fff;
+    border-radius:22px;
+    padding:20px 20px 10px;
+    box-shadow:0 4px 0 rgba(0,0,0,.25);
+}
+
+.sc-stat b{
+    display:block;
+    font:700 22px 'Plus Jakarta Sans';
+}
+
+.sc-stat span{
+    font:700 52px 'Plus Jakarta Sans';
+}
+
+.sc-row{
+    display:flex;
+    gap:70px;
+}
+
+.sc-search{
+    flex:1;
+    height:52px;
+    border:0;
+    border-radius:26px;
+    padding:0 32px;
+    font-size:18px;
+    box-shadow:0 4px 0 rgba(0,0,0,.25);
+}
+
+.sc-btn{
+    height:52px;
+    border:0;
+    border-radius:12px;
+    padding:0 28px;
+    font:700 22px 'Plus Jakarta Sans';
+    color:#fff;background:var(--cy);
+    box-shadow:0 4px 0 rgba(0,0,0,.2);
+}
+
+.sc-btn.red{
+    background:var(--red);
+}
+
+.sc-btn.ind{
+    background:var(--ind);
+}
+
+.sc-btn:disabled{
+    opacity:.5;
+    cursor:not-allowed;
+}
+
+.sc-card{
+    background:#fff;
+    border-radius:14px;
+    overflow:auto;
+    border:1px solid #cbd5e1;
+}
+
+.sc-table{
+    width:100%;
+    border-collapse:collapse;
+    min-width:640px;
+}
+
+.sc-table th{
+    text-align:left;
+    padding:18px 20px;
+    font-size:15px;
+    font-weight:600;
+}
+
+.sc-table td{
+    padding:14px 20px;
+    border-top:1px solid #94a3b8;
+    font-size:16px;
+    vertical-align:middle;
+}
+
+.sc-table .c{
+    text-align:center;
+}
+
+.sc-name{
+    font-weight:700;
+    color:var(--ink);
+}
+
+.sc-badge{
+    display:inline-block;
+    border-radius:5px;
+    padding:2px 10px;
+    color:#fff;
+    font-size:14px;
+    font-weight:600;
+    white-space:nowrap;
+}
+
+.g{
+    background:var(--grn);
+}
+
+.r{
+    background:var(--red);
+}
+
+.w{
+    background:#44403c;
+    color:var(--org);
+}
+
+.c2{
+    background:var(--cy);
+}
+
 .sc-sw{width:52px;height:28px;border-radius:14px;border:0;background:#d4d4d8;position:relative;transition:background .2s}
 .sc-sw::after{content:'';position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .2s}
 .sc-sw[aria-checked=true]{background:var(--ind)}.sc-sw[aria-checked=true]::after{transform:translateX(24px)}

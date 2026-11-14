@@ -7,14 +7,8 @@ button,input,select{font:inherit;color:inherit}
 button{cursor:pointer}
 :focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
 .fn-app{min-height:100vh;display:flex;flex-direction:column;position:relative}
-.fn-nav{height:87px;background:var(--nav);display:flex;align-items:center;justify-content:space-between;padding:0 24px}
-.fn-logo{font-size:40px;font-weight:700;letter-spacing:-1px}
-.fn-links{display:flex;gap:26px;font-weight:600;font-size:17px}
 .fn-links a{color:#fff;text-decoration:none;padding-bottom:4px;border-bottom:3px solid transparent}
 .fn-links a.active{color:var(--cyan);border-color:var(--cyan)}
-.fn-user{display:flex;align-items:center;gap:12px}
-.fn-avatar{width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,#a5b4fc,#e9d5ff)}
-.fn-logout{background:none;border:0;font-size:28px}
 .fn-sub{height:50px;border-bottom:1px solid #1e293b;display:flex;align-items:center;justify-content:space-between;padding:0 30px}
 .fn-title{font-size:21px;color:#94a3b8}
 .fn-actions{display:flex;gap:14px}
