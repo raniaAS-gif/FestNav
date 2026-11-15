@@ -11,11 +11,20 @@
 .check{width:28px;height:28px;border-radius:5px;border:2px solid var(--line);background:#334155;display:grid;place-items:center;font-size:22px;line-height:1;margin-left:auto;margin-right:16px;padding:0}
 .state{padding:36px;text-align:center;color:var(--muted)}
 .fac-err{margin:10px 30px 0;padding:10px 16px;border-radius:10px;background:#450a0a;border:1px solid var(--red);color:#fecaca}
-.fac-modal{max-height:92vh;overflow:auto}
-.fac-modal h2{font-size:28px}
 .fac-modal label .req{color:#f87171}
 .field.bad{border-color:var(--red)}
 textarea.field{height:84px;padding:12px 18px;resize:vertical}
 .msg{margin:6px 4px 0;font-size:14px;color:#fca5a5}
 .help{margin:6px 4px 0;font-size:13px;color:#94a3b8}
 .ro{line-height:44px}
+
+/* popup: header tetap, isi bisa di-scroll, tombol tetap di bawah */
+.fac-modal{display:flex;flex-direction:column;max-height:min(80vh,560px);padding:0;overflow:hidden}
+.fac-modal h2{margin:0;padding:18px 24px 6px;font-size:26px}
+.fac-body{overflow-y:auto;padding:0 24px 12px;flex:1}
+.fac-modal label{margin:12px 0 5px;font-size:16px}
+.fac-modal .field{height:44px}
+.fac-modal textarea.field{height:72px}
+.fac-modal .modal-actions{margin:0;padding:12px 24px;border-top:1px solid #334155}
+textarea.field{color:#fff}
+.field.dd-btn{padding-right:48px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 20px center}

@@ -106,10 +106,12 @@
 
 /* Content Container (Lebar Samakan 950px) */
 .tambah-content {
-  max-width: 950px;
-  margin: 0 auto;
-  padding: 0 20px;
+  width: 100%;
   box-sizing: border-box;
+  padding: 0 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .tambah-card {

@@ -2,12 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import './common.css';
 import './GalleryEvent.css';
-import NavbarEditing from '../components/NavbarEditing';
+import NavbarEditing from '../components/NavbarEditing'
 
 /* Kolom tabel gambar_event: id_gambar, id_event, url_gambar, jenis_gambar, keterangan, waktu_diunggah
    (+ public_id Cloudinary, disarankan ditambah agar file bisa dihapus dari Cloudinary) */
-const JENIS = [['poster', 'Poster'], ['denah', 'Denah'], ['lainnya', 'Lainnya']];
-const GRAD = { poster: 'linear-gradient(135deg,#fde68a,#f472b6)', denah: 'linear-gradient(135deg,#e2e8f0,#a3e635)', lainnya: 'linear-gradient(135deg,#c7d2fe,#818cf8)' };
+const JENIS = [['poster', 'Poster'], ['foto_venue', 'Foto Venue'], ['jadwal', 'Jadwal'], ['lainnya', 'Lainnya']];
+const LABEL = Object.fromEntries(JENIS);
+const JENIS_AWAL = 'lainnya';
+const GRAD = { poster: 'linear-gradient(135deg,#fde68a,#f472b6)', foto_venue: 'linear-gradient(135deg,#bae6fd,#34d399)', jadwal: 'linear-gradient(135deg,#ddd6fe,#6366f1)', lainnya: 'linear-gradient(135deg,#e2e8f0,#94a3b8)' };
 const TIPE = ['image/jpeg', 'image/png', 'image/webp'], MAKS_MB = 10;
 
 /* Thumbnail Cloudinary: sisipkan transformasi setelah /upload/ (url asli tetap disimpan di DB) */
@@ -17,7 +19,7 @@ const tgl = (iso) => new Date(iso).toLocaleDateString('id-ID', { day: 'numeric',
 /* ---------- API ----------
    Bawaan: data tiruan di memori supaya layar bisa dicoba. Ganti dengan httpApi saat backend siap:
    <GalleryEvent api={httpApi} /> */
-const SEED = [['Denah Parkir', 'denah'], ['Denah Lantai 1', 'denah'], ['Denah Tenant', 'denah'], ['Poster Utama', 'poster'], ['Denah Outdoor', 'denah']]
+const SEED = [['Poster Utama', 'poster'], ['Foto Panggung Utama', 'foto_venue'], ['Jadwal Acara Hari 1', 'jadwal'], ['Poster Line Up', 'poster'], ['Foto Area Kuliner', 'foto_venue'], ['Jadwal Acara Hari 2', 'jadwal'], ['Spanduk Sponsor', 'lainnya']]
   .map(([k, j], i) => ({ id_gambar: i + 1, id_event: 1, url_gambar: '', public_id: null, jenis_gambar: j, keterangan: k, waktu_diunggah: new Date(Date.now() - i * 864e5).toISOString() }));
 const mockApi = (() => {
   let rows = [...SEED];
@@ -48,7 +50,7 @@ export default function GalleryEvent({ idEvent, namaEvent = 'Dies Natalis Udayan
   const [modeHapus, setModeHapus] = useState(false);
   const [dipilih, setDipilih] = useState([]);
   const [modal, setModal] = useState(null); // 'tambah' | 'hapus'
-  const [form, setForm] = useState({ file: null, preview: '', keterangan: '', jenis: '' });
+  const [form, setForm] = useState({ file: null, preview: '', keterangan: '', jenis: JENIS_AWAL });
   const [formErr, setFormErr] = useState('');
   const [busy, setBusy] = useState(false);
   const input = useRef();
@@ -62,7 +64,7 @@ export default function GalleryEvent({ idEvent, namaEvent = 'Dies Natalis Udayan
   const terpilih = items.filter((d) => dipilih.includes(d.id_gambar));
   const toggle = (k) => setDipilih((s) => (s.includes(k) ? s.filter((x) => x !== k) : [...s, k]));
 
-  const tutup = () => { if (busy) return; if (form.preview) URL.revokeObjectURL(form.preview); setModal(null); setForm({ file: null, preview: '', keterangan: '', jenis: '' }); setFormErr(''); };
+  const tutup = () => { if (busy) return; if (form.preview) URL.revokeObjectURL(form.preview); setModal(null); setForm({ file: null, preview: '', keterangan: '', jenis: JENIS_AWAL }); setFormErr(''); };
   const pilihFile = (e) => {
     const f = e.target.files?.[0]; e.target.value = ''; if (!f) return;
     if (!TIPE.includes(f.type)) return setFormErr('Format harus JPG, PNG, atau WebP.');
@@ -73,7 +75,6 @@ export default function GalleryEvent({ idEvent, namaEvent = 'Dies Natalis Udayan
   const unggah = async () => {
     if (!form.file) return setFormErr('Pilih gambar terlebih dahulu.');
     if (!form.keterangan.trim()) return setFormErr('Nama gambar wajib diisi.');
-    if (!form.jenis) return setFormErr('Pilih jenis gambar.');
     setBusy(true); setFormErr('');
     try {
       const baru = await api.upload(id, { file: form.file, keterangan: form.keterangan.trim(), jenis: form.jenis });
@@ -125,7 +126,7 @@ export default function GalleryEvent({ idEvent, namaEvent = 'Dies Natalis Udayan
               <figcaption className="gal-cap">
                 <div style={{ minWidth: 0 }}>
                   <div className="gal-name" title={d.keterangan}>{d.keterangan}</div>
-                  <div className="gal-meta"><span className="gal-badge">{d.jenis_gambar}</span>{tgl(d.waktu_diunggah)}</div>
+                  <div className="gal-meta"><span className="gal-badge">{LABEL[d.jenis_gambar] ?? d.jenis_gambar}</span>{tgl(d.waktu_diunggah)}</div>
                 </div>
                 {modeHapus && <button className="gal-check" aria-label={`Pilih ${d.keterangan}`} aria-pressed={dipilih.includes(d.id_gambar)} onClick={() => toggle(d.id_gambar)}>{dipilih.includes(d.id_gambar) ? '✓' : ''}</button>}
               </figcaption>
@@ -144,7 +145,7 @@ export default function GalleryEvent({ idEvent, namaEvent = 'Dies Natalis Udayan
             <input ref={input} type="file" accept={TIPE.join(',')} hidden onChange={pilihFile} />
             <input className="field" style={{ marginTop: 14 }} placeholder="Tambahkan nama gambar..." aria-label="Nama gambar" value={form.keterangan} onChange={(e) => setForm({ ...form, keterangan: e.target.value })} />
             <select className="field" style={{ marginTop: 10 }} aria-label="Jenis gambar" value={form.jenis} onChange={(e) => setForm({ ...form, jenis: e.target.value })}>
-              <option value="">Pilih jenis gambar...</option>{JENIS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+              {JENIS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
             </select>
             {formErr && <p className="form-err" role="alert">{formErr}</p>}
             <div className="modal-actions" style={{ marginTop: 12 }}>
