@@ -40,10 +40,12 @@
 
 /* Main Content Wrapper */
 .detail-eo-content {
-  max-width: 900px;
-  margin: 24px auto 0 auto;
-  padding: 0 20px;
+  width: 100%;
   box-sizing: border-box;
+  padding: 0 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 /* Demo Simulator Bar (Untuk Testing Frontend) */

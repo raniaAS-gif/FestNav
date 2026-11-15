@@ -1,23 +1,27 @@
 import { useEffect, useState } from 'react';
-import { NavLink, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import './common.css';
 import './FacilityManagement.css';
-import NavbarEditing from '../components/NavbarEditing';
+import NavbarEditing from '../components/NavbarEditing'
 
 export const JENIS_ZONA = {
-  'Panggung / Stage': '#8b5cf6', Kuliner: '#f59e0b', 'Bazzar / Tenant': '#10b981',
-  'Fasilitas Umum': '#0ea5e9', Parkir: '#64748b', VIP: '#f43f5e',
+  'Panggung / Stage': '#8b5cf6',
+  Kuliner: '#f59e0b',
+  'Bazzar / Tenant': '#10b981',
+  'Fasilitas Umum': '#0ea5e9',
+  Parkir: '#64748b',
+  VIP: '#f43f5e',
 };
 
 const JENIS = Object.keys(JENIS_ZONA);
-const STATUS = [['aktif', 'Aktif'], ['nonaktif', 'Nonaktif']]; // sesuaikan dengan nilai kolom fasilitas.status
-const KOSONG = { id_map: '', nama_fasilitas: '', jenis_fasilitas: '', nama_penanda: '', deskripsi: '', status: 'aktif' };
+const STATUS = [['buka', 'Buka'], ['penuh', 'Penuh'], ['tutup', 'Tutup']]; // nilai kolom fasilitas.status
+const KOSONG = { id_map: '', nama_fasilitas: '', jenis_fasilitas: '', nama_penanda: '', deskripsi: '', status: 'buka' };
 
 /* ---------- API ----------
    fasilitas + penanda_lokasi dibuat/diubah/dihapus bersamaan (satu transaksi di backend).
    Bawaan: data tiruan di memori. Ganti dengan httpApi saat backend siap. */
 const PETA = [{ id_map: 1, nama_map: 'Day 1: Lapangan Rektorat' }, { id_map: 2, nama_map: 'Day 2: Gedung Rektorat' }];
-const F = (id, nama, jenis, mk, placed = true) => ({ id_fasilitas: id, id_map: 1, nama_fasilitas: nama, jenis_fasilitas: jenis, deskripsi: '', status: 'aktif',
+const F = (id, nama, jenis, mk, placed = true) => ({ id_fasilitas: id, id_map: 1, nama_fasilitas: nama, jenis_fasilitas: jenis, deskripsi: '', status: 'buka',
   penanda: { id_penanda: id, nama_penanda: mk, garis_lintang: placed ? -8.6724 : null, garis_bujur: placed ? 115.2362 : null } });
 const mockApi = (() => {
   let rows = [F(1, 'Toilet Utara', 'Fasilitas Umum', 'T1'), F(2, 'Food Court A', 'Kuliner', 'F1'), F(3, 'Panggung Utama', 'Panggung / Stage', 'P1'),
@@ -44,8 +48,8 @@ export const httpApi = {
 function JenisSelect({ value, onChange, bad }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="dd">
-      <button type="button" className={`field ${bad ? 'bad' : ''}`} style={{ textAlign: 'left' }} aria-haspopup="listbox" aria-expanded={open} onClick={() => setOpen(!open)}>
+    <div className="dd" onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setOpen(false); }}>
+      <button type="button" className={`field dd-btn ${bad ? 'bad' : ''}`} style={{ textAlign: 'left' }} aria-haspopup="listbox" aria-expanded={open} onClick={() => setOpen(!open)}>
         {value ? <span className="jenis"><span className="dot" style={{ background: JENIS_ZONA[value] }} />{value}</span> : <span className="placeholder">Pilih jenis fasilitas..</span>}
       </button>
       {open && (
@@ -138,7 +142,7 @@ export default function FacilityManagement({ idEvent, namaEvent = 'Dies Natalis 
                 <span style={{ fontSize: 14, color: '#cbd5e1' }}>{namaPeta(d.id_map)}</span>
                 {modeHapus
                   ? <button className="check" aria-label={`Pilih ${d.nama_fasilitas}`} aria-pressed={dipilih.includes(d.id_fasilitas)} onClick={() => toggle(d.id_fasilitas)}>{dipilih.includes(d.id_fasilitas) ? '✓' : ''}</button>
-                  : <button className="btn-edit" onClick={() => buka('edit', { id_fasilitas: d.id_fasilitas, id_map: d.id_map, nama_fasilitas: d.nama_fasilitas, jenis_fasilitas: d.jenis_fasilitas, nama_penanda: d.penanda.nama_penanda, deskripsi: d.deskripsi ?? '', status: d.status ?? 'aktif' })}>Edit</button>}
+                  : <button className="btn-edit" onClick={() => buka('edit', { id_fasilitas: d.id_fasilitas, id_map: d.id_map, nama_fasilitas: d.nama_fasilitas, jenis_fasilitas: d.jenis_fasilitas, nama_penanda: d.penanda.nama_penanda, deskripsi: d.deskripsi ?? '', status: d.status ?? 'buka' })}>Edit</button>}
               </div>
             ))}
         </div>
@@ -148,6 +152,7 @@ export default function FacilityManagement({ idEvent, namaEvent = 'Dies Natalis 
         <div className="overlay" onClick={tutup}>
           <div className="modal fac-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
             <h2>{modal.tipe === 'tambah' ? 'Tambah Fasilitas' : 'Edit Fasilitas'}</h2>
+            <div className="fac-body">
 
             <label htmlFor="nf">NAMA FASILITAS <span className="req">*</span></label>
             <input id="nf" className={`field ${errs.nama_fasilitas ? 'bad' : ''}`} placeholder="Masukkan nama fasilitas.." value={f.nama_fasilitas} onChange={(e) => setForm('nama_fasilitas', e.target.value)} />
@@ -174,6 +179,7 @@ export default function FacilityManagement({ idEvent, namaEvent = 'Dies Natalis 
             <select id="st" className="field" value={f.status} onChange={(e) => setForm('status', e.target.value)}>{STATUS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
 
             {errs.umum && <p className="msg" role="alert">{errs.umum}</p>}
+            </div>
             <div className="modal-actions">
               <button className="btn btn-ghost" onClick={tutup} disabled={busy}>Batal</button>
               <button className="btn btn-solid" onClick={simpan} disabled={busy}>{busy ? 'Menyimpan…' : modal.tipe === 'tambah' ? 'Tambah' : 'Simpan'}</button>
@@ -186,6 +192,7 @@ export default function FacilityManagement({ idEvent, namaEvent = 'Dies Natalis 
         <div className="overlay" onClick={tutup}>
           <div className="modal danger fac-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
             <h2>Hapus Fasilitas</h2>
+            <div className="fac-body">
             {terpilih.map((d) => (
               <div key={d.id_fasilitas}>
                 <label>NAMA FASILITAS</label><div className="field ro">{d.nama_fasilitas}</div>
@@ -194,6 +201,7 @@ export default function FacilityManagement({ idEvent, namaEvent = 'Dies Natalis 
               </div>
             ))}
             <p className="help">Marker yang tertaut ikut terhapus dari peta. Tindakan ini tidak dapat dibatalkan.</p>
+            </div>
             <div className="modal-actions">
               <button className="btn btn-red" onClick={tutup} disabled={busy}>Batal</button>
               <button className="btn btn-red on" onClick={hapus} disabled={busy}>{busy ? 'Menghapus…' : 'Hapus'}</button>

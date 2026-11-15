@@ -40,13 +40,12 @@
 
 /* Main Content Wrapper (Standar 950px) */
 .dash-eo-content {
-  max-width: 950px;
-  margin: 25px auto 0 auto;
-  padding: 0 20px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0 18px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  box-sizing: border-box;
+  gap: 20px;
 }
 
 /* White Card Container */
