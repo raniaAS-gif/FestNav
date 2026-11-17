@@ -45,11 +45,11 @@ function NavbarEO() {
 
           {/* User Profile & Logout */}
           <div className="user-profile">
-            {/* Klik Nama / Avatar -> Ke Profile EO */}
+            {/* Klik Nama / Avatar -> Ke Profile Admin dengan tetap menggunakan Navbar EO */}
             <div
               className="user-info-clickable"
-              onClick={() => navigate('/profile-eo')}
-              title="Lihat Profil EO"
+              onClick={() => navigate('/profile-admin', { state: { fromEO: true } })}
+              title="Lihat Profil Admin"
             >
               <span className="user-name">EO Esai</span>
               <div className="avatar-placeholder">👤</div>

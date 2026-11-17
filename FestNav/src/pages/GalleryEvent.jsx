@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import './common.css';
 import './GalleryEvent.css';
 import NavbarEditing from '../components/NavbarEditing';
@@ -119,9 +119,16 @@ export default function GalleryEvent({
   api = mockApi,
 }) {
   const params = useParams();
-  const id = idEvent ?? params.idEvent ?? 1;
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const id = idEvent ?? location.state?.idEvent ?? params.idEvent ?? 1;
+  const judulEvent = location.state?.namaEvent || namaEvent;
+  const asalReview = location.state?.from;
+
   const [items, setItems] = useState([]);
   const [adaPoster, setAdaPoster] = useState(false);
+  const [denahDipilih, setDenahDipilih] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
@@ -242,8 +249,12 @@ export default function GalleryEvent({
     setBusy(true);
     setFormErr('');
     try {
-      if (modal === 'poster') await api.jadikanPoster(item.id_gambar);
-      else await api.jadikanDenah(item.id_gambar, nama);
+      if (modal === 'poster') {
+        await api.jadikanPoster(item.id_gambar);
+      } else {
+        await api.jadikanDenah(item.id_gambar, nama);
+        setDenahDipilih(nama);
+      }
       await muat();
       setBusy(false);
       setModal(null);
@@ -258,6 +269,17 @@ export default function GalleryEvent({
       setBusy(false);
       setFormErr('Gagal memindahkan gambar. Coba lagi.');
     }
+  };
+
+  const kembaliKeReview = () => {
+    navigate(asalReview || '/scraping', {
+      state: {
+        view: 'review',
+        idScraping: location.state?.idScraping,
+        posterSudahDiatur: adaPoster,
+        denahSudahDiatur: denahDipilih,
+      },
+    });
   };
 
   const Img = ({ d, cls }) =>
@@ -276,7 +298,7 @@ export default function GalleryEvent({
     <div className="fn-app">
       <NavbarEditing />
       <div className="fn-sub">
-        <span className="fn-title">{namaEvent}</span>
+        <span className="fn-title">{judulEvent}</span>
         <div className="fn-actions">
           <button className={`btn btn-red ${modeHapus ? 'on' : ''}`} onClick={klikHapus}>
             {modeHapus && dipilih.length ? `Hapus (${dipilih.length})` : 'Hapus'}
@@ -366,6 +388,20 @@ export default function GalleryEvent({
               )}
             </figure>
           ))}
+        </div>
+      )}
+
+      {asalReview && (
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'flex-end',
+            padding: '20px 24px 32px',
+          }}
+        >
+          <button className="btn btn-primary" onClick={kembaliKeReview}>
+            Kembali ke Review Event
+          </button>
         </div>
       )}
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import NavbarAdmin from '../components/NavbarAdmin'
 import NavbarEO from '../components/NavbarEO'
 import './ProfileAdmin.css'
@@ -13,7 +13,10 @@ const getDefaultProfile = (isEO) => ({
 
 function ProfileAdmin({ role = 'admin' }) {
   const navigate = useNavigate()
-  const isEO = role === 'eo'
+  const location = useLocation()
+  const isFromEO = location.state?.fromEO === true
+  const isEO = role === 'eo' && !isFromEO
+  const useEONavbar = role === 'eo' || isFromEO
   const storageKey = isEO ? 'festnav_profile_eo' : 'festnav_profile_admin'
 
   // State Mode Edit (false = Preview Mode / Terkunci, true = Edit Mode)
@@ -83,7 +86,7 @@ function ProfileAdmin({ role = 'admin' }) {
       } catch (err) {
         console.error('Gagal menyimpan profil:', err)
       }
-      console.log(`Update Profil (${role}):`, profileData)
+      console.log(`Update Profil (${isEO ? 'eo' : 'admin'}):`, profileData)
       alert('Profil berhasil diperbarui!')
       setIsEditing(false)
     } else {
@@ -104,8 +107,8 @@ function ProfileAdmin({ role = 'admin' }) {
 
   return (
     <div className="profile-container">
-      {/* Navbar Dinamis sesuai Role */}
-      {isEO ? <NavbarEO /> : <NavbarAdmin />}
+      {/* Navbar Dinamis: Tetap memakai NavbarEO jika diakses dari EO */}
+      {useEONavbar ? <NavbarEO /> : <NavbarAdmin />}
 
       {/* Hero Content Area */}
       <main className="profile-content">

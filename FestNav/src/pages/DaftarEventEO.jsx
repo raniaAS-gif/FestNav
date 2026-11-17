@@ -302,13 +302,6 @@ function DaftarEventEO() {
                 >
                   Request Publish
                 </button>
-                <button
-                  type="button"
-                  className="btn-card-cyan"
-                  onClick={() => navigate('/digitasi-eo', { state: { eventData: evt } })}
-                >
-                  Digitasi
-                </button>
               </div>
             </div>
           ))}

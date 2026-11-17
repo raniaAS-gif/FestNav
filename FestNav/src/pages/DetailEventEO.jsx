@@ -389,42 +389,10 @@ function DetailEventEO() {
 
       <main className="detail-eo-content">
         <div className="demo-simulator-bar">
-          <span className="demo-label">Simulasi Status Event (Testing):</span>
-          <div className="demo-btn-group">
-            <button
-              type="button"
-              className={`demo-pill ${eventStatus === 'draft' ? 'active' : ''}`}
-              onClick={() => {
-                setEventStatus('draft')
-                setWarningDenahId(null)
-                syncEOStorage('draft', denahList)
-              }}
-            >
-              1. Draft / Ditolak
-            </button>
-            <button
-              type="button"
-              className={`demo-pill ${eventStatus === 'pending' ? 'active' : ''}`}
-              onClick={() => {
-                setEventStatus('pending')
-                setWarningDenahId(null)
-                syncEOStorage('pending', denahList)
-              }}
-            >
-              2. Menunggu Verifikasi
-            </button>
-            <button
-              type="button"
-              className={`demo-pill ${eventStatus === 'published' ? 'active' : ''}`}
-              onClick={() => {
-                setEventStatus('published')
-                setWarningDenahId(null)
-                syncEOStorage('published', denahList)
-              }}
-            >
-              3. Sudah Dipublish Admin
-            </button>
-          </div>
+          <span className="demo-label">Status Event:</span>
+          <span className="demo-pill active" style={{ cursor: 'default' }}>
+            {getStatusLabel()}
+          </span>
         </div>
 
         <div className="event-top-header">
@@ -544,8 +512,15 @@ function DetailEventEO() {
                           type="button"
                           className="btn-cyan-denah"
                           onClick={() =>
-                            navigate('/digitasi-eo', {
-                              state: { eventData: buildFullEventPayload(), denah }
+                            navigate('/map-editor', {
+                              state: {
+                                role: 'eo',
+                                eventId: eventInfo.id,
+                                eventTitle: eventInfo.namaEvent,
+                                selectedDenah: { ...denah, title: denah.namaDenah },
+                                eventData: buildFullEventPayload(),
+                                denah
+                              }
                             })
                           }
                         >

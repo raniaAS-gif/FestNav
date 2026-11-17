@@ -111,7 +111,12 @@ function DashboardAdmin() {
           <div className="dash-card">
             <div className="card-header-flex">
               <h3 className="card-title text-cyan">Proses Scrapping</h3>
-              <button className="btn-cyan-small">Laman Scrapping</button>
+              <button
+                className="btn-cyan-small"
+                onClick={() => navigate('/scraping')}
+              >
+                Laman Scrapping
+              </button>
             </div>
             <div className="progress-header">
               <span className="progress-label">{stats.scrapingStatusText}</span>
@@ -149,7 +154,16 @@ function DashboardAdmin() {
                   <h4 className="item-title">{draft.title}</h4>
                   <p className="item-sub">Terakhir diedit: {draft.lastEdited}</p>
                 </div>
-                <button className="btn-cyan-action">Lanjutkan digitasi</button>
+                <button
+                  className="btn-cyan-action"
+                  onClick={() =>
+                    navigate('/detail-event', {
+                      state: { eventId: draft.id, eventTitle: draft.title }
+                    })
+                  }
+                >
+                  Lihat Detail
+                </button>
               </div>
             ))}
           </div>

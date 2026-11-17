@@ -136,6 +136,7 @@ export default function MapEditor({
 }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const isEO = location.state?.role === 'eo';
 
   const initView = { lat: mapData.garis_lintang_pusat, lng: mapData.garis_bujur_pusat, zoom: ZOOM_AWAL };
   const [mapView, setMapView] = useState(initView);
@@ -589,7 +590,10 @@ export default function MapEditor({
   const svgInteractive = isDrawing || dragging;
 
   const displayEventTitle = location.state?.eventTitle || namaEvent;
-  const displayMapTitle = location.state?.selectedDenah?.title || mapData.nama_map;
+  const displayMapTitle =
+    location.state?.selectedDenah?.title ||
+    location.state?.denah?.namaDenah ||
+    mapData.nama_map;
 
   return (
     <div className="fn-app" style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -825,7 +829,7 @@ export default function MapEditor({
               className="btn"
               style={{ height: 34, borderColor: '#334155', padding: '0 36px' }}
               onClick={() =>
-                navigate('/detail-event', {
+                navigate(isEO ? '/detail-event-eo' : '/detail-event', {
                   state: {
                     eventId: location.state?.eventId,
                     eventTitle: location.state?.eventTitle,
@@ -921,7 +925,7 @@ export default function MapEditor({
                 className="btn btn-cyan"
                 onClick={() => {
                   setNavModal(null);
-                  navigate('/dashboard');
+                  navigate(isEO ? '/dashboard-eo' : '/dashboard');
                 }}
               >
                 Ya, Kembali
