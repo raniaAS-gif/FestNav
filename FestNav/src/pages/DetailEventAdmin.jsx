@@ -278,7 +278,7 @@ function DetailEventAdmin() {
                       Publish
                     </button>
                   )}
-                  <button className="btn-cyan-wide">Buka Map Editor</button>
+                  <button className="btn-cyan-wide" onClick={() => navigate('/map-editor', { state: { eventId: eventData.id, eventTitle: eventData.title, eventData, selectedDenah: denah }, }) } > Buka Map Editor </button>
                 </div>
               </div>
             ))}
