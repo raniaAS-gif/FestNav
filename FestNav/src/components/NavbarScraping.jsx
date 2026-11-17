@@ -18,12 +18,16 @@ export default function AdminNavbar({ userName = 'Admin Esai', avatarUrl, onLogo
   return (
     <>
       <nav className="scraping-navbar">
-        <div className="nav-brand" onClick={() => navigate('/admin')}>
+        <div
+          className="nav-brand"
+          style={{ cursor: 'pointer' }}
+          onClick={() => navigate('/dashboard')}
+        >
           FestNav
         </div>
 
         <div className="user-profile">
-          <div className="user-info-clickable" onClick={() => navigate('/profile')}>
+          <div className="user-info-clickable" onClick={() => navigate('/profile-admin')}>
             <span className="user-name">{userName}</span>
             <div className="avatar-placeholder">
               {avatarUrl ? <img src={avatarUrl} alt="Avatar" /> : '👤'}

@@ -3,34 +3,42 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import NavbarAdmin from '../components/NavbarAdmin'
 import './DetailEventAdmin.css'
 
-const DEFAULT_FALLBACK_EVENT = {
+const DEFAULT_POSTER_URL =
+  'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=600&q=80'
+
+const DEFAULT_DENAH_IMAGES = [
+  'https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&w=1000&q=80',
+  'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1000&q=80'
+]
+
+const DEFAULT_ADMIN_EVENT = {
   id: 1,
-  title: 'Dies Natalis Udayana 2026',
-  posterUrl: '',
   namaEvent: 'Dies Natalis Udayana 2026',
-  tanggalEvent: '21 Oktober 2025 - 31 Desember 2025',
+  tanggalEvent: '21 Oktober 2025 – 31 Desember 2025',
   lokasiEvent: 'Rektorat Universitas Udayana',
   jenisEvent: 'Event Indoor & Outdoor',
   eventOrganizer: 'Universitas Udayana',
   sumber: 'Kerjasama Event Organizer',
-  status: 'Sudah Dipublish',
+  status: 'Draft',
+  posterUrl: DEFAULT_POSTER_URL,
   deskripsiSingkat:
-    'ini adalah itu, itu adalah ini, lalu dia adalah saya, saya adalh kami, kami adalah rambut, rambut adalah bok, bok adalah sayuran, sayuran adalah nama gang, dan lain sebagainya.',
+    'Informasi dan panduan denah resmi kegiatan untuk navigasi pengunjung.',
   denahList: [
     {
-      id: 'day-1',
-      title: 'Day 1: Lapangan Rektorat',
-      mapUrl: ''
+      id: 1,
+      namaDenah: 'Day 1: Lapangan Rektorat',
+      status: 'draft',
+      imageUrl: DEFAULT_DENAH_IMAGES[0]
     },
     {
-      id: 'day-2',
-      title: 'Day 2: Gedung Rektorat',
-      mapUrl: ''
+      id: 2,
+      namaDenah: 'Day 2: Gedung Rektorat',
+      status: 'draft',
+      imageUrl: DEFAULT_DENAH_IMAGES[1]
     }
   ]
 }
 
-// Helper untuk menyusun jenis event dari array tags jika belum tersedia eksplisit
 function resolveJenisFromTags(tags = []) {
   const labels = tags.map((t) => t.label)
   const hasIndoor = labels.includes('Event Indoor')
@@ -45,11 +53,9 @@ function DetailEventAdmin() {
   const navigate = useNavigate()
   const location = useLocation()
 
-  // State Data Event Dinamis (dari navigasi DaftarEventAdmin / localStorage)
-  const [eventData, setEventData] = useState(() => {
+  const [resolvedSource] = useState(() => {
     const navState = location.state || {}
 
-    // Cari data lengkap event di localStorage berdasarkan id atau title
     let storedEvent = null
     try {
       const savedList = JSON.parse(localStorage.getItem('festnav_admin_events') || '[]')
@@ -65,312 +71,321 @@ function DetailEventAdmin() {
       storedEvent = null
     }
 
-    const source = navState.eventData || storedEvent
-    const resolvedTitle =
-      navState.eventTitle || source?.title || DEFAULT_FALLBACK_EVENT.title
-    const isDefaultEvent = resolvedTitle === DEFAULT_FALLBACK_EVENT.title
-
+    const source = storedEvent || navState.eventData
     if (!source && !navState.eventTitle) {
-      return DEFAULT_FALLBACK_EVENT
+      return DEFAULT_ADMIN_EVENT
     }
 
-    const resolvedDate =
-      navState.eventDate ||
-      source?.tanggalEvent ||
-      source?.dateRange ||
-      DEFAULT_FALLBACK_EVENT.tanggalEvent
+    const title =
+      navState.eventTitle || source?.namaEvent || source?.title || DEFAULT_ADMIN_EVENT.namaEvent
+    const isDefault = title === DEFAULT_ADMIN_EVENT.namaEvent
 
     const resolvedStatus =
-      navState.eventStatus || source?.status || DEFAULT_FALLBACK_EVENT.status
-
-    const resolvedSumber =
-      source?.sumber ||
-      source?.tags?.[0]?.label ||
-      (source?.type === 'scrapping'
-        ? 'Hasil Scrapping'
-        : 'Kerjasama Event Organizer')
-
-    const resolvedJenis =
-      source?.jenisEvent ||
-      (source?.tags ? resolveJenisFromTags(source.tags) : DEFAULT_FALLBACK_EVENT.jenisEvent)
+      storedEvent?.status || navState.eventStatus || source?.status || 'Draft'
 
     const resolvedDenah =
       Array.isArray(source?.denahList) && source.denahList.length > 0
         ? source.denahList.map((d, idx) => ({
-            id: d.id || `denah-${idx + 1}`,
-            title: d.title || d.namaDenah || `Denah ${idx + 1}`,
-            mapUrl: d.mapUrl || d.imageUrl || ''
+            id: d.id || idx + 1,
+            namaDenah: d.namaDenah || d.title || `Denah ${idx + 1}`,
+            status: d.status || 'draft',
+            imageUrl:
+              d.imageUrl ||
+              d.mapUrl ||
+              DEFAULT_DENAH_IMAGES[idx % DEFAULT_DENAH_IMAGES.length]
           }))
-        : isDefaultEvent
-        ? DEFAULT_FALLBACK_EVENT.denahList
+        : Array.isArray(navState.denah) && navState.denah.length > 0
+        ? navState.denah
+        : isDefault
+        ? DEFAULT_ADMIN_EVENT.denahList
         : [
             {
-              id: 'denah-1',
-              title: `Denah Utama - ${resolvedTitle}`,
-              mapUrl: ''
+              id: 1,
+              namaDenah: `Denah Utama - ${title}`,
+              status: 'draft',
+              imageUrl: DEFAULT_DENAH_IMAGES[0]
             }
           ]
 
     return {
       id: source?.id || navState.eventId || Date.now(),
-      title: resolvedTitle,
-      posterUrl: source?.posterUrl || '',
-      namaEvent: source?.namaEvent || resolvedTitle,
-      tanggalEvent: resolvedDate,
+      namaEvent: title,
+      tanggalEvent:
+        navState.eventDate ||
+        source?.tanggalEvent ||
+        source?.dateRange ||
+        DEFAULT_ADMIN_EVENT.tanggalEvent,
       lokasiEvent:
+        navState.location ||
         source?.lokasiEvent ||
-        (isDefaultEvent ? DEFAULT_FALLBACK_EVENT.lokasiEvent : 'Bali, Indonesia'),
-      jenisEvent: resolvedJenis,
+        (isDefault ? DEFAULT_ADMIN_EVENT.lokasiEvent : 'Bali, Indonesia'),
+      jenisEvent:
+        source?.jenisEvent ||
+        (source?.tags ? resolveJenisFromTags(source.tags) : DEFAULT_ADMIN_EVENT.jenisEvent),
       eventOrganizer:
         source?.eventOrganizer ||
-        (isDefaultEvent ? DEFAULT_FALLBACK_EVENT.eventOrganizer : 'Panitia Penyelenggara'),
-      sumber: resolvedSumber,
+        (isDefault ? DEFAULT_ADMIN_EVENT.eventOrganizer : 'EO Esai'),
+      sumber:
+        source?.sumber ||
+        (source?.type === 'scrapping' ? 'Hasil Scrapping' : 'Kerjasama Event Organizer'),
       status: resolvedStatus,
+      posterUrl: navState.posterUrl || source?.posterUrl || DEFAULT_POSTER_URL,
       deskripsiSingkat:
+        navState.description ||
         source?.deskripsiSingkat ||
-        (isDefaultEvent
-          ? DEFAULT_FALLBACK_EVENT.deskripsiSingkat
-          : `Informasi dan panduan denah resmi untuk kegiatan ${resolvedTitle}.`),
+        (isDefault
+          ? DEFAULT_ADMIN_EVENT.deskripsiSingkat
+          : `Informasi dan panduan denah resmi untuk kegiatan ${title}.`),
       denahList: resolvedDenah
     }
   })
 
-  // State Overlay Modal: null, 'publish', 'unpublish', 'delete-warning', 'delete-success'
-  const [activeModal, setActiveModal] = useState(null)
+  const [eventStatus, setEventStatus] = useState(resolvedSource.status)
+  const [denahList, setDenahList] = useState(resolvedSource.denahList)
+  const [showPublishModal, setShowPublishModal] = useState(false)
 
-  const isPublished = eventData.status === 'Sudah Dipublish'
+  const eventInfo = {
+    id: resolvedSource.id,
+    namaEvent: resolvedSource.namaEvent,
+    tanggalEvent: resolvedSource.tanggalEvent,
+    lokasiEvent: resolvedSource.lokasiEvent,
+    jenisEvent: resolvedSource.jenisEvent,
+    eventOrganizer: resolvedSource.eventOrganizer,
+    sumber: resolvedSource.sumber,
+    posterUrl: resolvedSource.posterUrl,
+    deskripsiSingkat: resolvedSource.deskripsiSingkat
+  }
 
-  // Sinkronkan perubahan status ke localStorage agar DaftarEventAdmin ikut terupdate
-  const syncStatusToStorage = (newStatus, newColor) => {
+  const buildFullEventPayload = (overrideStatus = eventStatus) => ({
+    ...eventInfo,
+    title: eventInfo.namaEvent,
+    dateRange: eventInfo.tanggalEvent,
+    status: overrideStatus,
+    denahList
+  })
+
+  const syncAdminStorage = (nextStatus, nextDenahList = denahList) => {
     try {
       const savedList = JSON.parse(localStorage.getItem('festnav_admin_events') || '[]')
       if (Array.isArray(savedList) && savedList.length > 0) {
-        const updatedList = savedList.map((item) =>
-          item.id === eventData.id || item.title === eventData.title
-            ? { ...item, status: newStatus, statusColor: newColor }
-            : item
-        )
+        const updatedList = savedList.map((item) => {
+          if (item.id !== eventInfo.id && item.title !== eventInfo.namaEvent) {
+            return item
+          }
+          return {
+            ...item,
+            status: nextStatus,
+            statusColor: nextStatus === 'Sudah Dipublish' ? '#3b82f6' : '#3730a3',
+            denahList: nextDenahList
+          }
+        })
         localStorage.setItem('festnav_admin_events', JSON.stringify(updatedList))
       }
     } catch (err) {
-      console.error('Gagal memperbarui status event:', err)
+      console.error('Gagal menyinkronkan status event admin:', err)
     }
   }
 
-  // Handler Publish & Unpublish
-  const handlePublish = () => {
-    setEventData((prev) => ({ ...prev, status: 'Sudah Dipublish' }))
-    syncStatusToStorage('Sudah Dipublish', '#3b82f6')
-    setActiveModal('publish')
+  const handlePublishEvent = () => {
+    setEventStatus('Sudah Dipublish')
+    syncAdminStorage('Sudah Dipublish', denahList)
+    setShowPublishModal(true)
   }
 
-  const handleUnpublish = () => {
-    setEventData((prev) => ({ ...prev, status: 'Belum dipublish' }))
-    syncStatusToStorage('Belum Dipublish', '#3730a3')
-    setActiveModal('unpublish')
-  }
-
-  // Handler Hapus Event
-  const handleOpenDeleteModal = () => {
-    setActiveModal('delete-warning')
-  }
-
-  const handleConfirmDelete = () => {
-    try {
-      const savedList = JSON.parse(localStorage.getItem('festnav_admin_events') || '[]')
-      if (Array.isArray(savedList) && savedList.length > 0) {
-        const updatedList = savedList.filter(
-          (item) => item.id !== eventData.id && item.title !== eventData.title
-        )
-        localStorage.setItem('festnav_admin_events', JSON.stringify(updatedList))
-      }
-    } catch (err) {
-      console.error('Gagal menghapus event:', err)
-    }
-    setActiveModal('delete-success')
-  }
-
-  const handleCloseDeleteSuccess = () => {
-    setActiveModal(null)
-    navigate('/daftar-event')
+  const handlePublishDenah = (denahId) => {
+    const updatedDenah = denahList.map((item) =>
+      item.id === denahId ? { ...item, status: 'published' } : item
+    )
+    setDenahList(updatedDenah)
+    syncAdminStorage(eventStatus, updatedDenah)
+    setShowPublishModal(true)
   }
 
   return (
-    <div className="detail-container">
-      {/* Navbar */}
+    <div className="detail-eo-container">
       <NavbarAdmin />
 
-      {/* Hero Header */}
-      <div className="detail-hero">
+      <div className="detail-eo-hero">
         <h1 className="hero-title">Detail Event</h1>
         <p className="hero-subtitle">Festival Navigation</p>
       </div>
 
-      {/* Main Content Area */}
-      <main className="detail-content">
-        {/* Title Bar with Actions */}
-        <div className="detail-header-bar">
-          <h2 className="event-main-title">{eventData.title}</h2>
-          <div className="header-actions">
-            <button className="btn-danger-sm" onClick={handleOpenDeleteModal}>
-              Hapus
-            </button>
-            <button
-              className="btn-cyan-sm"
-              onClick={() => navigate('/edit-event', { state: { eventData, role: 'admin' } })}
-            >
-              Edit Detail
-            </button>
-          </div>
+      <main className="detail-eo-content">
+        <div className="event-top-header">
+          <h2 className="event-main-title">{eventInfo.namaEvent}</h2>
+          <button
+            type="button"
+            className="btn-cyan-edit"
+            onClick={() =>
+              navigate('/edit-event', {
+                state: { eventData: buildFullEventPayload(), role: 'admin' }
+              })
+            }
+          >
+            Edit Detail
+          </button>
         </div>
 
-        {/* Main Event Card */}
-        <div className="detail-card">
-          <div className="info-grid">
-            <div className="poster-container">
-              {eventData.posterUrl ? (
-                <img src={eventData.posterUrl} alt="Event Poster" className="poster-img" />
-              ) : (
-                <div className="poster-placeholder">
-                  <span>[ Tempat Poster Event ]</span>
-                </div>
-              )}
+        <div className="detail-eo-card">
+          <div className="detail-top-grid">
+            <div className="poster-box">
+              <img
+                src={eventInfo.posterUrl}
+                alt={eventInfo.namaEvent}
+                className="event-poster-img"
+              />
             </div>
 
-            <div className="info-details">
-              <p><strong>Nama Event:</strong> {eventData.namaEvent}</p>
-              <p><strong>Tanggal Event:</strong> {eventData.tanggalEvent}</p>
-              <p><strong>Lokasi Event:</strong> {eventData.lokasiEvent}</p>
-              <p><strong>Jenis Event:</strong> {eventData.jenisEvent}</p>
-              <p><strong>Event Organizer:</strong> {eventData.eventOrganizer}</p>
-              <p><strong>Sumber:</strong> {eventData.sumber}</p>
-              <p><strong>Status:</strong> {eventData.status}</p>
+            <div className="metadata-list">
+              <p>
+                <strong>Nama Event:</strong> {eventInfo.namaEvent}
+              </p>
+              <p>
+                <strong>Tanggal Event:</strong> {eventInfo.tanggalEvent}
+              </p>
+              <p>
+                <strong>Lokasi Event:</strong> {eventInfo.lokasiEvent}
+              </p>
+              <p>
+                <strong>Jenis Event:</strong> {eventInfo.jenisEvent}
+              </p>
+              <p>
+                <strong>Event Organizer:</strong> {eventInfo.eventOrganizer}
+              </p>
+              <p>
+                <strong>Sumber:</strong> {eventInfo.sumber}
+              </p>
+              <p>
+                <strong>Status:</strong> {eventStatus}
+              </p>
 
-              <div className="description-box">
-                <p><strong>Deskripsi Singkat:</strong></p>
-                <p className="desc-text">{eventData.deskripsiSingkat}</p>
+              <div className="deskripsi-block">
+                <strong>Deskripsi Singkat:</strong>
+                <p className="deskripsi-text">{eventInfo.deskripsiSingkat}</p>
               </div>
             </div>
           </div>
 
-          <hr className="divider" />
+          <hr className="detail-divider" />
 
-          {/* Denah Acara Section */}
-          <div className="denah-section">
-            <h3 className="section-title text-cyan">Denah Acara</h3>
+          <div className="denah-acara-section">
+            <h2 className="denah-section-heading">Denah Acara</h2>
 
-            {eventData.denahList.map((denah) => (
-              <div key={denah.id} className="map-block">
-                <h4 className="map-title">{denah.title}</h4>
-                <div className="map-container">
-                  {denah.mapUrl ? (
-                    <img src={denah.mapUrl} alt={denah.title} className="map-img" />
-                  ) : (
-                    <div className="map-placeholder">
-                      <span>[ Tempat Gambar Denah: {denah.title} ]</span>
-                    </div>
-                  )}
+            {denahList.map((denah) => (
+              <div key={denah.id} className="denah-item-wrapper">
+                <div className="denah-title-row">
+                  <h3 className="denah-item-name">{denah.namaDenah}</h3>
                 </div>
 
-                <div className="map-actions">
-                  {isPublished && (
-                    <button className="btn-cyan-wide" onClick={handlePublish}>
-                      Publish
-                    </button>
-                  )}
-                  <button className="btn-cyan-wide" onClick={() => navigate('/map-editor', { state: { eventId: eventData.id, eventTitle: eventData.title, eventData, selectedDenah: denah }, }) } > Buka Map Editor </button>
+                <div className="denah-image-frame">
+                  <img
+                    src={denah.imageUrl}
+                    alt={denah.namaDenah}
+                    className="denah-map-img"
+                  />
+                </div>
+
+                <div className="denah-btn-row">
+                  <button
+                    type="button"
+                    className="btn-cyan-denah"
+                    onClick={() => handlePublishDenah(denah.id)}
+                  >
+                    {denah.status === 'published' ? 'Sudah Dipublish' : 'Publish Denah'}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-cyan-denah"
+                    onClick={() =>
+                      navigate('/map-editor', {
+                        state: {
+                          role: 'admin',
+                          eventId: eventInfo.id,
+                          eventTitle: eventInfo.namaEvent,
+                          selectedDenah: { ...denah, title: denah.namaDenah },
+                          eventData: buildFullEventPayload(),
+                          denah
+                        }
+                      })
+                    }
+                  >
+                    Buka Map Editor
+                  </button>
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Bottom Global Action Buttons */}
-        <div className="global-actions">
-          <div className="global-btn-row">
-            <button className="btn-green-lg" onClick={handlePublish}>
-              Publish
+        <div className="detail-eo-footer">
+          <div className="footer-dual-buttons">
+            <button
+              type="button"
+              className="btn-cyan-footer"
+              onClick={handlePublishEvent}
+            >
+              Publish Event
             </button>
-            <button className="btn-cyan-lg" onClick={() => navigate('/daftar-event')}>
-              Tutup
+            <button
+              type="button"
+              className="btn-cyan-footer"
+              onClick={() => navigate('/daftar-event')}
+            >
+              Kembali
             </button>
           </div>
-
-          {isPublished && (
-            <button className="btn-red-lg" onClick={handleUnpublish}>
-              Unpublish
-            </button>
-          )}
         </div>
       </main>
 
-      {/* OVERLAY MODAL 1: UNPUBLISHED */}
-      {activeModal === 'unpublish' && (
-        <div className="modal-overlay">
-          <div className="modal-card success-modal">
-            <div className="success-icon-wrapper">
+      {/* MODAL PUBLISHED */}
+      {showPublishModal && (
+        <div
+          onClick={() => setShowPublishModal(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '16px',
+              textAlign: 'center',
+              maxWidth: '380px',
+              width: '90%',
+              padding: '32px 24px',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)'
+            }}
+          >
+            <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}>
               <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
                 <circle cx="32" cy="32" r="30" fill="#22c55e" />
-                <path d="M20 32L28 40L44 24" stroke="white" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />
+                <path
+                  d="M20 32L28 40L44 24"
+                  stroke="white"
+                  strokeWidth="6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               </svg>
             </div>
-            <h3 className="success-message">Berhasil! Konten sudah di unpublish</h3>
-            <button className="btn-modal btn-kembali" onClick={() => setActiveModal(null)}>
-              Kembali
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* OVERLAY MODAL 2: PUBLISHED */}
-      {activeModal === 'publish' && (
-        <div className="modal-overlay">
-          <div className="modal-card success-modal">
-            <div className="success-icon-wrapper">
-              <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
-                <circle cx="32" cy="32" r="30" fill="#22c55e" />
-                <path d="M20 32L28 40L44 24" stroke="white" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-            <h3 className="success-message">Berhasil! Konten sudah dipublish</h3>
-            <button className="btn-modal btn-kembali" onClick={() => setActiveModal(null)}>
-              Kembali
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* OVERLAY MODAL 3: PERINGATAN HAPUS EVENT */}
-      {activeModal === 'delete-warning' && (
-        <div className="modal-overlay">
-          <div className="modal-card warning-modal">
-            <h2 className="warning-title">Peringatan!</h2>
-            <h3 className="warning-subtitle">Yakin menghapus event?</h3>
-            <p className="warning-desc">Event yang dihapus tidak akan bisa dikembalikan lagi</p>
-            <div className="modal-btn-row">
-              <button className="btn-modal btn-cyan-modal" onClick={() => setActiveModal(null)}>
-                Batalkan
-              </button>
-              <button className="btn-modal btn-cyan-modal" onClick={handleConfirmDelete}>
-                Yakin
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* OVERLAY MODAL 4: BERHASIL DIHAPUS */}
-      {activeModal === 'delete-success' && (
-        <div className="modal-overlay">
-          <div className="modal-card success-modal">
-            <div className="success-icon-wrapper">
-              <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
-                <circle cx="32" cy="32" r="30" fill="#22c55e" />
-                <path d="M20 32L28 40L44 24" stroke="white" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-            <h3 className="success-message">Berhasil! Konten sudah dihapus</h3>
-            <button className="btn-modal btn-kembali" onClick={handleCloseDeleteSuccess}>
+            <h3 style={{ fontSize: 20, marginBottom: 24, color: '#0f172a' }}>
+              Berhasil! Konten sudah dipublish
+            </h3>
+            <button
+              type="button"
+              className="btn-cyan-footer"
+              style={{ width: '100%' }}
+              onClick={() => setShowPublishModal(false)}
+            >
               Kembali
             </button>
           </div>

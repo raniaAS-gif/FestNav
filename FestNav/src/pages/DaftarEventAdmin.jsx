@@ -162,12 +162,17 @@ function DaftarEventAdmin() {
     }
   }, [events])
 
-  // Tangkap jika ada state event baru yang dikirim lewat navigasi
+  // Tangkap jika ada state event baru atau activeTab yang dikirim lewat navigasi
   useEffect(() => {
+    if (location.state?.activeTab) {
+      setActiveTab(location.state.activeTab)
+    }
     if (location.state?.newEvent) {
       const incoming = location.state.newEvent
       setEvents((prev) => {
-        if (prev.some((item) => item.id === incoming.id)) return prev
+        if (prev.some((item) => item.id === incoming.id && item.title === incoming.title)) {
+          return prev
+        }
         return [incoming, ...prev]
       })
       if (incoming.type) {
@@ -269,9 +274,16 @@ function DaftarEventAdmin() {
                     onClick={() =>
                       navigate('/detail-event', {
                         state: {
+                          eventId: evt.id,
                           eventTitle: evt.title,
                           eventDate: evt.dateRange,
-                          eventStatus: evt.status
+                          eventStatus: evt.status,
+                          description: evt.description,
+                          location: evt.location,
+                          sourceUrl: evt.sourceUrl,
+                          posterUrl: evt.posterUrl,
+                          denah: evt.denah,
+                          eventData: evt
                         }
                       })
                     }
@@ -284,7 +296,6 @@ function DaftarEventAdmin() {
                   >
                     Hapus
                   </button>
-                  <button className="btn-action btn-digitasi">Digitasi</button>
                 </div>
               </div>
             ))
