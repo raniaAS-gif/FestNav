@@ -4,7 +4,10 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.routers import auth
+from app.routers import auth, events, jenis_fasilitas
+from app.routers import maps
+from app.routers import fasilitas
+from app.routers import rute
 
 app = FastAPI(title="FestNav API", version="1.0.0")
 
@@ -17,6 +20,11 @@ app.add_middleware(
 )
 
 app.include_router(auth.router)
+app.include_router(events.router)
+app.include_router(jenis_fasilitas.router)
+app.include_router(maps.router)
+app.include_router(fasilitas.router)
+app.include_router(rute.router)
 
 
 @app.get("/")

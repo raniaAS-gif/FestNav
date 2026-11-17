@@ -1,5 +1,4 @@
 from passlib.context import CryptContext
-from sqlalchemy import text
 
 from app.database import SessionLocal
 from app.models import Pengelola
@@ -7,28 +6,9 @@ from app.models import Pengelola
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
-def detect_organizer_role(db) -> str:
-    """Membaca CHECK constraint tabel pengelola agar nilai peran 100% sesuai."""
-    row = db.execute(
-        text(
-            """
-            SELECT pg_get_constraintdef(c.oid)
-            FROM pg_constraint c
-            JOIN pg_class t ON c.conrelid = t.oid
-            WHERE t.relname = 'pengelola' AND c.contype = 'c'
-            """
-        )
-    ).scalar()
-    if row and "event_organizer" in row:
-        return "event_organizer"
-    return "organizer"
-
-
 def seed():
     db = SessionLocal()
     try:
-        organizer_role = detect_organizer_role(db)
-
         akun_awal = [
             {
                 "peran": "admin",
@@ -42,7 +22,7 @@ def seed():
                 "aktif": True,
             },
             {
-                "peran": organizer_role,
+                "peran": "event_organizer",
                 "nama": "Organizer Bali Fest",
                 "nama_organisasi": "Nusantara Event Organizer",
                 "deskripsi": "Penyelenggara festival seni, musik, dan budaya.",
@@ -57,11 +37,10 @@ def seed():
         for data in akun_awal:
             existing = db.query(Pengelola).filter(Pengelola.username == data["username"]).first()
             if existing:
-                print(f"[SKIP] Akun '{data['username']}' sudah ada di database.")
+                print(f"[SKIP] Akun '{data['username']}' sudah ada.")
                 continue
 
-            pengelola = Pengelola(**data)
-            db.add(pengelola)
+            db.add(Pengelola(**data))
             print(f"[OK] Membuat akun '{data['username']}' (peran: {data['peran']})")
 
         db.commit()
