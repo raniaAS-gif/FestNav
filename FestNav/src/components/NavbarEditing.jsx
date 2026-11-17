@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import './NavbarEditing.css';
 
-export default function Navbar({ userName, avatarUrl, onLogout }) {
+export default function Navbar({ userName, avatarUrl, onLogout, onBrandClick }) {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const navigate = useNavigate();
 
@@ -19,7 +19,10 @@ export default function Navbar({ userName, avatarUrl, onLogout }) {
     <>
       <nav className="editing-navbar">
         {/* Kiri: Brand */}
-        <div className="nav-brand" onClick={() => navigate('/map-editor')}>
+        <div
+        className="nav-brand"
+        onClick={() => (onBrandClick ? onBrandClick() : navigate('/dashboard'))}
+        >
           FestNav
         </div>
 
