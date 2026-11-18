@@ -118,10 +118,28 @@ function parseDateRangeInput(text) {
   }
 }
 
+// Perbaikan 1: Gunakan 'campuran' (bukan 'hybrid') agar sesuai constraint schemaix.sql
 function mapJenisToTipeLokasi(jenisEvent) {
   if (jenisEvent === 'Event Indoor') return 'indoor'
   if (jenisEvent === 'Event Outdoor') return 'outdoor'
-  return 'hybrid'
+  return 'campuran'
+}
+
+// Perbaikan 3: Urai error validasi FastAPI (array of objects) menjadi string terbaca
+function formatApiError(detail, fallback = 'Gagal menyimpan event baru.') {
+  if (!detail) return fallback
+  if (typeof detail === 'string') return detail
+  if (Array.isArray(detail)) {
+    return detail
+      .map((item) => {
+        const field = Array.isArray(item.loc)
+          ? item.loc[item.loc.length - 1]
+          : 'field'
+        return `${field}: ${item.msg}`
+      })
+      .join('\n')
+  }
+  return JSON.stringify(detail)
 }
 
 function TambahEventAdmin({ role = 'admin' }) {
@@ -257,12 +275,6 @@ function TambahEventAdmin({ role = 'admin' }) {
 
     setIsSaving(true)
     try {
-      const resolvedSumber = isEO
-        ? 'eo'
-        : formData.sumber === 'Hasil Scrapping'
-        ? 'scraping'
-        : 'eo'
-
       const resolvedJenis =
         formData.jenisEvent === 'Belum dipilih'
           ? 'Event Indoor & Outdoor'
@@ -275,29 +287,32 @@ function TambahEventAdmin({ role = 'admin' }) {
 
       const posterUrl = posterFile ? await fileToDataUrl(posterFile) : null
 
+      // Perbaikan 2: Payload bersih sesuai schema EventCreate (status 'draft')
+      const eventPayload = {
+        nama_event: namaEventClean,
+        deskripsi: formData.deskripsiSingkat.trim() || null,
+        tanggal_mulai,
+        tanggal_selesai,
+        lokasi: formData.lokasiEvent.trim() || null,
+        garis_lintang: -8.6724,
+        garis_bujur: 115.2362,
+        jenis_event: resolvedJenis,
+        tipe_lokasi: tipeLokasi,
+        mode_event: 'interaktif',
+        status_event: 'draft',
+        poster_url: posterUrl
+      }
+
       // 1. Buat Event baru di backend
       const resEvent = await fetch(`${API_BASE}/api/events`, {
         method: 'POST',
         headers: getAuthHeaders(true),
-        body: JSON.stringify({
-          nama_event: namaEventClean,
-          tanggal_mulai,
-          tanggal_selesai,
-          lokasi: formData.lokasiEvent.trim() || null,
-          jenis_event: resolvedJenis,
-          tipe_lokasi: tipeLokasi,
-          nama_organizer: formData.eventOrganizer.trim() || null,
-          sumber: resolvedSumber,
-          deskripsi: formData.deskripsiSingkat.trim() || null,
-          poster_url: posterUrl,
-          garis_lintang: -8.6724,
-          garis_bujur: 115.2362
-        })
+        body: JSON.stringify(eventPayload)
       })
 
       const createdEvent = await resEvent.json().catch(() => ({}))
       if (!resEvent.ok) {
-        throw new Error(createdEvent.detail || 'Gagal menyimpan event baru')
+        throw new Error(formatApiError(createdEvent.detail))
       }
 
       // 2. Buat Denah Peta (Map) jika user mengisi nama denah atau mengunggah gambar denah
@@ -328,18 +343,26 @@ function TambahEventAdmin({ role = 'admin' }) {
 
         if (!resMap.ok) {
           const errMap = await resMap.json().catch(() => ({}))
-          console.error('Gagal menyimpan denah:', errMap.detail)
+          console.error('Gagal menyimpan denah:', formatApiError(errMap.detail))
         }
       }
 
-      alert('Event baru berhasil disimpan ke database!')
-      if (isEO) {
-        navigate('/daftar-event-eo')
-      } else {
-        navigate('/daftar-event', {
-          state: { activeTab: resolvedSumber === 'scraping' ? 'scrapping' : 'eo' }
-        })
-      }
+  alert('Event baru berhasil disimpan sebagai draft!')
+
+        const eventId = createdEvent.id_event
+        if (eventId) {
+          navigate(isEO ? '/detail-event-eo' : '/detail-event', {
+            state: {
+              role: activeRole,
+              event: createdEvent,
+              id_event: eventId,
+              eventId: eventId,
+              id: eventId
+            }
+          })
+        } else {
+          navigate(isEO ? '/daftar-event-eo' : '/daftar-event')
+        }
     } catch (err) {
       alert(err.message || 'Gagal menyimpan event baru.')
     } finally {
