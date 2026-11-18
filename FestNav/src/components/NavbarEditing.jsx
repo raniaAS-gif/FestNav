@@ -1,13 +1,49 @@
 import { useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import './NavbarEditing.css';
+
+function getStoredUser() {
+  try {
+    return JSON.parse(localStorage.getItem('user') || 'null');
+  } catch {
+    return null;
+  }
+}
+
+function getEditorContext(locationState) {
+  if (locationState && (locationState.id_map || locationState.eventId)) {
+    try {
+      sessionStorage.setItem('festnav_editor_ctx', JSON.stringify(locationState));
+    } catch {
+      // Abaikan jika storage penuh
+    }
+    return locationState;
+  }
+  try {
+    return JSON.parse(sessionStorage.getItem('festnav_editor_ctx') || 'null') || locationState || {};
+  } catch {
+    return locationState || {};
+  }
+}
 
 export default function Navbar({ userName, avatarUrl, onLogout, onBrandClick }) {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const storedUser = getStoredUser();
+  const displayName = userName || storedUser?.nama || storedUser?.username || '';
+  const editorState = getEditorContext(location.state);
 
   const handleConfirmLogout = () => {
     setShowLogoutModal(false);
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('token');
+    localStorage.removeItem('user_type');
+    localStorage.removeItem('peran');
+    localStorage.removeItem('role');
+    localStorage.removeItem('user');
+    sessionStorage.removeItem('festnav_editor_ctx');
     if (onLogout) {
       onLogout();
     } else {
@@ -20,28 +56,31 @@ export default function Navbar({ userName, avatarUrl, onLogout, onBrandClick }) 
       <nav className="editing-navbar">
         {/* Kiri: Brand */}
         <div
-        className="nav-brand"
-        onClick={() => (onBrandClick ? onBrandClick() : navigate('/dashboard'))}
+          className="nav-brand"
+          onClick={() => (onBrandClick ? onBrandClick() : navigate('/dashboard'))}
         >
           FestNav
         </div>
 
-        {/* Tengah: 3 Menu Navigasi Pages */}
+        {/* Tengah: 3 Menu Navigasi Pages (meneruskan state id_map & eventId) */}
         <div className="nav-menu-links">
           <NavLink
             to="/map-editor"
+            state={editorState}
             className={({ isActive }) => `nav-menu-link ${isActive ? 'active' : ''}`}
           >
             Map Editor
           </NavLink>
           <NavLink
             to="/galeri"
+            state={editorState}
             className={({ isActive }) => `nav-menu-link ${isActive ? 'active' : ''}`}
           >
             Galeri Gambar Event
           </NavLink>
           <NavLink
             to="/fasilitas"
+            state={editorState}
             className={({ isActive }) => `nav-menu-link ${isActive ? 'active' : ''}`}
           >
             Manajemen Fasilitas
@@ -54,7 +93,7 @@ export default function Navbar({ userName, avatarUrl, onLogout, onBrandClick }) 
             <div className="avatar-placeholder">
               {avatarUrl ? <img src={avatarUrl} alt="Avatar" /> : '👤'}
             </div>
-            {userName && <span className="user-name">{userName}</span>}
+            {displayName && <span className="user-name">{displayName}</span>}
           </div>
 
           <button

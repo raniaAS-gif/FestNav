@@ -5,9 +5,11 @@ import './MapEditor.css';
 import NavbarEditing from '../components/NavbarEditing';
 
 /* Zona = bentuk (kolom fasilitas.bentuk). Pin muncul otomatis begitu zona dipilihkan fasilitasnya.
-   Nama, jenis, warna, deskripsi, dan label pin SEMUA datang dari fasilitas (view v_fasilitas_peta), bukan diketik di sini. */
+   Nama, jenis, warna, deskripsi, dan label pin SEMUA datang dari fasilitas, bukan diketik di sini. */
+const API_BASE = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) || 'http://127.0.0.1:8000';
+
 const ABU = '#94a3b8';
-const AKSES = [['umum', 'Umum'], ['vip', 'VIP'], ['staf', 'Staf']];       // nilai CHECK rute.akses_penggunaan
+const AKSES = [['umum', 'Umum'], ['vip', 'VIP'], ['staf', 'Staf']]; // nilai CHECK rute.akses_penggunaan
 const WARNA_AKSES = { umum: '#2563eb', vip: '#dc2626', staf: '#000000' };
 const NAMA_WARNA = { umum: 'Biru', vip: 'Merah', staf: 'Hitam' };
 const W_DEF = 850, H_DEF = 485, ZOOM_AWAL = 18, OPASITAS_AWAL = 0.7;
@@ -17,6 +19,12 @@ const BENTUK = { rectangle: 'persegi panjang', ellipse: 'lingkaran', polygon: 'p
 
 const I = (c) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{c}</svg>;
 const ICON = { select: I(<path d="M5 3l14 8-6 2-2 6z" />), rectangle: I(<rect x="3" y="6" width="18" height="12" rx="1" />), ellipse: I(<circle cx="12" cy="12" r="8" />), polygon: I(<path d="M12 3l8 5v8l-8 5-8-5V8z" />), line: I(<path d="M5 19L19 5" />) };
+
+const getAuthToken = () =>
+  localStorage.getItem('token') ||
+  localStorage.getItem('access_token') ||
+  localStorage.getItem('festnav_token') ||
+  '';
 
 /* ---------- loader Google Maps JS SDK ---------- */
 let gmPromise = null;
@@ -44,12 +52,20 @@ const loadGoogleMaps = (apiKey) => {
   return gmPromise;
 };
 
-/* ---------- data contoh (ganti dengan data dari API) ---------- */
+/* ---------- data fallback demo (dipakai hanya jika dibuka tanpa state event/map) ---------- */
 const DENAH_DEMO = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 545 310"><rect width="545" height="310" fill="#f8fafc"/><rect x="20" y="20" width="200" height="120" fill="#dbeafe" stroke="#334155"/><rect x="240" y="20" width="140" height="120" fill="#dcfce7" stroke="#334155"/><rect x="400" y="20" width="125" height="120" fill="#fee2e2" stroke="#334155"/><rect x="20" y="160" width="505" height="40" fill="#e2e8f0"/><rect x="20" y="220" width="240" height="70" fill="#fef3c7" stroke="#334155"/><rect x="280" y="220" width="245" height="70" fill="#ede9fe" stroke="#334155"/></svg>');
-const MAP_DEFAULT = { id_map: 1, id_event: 1, nama_map: 'Day 1: Lapangan Rektorat', tipe_map: 'outdoor', status_map: 'draft', garis_lintang_pusat: -8.6724, garis_bujur_pusat: 115.2362,
-  gambar_layout: DENAH_DEMO, gambar_public_id: null, tampilkan_denah: false, barat_daya_lat: null, barat_daya_lng: null, timur_laut_lat: null, timur_laut_lng: null, rotasi: 0, opasitas: OPASITAS_AWAL };
+const MAP_DEFAULT = {
+  id_map: 1, id_event: 1, nama_map: 'Day 1: Lapangan Rektorat', tipe_map: 'outdoor', status_map: 'draft',
+  garis_lintang_pusat: -8.6724, garis_bujur_pusat: 115.2362,
+  gambar_layout: DENAH_DEMO, gambar_public_id: null, tampilkan_denah: false,
+  barat_daya_lat: null, barat_daya_lng: null, timur_laut_lat: null, timur_laut_lng: null,
+  rotasi: 0, opasitas: OPASITAS_AWAL,
+};
 const rectPts = (b) => [[b[0], b[1]], [b[2], b[1]], [b[2], b[3]], [b[0], b[3]]];
-const F = (id, nama, kode, namaJenis, warna, desk, label, px, kind) => ({ id_fasilitas: id, id_map: 1, nama_fasilitas: nama, kode_jenis: kode, nama_jenis: namaJenis, warna, deskripsi_tampil: desk, label_penanda: label, sudah_digambar: !!px, bentuk_px: px, bentuk_kind: kind });
+const F = (id, nama, kode, namaJenis, warna, desk, label, px, kind) => ({
+  id_fasilitas: id, id_map: 1, nama_fasilitas: nama, kode_jenis: kode, nama_jenis: namaJenis,
+  warna, deskripsi_tampil: desk, label_penanda: label, sudah_digambar: !!px, bentuk_px: px, bentuk_kind: kind,
+});
 const FAS_DEFAULT = [
   F(1, 'Toilet Utara', 'toilet', 'Toilet', '#3B82F6', 'Toilet umum', 'TU', rectPts([365, 190, 450, 245]), 'rectangle'),
   F(2, 'Food Court A', 'foodcourt', 'Foodcourt', '#FB923C', 'Area bersama stan makanan', 'FCA', [[345, 45], [425, 80], [415, 185], [340, 168]], 'polygon'),
@@ -58,7 +74,10 @@ const FAS_DEFAULT = [
   F(5, 'Area VIP', 'area_vip', 'Area VIP', '#D946EF', 'Area khusus tamu VIP', 'AV', rectPts([598, 237, 670, 290]), 'rectangle'),
   F(6, 'Bazzar Tenant 12', 'kuliner', 'Kuliner', '#F59E0B', 'Area makanan dan minuman', 'BT12', null, null),
 ];
-const RUTE_DEFAULT = [{ id_rute: 1, nama_rute: 'Rute Pejalan Kaki Utama', titik_awal: 'Pintu Masuk', titik_akhir: 'Area VIP', akses_penggunaan: 'umum', pts_px: [[538, 98], [480, 150], [535, 205], [528, 228]] }];
+const RUTE_DEFAULT = [{
+  id_rute: 1, nama_rute: 'Rute Pejalan Kaki Utama', titik_awal: 'Pintu Masuk', titik_akhir: 'Area VIP',
+  akses_penggunaan: 'umum', pts_px: [[538, 98], [480, 150], [535, 205], [528, 228]],
+}];
 
 /* ---------- proyeksi Web Mercator piksel <-> [bujur, lintang] (sinkron dengan Google Maps) ---------- */
 const mercatorProj = ({ lat, lng, zoom }, { w, h }) => {
@@ -115,13 +134,38 @@ const makeShape = (kind, p0, p1) => {
 
 const seed = (toLL, map, fasilitas, rute) => {
   const P = (pts) => ({ type: 'Polygon', coordinates: [[...pts, pts[0]].map(toLL)] });
-  const geomOf = (f) => f.bentuk_geojson ?? (f.bentuk_px ? P(f.bentuk_px) : null);
-  const b = map.barat_daya_lng != null && map.timur_laut_lng != null ? [[map.barat_daya_lng, map.barat_daya_lat], [map.timur_laut_lng, map.timur_laut_lat]] : null;
+  const geomOf = (f) => f.bentuk_geojson ?? f.bentuk ?? (f.bentuk_px ? P(f.bentuk_px) : null);
+  const b = map.barat_daya_lng != null && map.timur_laut_lng != null
+    ? [[map.barat_daya_lng, map.barat_daya_lat], [map.timur_laut_lng, map.timur_laut_lat]]
+    : null;
   return {
-    zona: fasilitas.filter((f) => f.id_map === map.id_map && geomOf(f)).map((f, i) => ({ id_zona: i + 1, id_fasilitas: f.id_fasilitas, kind: f.bentuk_kind ?? 'polygon', geom: geomOf(f) })),
-    rute: rute.map((r) => ({ id_rute: r.id_rute, id_map: map.id_map, nama_rute: r.nama_rute, titik_awal: r.titik_awal ?? '', titik_akhir: r.titik_akhir ?? '', akses_penggunaan: r.akses_penggunaan,
-      bentuk_jalur_rute: r.bentuk_jalur_rute ?? { type: 'LineString', coordinates: r.pts_px.map(toLL) } })),
-    overlay: map.gambar_layout && b ? { url: map.gambar_layout, bounds: b, opacity: map.opasitas ?? OPASITAS_AWAL, rotasi: map.rotasi ?? 0, tampil: !!map.tampilkan_denah } : null,
+    zona: fasilitas
+      .filter((f) => f.id_map === map.id_map && geomOf(f))
+      .map((f, i) => ({
+        id_zona: i + 1,
+        id_fasilitas: f.id_fasilitas,
+        kind: f.bentuk_kind ?? 'polygon',
+        geom: geomOf(f),
+      })),
+    rute: rute.map((r) => ({
+      id_rute: r.id_rute,
+      id_map: map.id_map,
+      nama_rute: r.nama_rute ?? '',
+      titik_awal: r.titik_awal ?? '',
+      titik_akhir: r.titik_akhir ?? '',
+      akses_penggunaan: r.akses_penggunaan ?? 'umum',
+      bentuk_jalur_rute: r.bentuk_jalur_rute ?? { type: 'LineString', coordinates: (r.pts_px || []).map(toLL) },
+      isNew: Boolean(r.isNew),
+    })),
+    overlay: map.gambar_layout && b
+      ? {
+          url: map.gambar_layout,
+          bounds: b,
+          opacity: map.opasitas ?? OPASITAS_AWAL,
+          rotasi: map.rotasi ?? 0,
+          tampil: !!map.tampilkan_denah,
+        }
+      : null,
   };
 };
 
@@ -138,7 +182,18 @@ export default function MapEditor({
   const location = useLocation();
   const isEO = location.state?.role === 'eo';
 
-  const initView = { lat: mapData.garis_lintang_pusat, lng: mapData.garis_bujur_pusat, zoom: ZOOM_AWAL };
+  // State data dinamis dari Backend FastAPI
+  const [activeMap, setActiveMap] = useState(mapData);
+  const [fasilitasList, setFasilitasList] = useState(fasilitas);
+  const [initialRouteIds, setInitialRouteIds] = useState(() => new Set(rute.map((r) => r.id_rute)));
+  const [isLoadingData, setIsLoadingData] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const initView = {
+    lat: Number(mapData.garis_lintang_pusat ?? MAP_DEFAULT.garis_lintang_pusat),
+    lng: Number(mapData.garis_bujur_pusat ?? MAP_DEFAULT.garis_bujur_pusat),
+    zoom: ZOOM_AWAL,
+  };
   const [mapView, setMapView] = useState(initView);
   const [size, setSize] = useState({ w: W_DEF, h: H_DEF });
   const [mapType, setMapType] = useState('roadmap');
@@ -149,10 +204,10 @@ export default function MapEditor({
   const [isDirty, setIsDirty] = useState(false);
   const [navModal, setNavModal] = useState(null); // null | 'unsaved-warning' | 'confirm-dashboard'
   const [showPublishModal, setShowPublishModal] = useState(false);
-  const [statusMap, setStatusMap] = useState(mapData.status_map);
+  const [statusMap, setStatusMap] = useState(mapData.status_map || 'draft');
 
   const { toLL, toPx, mpp } = useMemo(() => mercatorProj(mapView, size), [mapView, size]);
-  const fasById = useMemo(() => new Map(fasilitas.map((f) => [f.id_fasilitas, f])), [fasilitas]);
+  const fasById = useMemo(() => new Map(fasilitasList.map((f) => [f.id_fasilitas, f])), [fasilitasList]);
   const [doc, setDoc] = useState(() => {
     const initProj = mercatorProj(initView, { w: W_DEF, h: H_DEF });
     return seed(initProj.toLL, mapData, fasilitas, rute);
@@ -183,6 +238,128 @@ export default function MapEditor({
   const isDrawing = (tool === 'zona' && mode === 'draw') || (tool === 'rute' && mode === 'draw');
   const isDrawingRef = useRef(isDrawing);
   isDrawingRef.current = isDrawing;
+
+  /* ---------- ambil data real dari backend berdasarkan location.state ---------- */
+  useEffect(() => {
+    const st = location.state || {};
+    const targetMapId =
+      st.id_map ??
+      st.mapId ??
+      st.selectedDenah?.id_map ??
+      st.selectedDenah?.id ??
+      st.denah?.id_map ??
+      st.denah?.id ??
+      null;
+    const targetEventId =
+      st.eventId ??
+      st.id_event ??
+      st.eventData?.id_event ??
+      st.eventData?.id ??
+      null;
+
+    if (!targetMapId && !targetEventId) return;
+
+    let cancelled = false;
+    const loadFromBackend = async () => {
+      setIsLoadingData(true);
+      try {
+        let loadedMap = null;
+
+        if (targetMapId) {
+          const resMap = await fetch(`${API_BASE}/api/maps/${targetMapId}`);
+          if (!resMap.ok) throw new Error('Gagal memuat detail map dari server');
+          loadedMap = await resMap.json();
+        } else if (targetEventId) {
+          const resList = await fetch(`${API_BASE}/api/maps/event/${targetEventId}`);
+          if (!resList.ok) throw new Error('Gagal memuat daftar map event');
+          const maps = await resList.json();
+          if (!maps.length) throw new Error('Event ini belum memiliki data map');
+          const wantedTitle = st.selectedDenah?.title || st.denah?.namaDenah;
+          loadedMap = (wantedTitle && maps.find((m) => m.nama_map === wantedTitle)) || maps[0];
+        }
+
+        if (!loadedMap || cancelled) return;
+
+        const [resFas, resRute] = await Promise.all([
+          fetch(`${API_BASE}/api/fasilitas/map/${loadedMap.id_map}`),
+          fetch(`${API_BASE}/api/rute/map/${loadedMap.id_map}`),
+        ]);
+
+        if (!resFas.ok) throw new Error('Gagal memuat daftar fasilitas map');
+        if (!resRute.ok) throw new Error('Gagal memuat daftar rute map');
+
+        const rawFas = await resFas.json();
+        const rawRute = await resRute.json();
+        if (cancelled) return;
+
+        const centerLat = Number(
+          loadedMap.garis_lintang_pusat ??
+          st.eventData?.garis_lintang ??
+          MAP_DEFAULT.garis_lintang_pusat
+        );
+        const centerLng = Number(
+          loadedMap.garis_bujur_pusat ??
+          st.eventData?.garis_bujur ??
+          MAP_DEFAULT.garis_bujur_pusat
+        );
+
+        const normalizedMap = {
+          ...loadedMap,
+          garis_lintang_pusat: centerLat,
+          garis_bujur_pusat: centerLng,
+        };
+
+        const mappedFas = rawFas.map((f) => ({
+          ...f,
+          warna: f.jenis?.warna ?? ABU,
+          nama_jenis: f.jenis?.nama_jenis ?? f.kode_jenis,
+          deskripsi_tampil: f.deskripsi ?? '',
+          label_penanda: f.label_penanda || f.nama_fasilitas?.slice(0, 3).toUpperCase() || '?',
+          sudah_digambar: Boolean(f.bentuk),
+          bentuk_geojson: f.bentuk ?? null,
+          bentuk_kind: 'polygon',
+        }));
+
+        const mappedRute = rawRute.map((r) => ({
+          ...r,
+          titik_awal: r.titik_awal ?? '',
+          titik_akhir: r.titik_akhir ?? '',
+          isNew: false,
+        }));
+
+        const nextView = { lat: centerLat, lng: centerLng, zoom: ZOOM_AWAL };
+        const proj = mercatorProj(nextView, size);
+
+        setActiveMap(normalizedMap);
+        setFasilitasList(mappedFas);
+        setInitialRouteIds(new Set(mappedRute.map((r) => r.id_rute)));
+        setStatusMap(normalizedMap.status_map || 'draft');
+        setMapView(nextView);
+        setDoc(seed(proj.toLL, normalizedMap, mappedFas, mappedRute));
+        setPast([]);
+        setFuture([]);
+        setSel(null);
+        setIsDirty(false);
+
+        if (mapInst.current) {
+          mapInst.current.panTo({ lat: centerLat, lng: centerLng });
+          mapInst.current.setZoom(ZOOM_AWAL);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setToast({ t: err.message || 'Gagal memuat data peta dari backend', err: true });
+          setTimeout(() => setToast(null), 3500);
+        }
+      } finally {
+        if (!cancelled) setIsLoadingData(false);
+      }
+    };
+
+    loadFromBackend();
+    return () => {
+      cancelled = true;
+    };
+  }, [location.state]);
 
   /* ---------- ukur dimensi kontainer peta agar proyeksi 1:1 ---------- */
   useEffect(() => {
@@ -251,7 +428,10 @@ export default function MapEditor({
   }, [mapType]);
 
   const resetCenter = () => {
-    const c = { lat: mapData.garis_lintang_pusat, lng: mapData.garis_bujur_pusat };
+    const c = {
+      lat: Number(activeMap.garis_lintang_pusat ?? MAP_DEFAULT.garis_lintang_pusat),
+      lng: Number(activeMap.garis_bujur_pusat ?? MAP_DEFAULT.garis_bujur_pusat),
+    };
     if (mapInst.current) {
       mapInst.current.panTo(c);
       mapInst.current.setZoom(ZOOM_AWAL);
@@ -276,7 +456,7 @@ export default function MapEditor({
   const shift = (c, dx, dy) => { const [x, y] = toPx(c); return toLL([x + dx, y + dy]); };
   const hid = (k) => hidden[k];
   const tg = (k) => setHidden((h) => ({ ...h, [k]: !h[k] }));
-  const flash = (t, err = false) => { setToast({ t, err }); setTimeout(() => setToast(null), 2600); };
+  const flash = (t, err = false) => { setToast({ t, err }); setTimeout(() => setToast(null), 2800); };
 
   const getOverlayRect = (ov = doc.overlay) => {
     if (!ov) return null;
@@ -317,7 +497,22 @@ export default function MapEditor({
     const ll = toLL(p);
     if (!rDraw) {
       const id = nid();
-      commit({ ...doc, rute: [...doc.rute, { id_rute: id, id_map: mapData.id_map, nama_rute: `Rute baru ${id - 100}`, titik_awal: '', titik_akhir: '', akses_penggunaan: 'umum', bentuk_jalur_rute: { type: 'LineString', coordinates: [ll] } }] });
+      commit({
+        ...doc,
+        rute: [
+          ...doc.rute,
+          {
+            id_rute: id,
+            id_map: activeMap.id_map,
+            nama_rute: `Rute baru ${id - 100}`,
+            titik_awal: '',
+            titik_akhir: '',
+            akses_penggunaan: 'umum',
+            bentuk_jalur_rute: { type: 'LineString', coordinates: [ll] },
+            isNew: true,
+          },
+        ],
+      });
       setRDraw(id); setSel({ type: 'rute', id }); return;
     }
     setDoc((cur) => ({ ...cur, rute: cur.rute.map((r) => (r.id_rute !== rDraw ? r : { ...r, bentuk_jalur_rute: { type: 'LineString', coordinates: [...r.bentuk_jalur_rute.coordinates, ll] } })) }));
@@ -400,9 +595,9 @@ export default function MapEditor({
     commit({
       ...doc,
       overlay: {
-        url: mapData.gambar_layout,
+        url: activeMap.gambar_layout,
         bounds: [toLL([size.w * 0.2, size.h * 0.78]), toLL([size.w * 0.84, size.h * 0.13])],
-        opacity: mapData.opasitas ?? OPASITAS_AWAL,
+        opacity: activeMap.opasitas ?? OPASITAS_AWAL,
         rotasi: 0,
         tampil: true,
       },
@@ -415,48 +610,189 @@ export default function MapEditor({
     const ov = doc.overlay;
     return {
       map: {
-        id_map: mapData.id_map,
+        id_map: activeMap.id_map,
         garis_lintang_pusat: Number(mapView.lat.toFixed(7)),
         garis_bujur_pusat: Number(mapView.lng.toFixed(7)),
-        gambar_layout: mapData.gambar_layout ?? null,
-        gambar_public_id: mapData.gambar_public_id ?? null,
+        gambar_layout: activeMap.gambar_layout ?? null,
+        gambar_public_id: activeMap.gambar_public_id ?? null,
         tampilkan_denah: !!ov?.tampil,
         barat_daya_lat: ov?.bounds[0][1] ?? null,
         barat_daya_lng: ov?.bounds[0][0] ?? null,
         timur_laut_lat: ov?.bounds[1][1] ?? null,
         timur_laut_lng: ov?.bounds[1][0] ?? null,
         rotasi: ov?.rotasi ?? 0,
-        opasitas: ov?.opacity ?? mapData.opasitas ?? OPASITAS_AWAL,
+        opasitas: ov?.opacity ?? activeMap.opasitas ?? OPASITAS_AWAL,
       },
-      fasilitas: fasilitas.filter((f) => f.id_map === mapData.id_map).map((f) => ({ id_fasilitas: f.id_fasilitas, bentuk: doc.zona.find((z) => z.id_fasilitas === f.id_fasilitas)?.geom ?? null })),
-      rute: doc.rute.map((r) => ({ ...r, jarak: Math.round(plen(r.bentuk_jalur_rute.coordinates.map(toPx), mpp)), titik_awal: r.titik_awal?.trim() || null, titik_akhir: r.titik_akhir?.trim() || null })),
+      fasilitas: fasilitasList
+        .filter((f) => f.id_map === activeMap.id_map)
+        .map((f) => ({
+          id_fasilitas: f.id_fasilitas,
+          bentuk: doc.zona.find((z) => z.id_fasilitas === f.id_fasilitas)?.geom ?? null,
+        })),
+      rute: doc.rute.map((r) => ({
+        ...r,
+        jarak: Math.round(plen(r.bentuk_jalur_rute.coordinates.map(toPx), mpp)),
+        titik_awal: r.titik_awal?.trim() || null,
+        titik_akhir: r.titik_akhir?.trim() || null,
+      })),
     };
   };
+
   const geojson = () => ({ type: 'FeatureCollection', features: [
     ...doc.zona.filter((z) => z.id_fasilitas).flatMap((z) => { const f = fasOf(z), pin = toLL(titikPin(ring(z).map(toPx))); return [
       { type: 'Feature', geometry: z.geom, properties: { layer: 'fasilitas', id_fasilitas: f.id_fasilitas, nama_fasilitas: f.nama_fasilitas, kode_jenis: f.kode_jenis, nama_jenis: f.nama_jenis, warna: f.warna, deskripsi: f.deskripsi_tampil, label_penanda: f.label_penanda, luas_m2: Math.round(area(ring(z).map(toPx), mpp)) } },
       { type: 'Feature', geometry: { type: 'Point', coordinates: pin }, properties: { layer: 'pin', id_fasilitas: f.id_fasilitas, label_penanda: f.label_penanda, warna: f.warna } }]; }),
-    ...rows().rute.map(({ bentuk_jalur_rute: g, ...p }) => ({ type: 'Feature', geometry: g, properties: { layer: 'rute', ...p } })),
+    ...rows().rute.map(({ bentuk_jalur_rute: g, isNew, ...p }) => ({ type: 'Feature', geometry: g, properties: { layer: 'rute', ...p } })),
   ] });
-  const simpan = () => {
+
+  /* ---------- simpan & publish ke API FastAPI ---------- */
+  const persistToApi = async (nextStatus = null) => {
     const kosong = doc.zona.filter((z) => !z.id_fasilitas).length;
     if (kosong) {
       flash(`${kosong} zona belum dipilihkan fasilitasnya.`, true);
       return false;
     }
-    (onSave ?? ((r) => console.log('Simpan', r)))(rows());
-    setIsDirty(false);
-    flash('Perubahan disimpan');
-    return true;
+
+    const ruteInvalid = doc.rute.find((r) => (r.bentuk_jalur_rute?.coordinates?.length || 0) < 2);
+    if (ruteInvalid) {
+      flash(`Rute "${ruteInvalid.nama_rute || 'baru'}" minimal harus memiliki 2 titik koordinat.`, true);
+      return false;
+    }
+
+    const payload = rows();
+    const token = getAuthToken();
+
+    if (!token) {
+      if (onSave) {
+        onSave(payload);
+        setIsDirty(false);
+        flash('Perubahan disimpan');
+        return true;
+      }
+      flash('Token login tidak ditemukan. Silakan login kembali.', true);
+      return false;
+    }
+
+    setIsSaving(true);
+    try {
+      const headers = {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      };
+
+      // 1. Update detail map & kalibrasi overlay
+      const { id_map: _omitId, ...mapBody } = payload.map;
+      if (nextStatus) mapBody.status_map = nextStatus;
+
+      const resMap = await fetch(`${API_BASE}/api/maps/${activeMap.id_map}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify(mapBody),
+      });
+      if (!resMap.ok) {
+        const err = await resMap.json().catch(() => ({}));
+        throw new Error(err.detail || 'Gagal menyimpan konfigurasi map');
+      }
+      const updatedMap = await resMap.json();
+
+      // 2. Update bentuk poligon pada semua fasilitas map ini
+      await Promise.all(
+        payload.fasilitas.map(async (f) => {
+          const resFas = await fetch(`${API_BASE}/api/fasilitas/${f.id_fasilitas}`, {
+            method: 'PATCH',
+            headers,
+            body: JSON.stringify({ bentuk: f.bentuk }),
+          });
+          if (!resFas.ok) {
+            const err = await resFas.json().catch(() => ({}));
+            throw new Error(err.detail || `Gagal menyimpan zona fasilitas #${f.id_fasilitas}`);
+          }
+        })
+      );
+
+      // 3. Sinkronisasi rute (DELETE rute terhapus, POST rute baru, PATCH rute lama)
+      const currentExistingIds = new Set(payload.rute.filter((r) => !r.isNew).map((r) => r.id_rute));
+      const deletedIds = [...initialRouteIds].filter((id) => !currentExistingIds.has(id));
+
+      await Promise.all(
+        deletedIds.map(async (id) => {
+          const resDel = await fetch(`${API_BASE}/api/rute/${id}`, {
+            method: 'DELETE',
+            headers,
+          });
+          if (!resDel.ok && resDel.status !== 404) {
+            throw new Error(`Gagal menghapus rute #${id}`);
+          }
+        })
+      );
+
+      const savedRoutes = await Promise.all(
+        payload.rute.map(async (r) => {
+          const ruteBody = {
+            nama_rute: r.nama_rute || null,
+            titik_awal: r.titik_awal,
+            titik_akhir: r.titik_akhir,
+            bentuk_jalur_rute: r.bentuk_jalur_rute,
+            jarak: r.jarak,
+            akses_penggunaan: r.akses_penggunaan,
+          };
+
+          if (r.isNew) {
+            const resCreate = await fetch(`${API_BASE}/api/rute`, {
+              method: 'POST',
+              headers,
+              body: JSON.stringify({ id_map: activeMap.id_map, ...ruteBody }),
+            });
+            if (!resCreate.ok) {
+              const err = await resCreate.json().catch(() => ({}));
+              throw new Error(err.detail || 'Gagal membuat rute baru');
+            }
+            const created = await resCreate.json();
+            return { ...created, titik_awal: created.titik_awal ?? '', titik_akhir: created.titik_akhir ?? '', isNew: false };
+          }
+
+          const resUpd = await fetch(`${API_BASE}/api/rute/${r.id_rute}`, {
+            method: 'PATCH',
+            headers,
+            body: JSON.stringify(ruteBody),
+          });
+          if (!resUpd.ok) {
+            const err = await resUpd.json().catch(() => ({}));
+            throw new Error(err.detail || `Gagal memperbarui rute #${r.id_rute}`);
+          }
+          const updated = await resUpd.json();
+          return { ...updated, titik_awal: updated.titik_awal ?? '', titik_akhir: updated.titik_akhir ?? '', isNew: false };
+        })
+      );
+
+      setActiveMap((prev) => ({ ...prev, ...updatedMap }));
+      setDoc((cur) => ({ ...cur, rute: savedRoutes }));
+      setInitialRouteIds(new Set(savedRoutes.map((r) => r.id_rute)));
+      setIsDirty(false);
+      onSave?.(payload);
+      return true;
+    } catch (err) {
+      flash(err.message || 'Terjadi kesalahan saat menyimpan ke server', true);
+      return false;
+    } finally {
+      setIsSaving(false);
+    }
   };
-  const handlePublish = () => {
-    const kosong = doc.zona.filter((z) => !z.id_fasilitas).length;
-    if (kosong) return flash(`${kosong} zona belum dipilihkan fasilitasnya.`, true);
+
+  const simpan = async () => {
+    const ok = await persistToApi(null);
+    if (ok) flash('Perubahan disimpan ke database');
+    return ok;
+  };
+
+  const handlePublish = async () => {
+    const ok = await persistToApi('published');
+    if (!ok) return;
     onPublish?.(rows());
     setStatusMap('published');
-    setIsDirty(false);
     setShowPublishModal(true);
   };
+
   const handleLogoClick = () => {
     if (isDirty) {
       setNavModal('unsaved-warning');
@@ -465,7 +801,7 @@ export default function MapEditor({
     }
   };
   const gjText = view === 'geojson' ? JSON.stringify(geojson(), null, 2) : '';
-  const unduh = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([gjText], { type: 'application/geo+json' })); a.download = `map-${mapData.id_map}.geojson`; a.click(); };
+  const unduh = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([gjText], { type: 'application/geo+json' })); a.download = `map-${activeMap.id_map}.geojson`; a.click(); };
 
   /* ---------- keyboard ---------- */
   const api = useRef(); api.current = { undo, redo, hapus, closeRoute };
@@ -517,7 +853,7 @@ export default function MapEditor({
 
     if (sel.type === 'zona') {
       const f = fasOf(o);
-      const tersedia = fasilitas.filter((x) => x.id_map === mapData.id_map && (x.id_fasilitas === o.id_fasilitas || !doc.zona.some((z) => z.id_fasilitas === x.id_fasilitas)));
+      const tersedia = fasilitasList.filter((x) => x.id_map === activeMap.id_map && (x.id_fasilitas === o.id_fasilitas || !doc.zona.some((z) => z.id_fasilitas === x.id_fasilitas)));
       return (<>
         <label>NAMA FASILITAS</label>
         {canEdit ? (
@@ -591,9 +927,9 @@ export default function MapEditor({
 
   const displayEventTitle = location.state?.eventTitle || namaEvent;
   const displayMapTitle =
+    activeMap.nama_map ||
     location.state?.selectedDenah?.title ||
-    location.state?.denah?.namaDenah ||
-    mapData.nama_map;
+    location.state?.denah?.namaDenah;
 
   return (
     <div className="fn-app" style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -608,12 +944,17 @@ export default function MapEditor({
           <div className="me-top">
             <span className="fn-title">{displayEventTitle} – {displayMapTitle}</span>
             <div className="me-top-r">
+              {isLoadingData && <span className="chip">Memuat...</span>}
               <span className="chip">{statusMap === 'published' ? 'Published' : 'Draft'}</span>
               <button className="sq" onClick={undo} disabled={!past.length} aria-label="Urungkan (Ctrl+Z)">↶</button>
               <button className="sq" onClick={redo} disabled={!future.length} aria-label="Ulangi (Ctrl+Y)">↷</button>
-              <button className="btn btn-solid" onClick={simpan}>Simpan</button>
+              <button className="btn btn-solid" onClick={simpan} disabled={isSaving || isLoadingData}>
+                {isSaving ? 'Menyimpan...' : 'Simpan'}
+              </button>
               <button className="btn" style={{ borderColor: '#334155', padding: '0 36px' }}>Mobile View</button>
-              <button className="btn btn-cyan" onClick={handlePublish}>Publish</button>
+              <button className="btn btn-cyan" onClick={handlePublish} disabled={isSaving || isLoadingData}>
+                Publish
+              </button>
             </div>
           </div>
 
@@ -868,11 +1209,11 @@ export default function MapEditor({
         <div className="overlay" onClick={() => setODlg(false)}>
           <div className="modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
             <h2 style={{ fontSize: 26 }}>Tambah Overlay</h2>
-            {mapData.gambar_layout ? (<>
-              <img className="ovl-prev" src={mapData.gambar_layout} alt={`Denah ${displayMapTitle}`} />
+            {activeMap.gambar_layout ? (<>
+              <img className="ovl-prev" src={activeMap.gambar_layout} alt={`Denah ${displayMapTitle}`} />
               <p className="help">Gambar denah ini berasal dari detail event untuk peta "{displayMapTitle}".</p></>)
               : <p className="muted">Peta ini belum punya gambar denah. Tambahkan di detail event atau lewat "Jadikan Denah" di Galeri Gambar Event.</p>}
-            <div className="modal-actions"><button className="btn btn-ghost" onClick={() => setODlg(false)}>Batal</button><button className="btn btn-solid" onClick={tambahOverlay} disabled={!mapData.gambar_layout}>Tambahkan</button></div>
+            <div className="modal-actions"><button className="btn btn-ghost" onClick={() => setODlg(false)}>Batal</button><button className="btn btn-solid" onClick={tambahOverlay} disabled={!activeMap.gambar_layout}>Tambahkan</button></div>
           </div>
         </div>
       )}
@@ -898,11 +1239,12 @@ export default function MapEditor({
               </button>
               <button
                 className="btn btn-solid"
-                onClick={() => {
-                  if (simpan()) setNavModal('confirm-dashboard');
+                disabled={isSaving}
+                onClick={async () => {
+                  if (await simpan()) setNavModal('confirm-dashboard');
                 }}
               >
-                Simpan Perubahan
+                {isSaving ? 'Menyimpan...' : 'Simpan Perubahan'}
               </button>
             </div>
           </div>

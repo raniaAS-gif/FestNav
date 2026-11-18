@@ -1,116 +1,125 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import NavbarAdmin from '../components/NavbarAdmin'
 import { useNavigate } from 'react-router-dom'
 import './DaftarValidasiAdmin.css'
 
-const VALIDATION_STORAGE_KEY = 'festnav_validation_requests'
+const API_BASE =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
+  'http://127.0.0.1:8000'
 
-const INITIAL_VALIDATIONS = [
-  {
-    id: 1,
-    eventId: 1,
-    eoName: 'EO Esai',
-    title: 'Dies Natalis Udayana 2026 (Denah)',
-    tags: [
-      { label: 'Kerjasama Event Organizer', color: '#00bcd4' },
-      { label: 'Event Indoor', color: '#f87171' },
-      { label: 'Event Outdoor', color: '#38bdf8' },
-      { label: 'Menunggu Publish', color: '#3730a3' }
-    ],
-    requestTime: '12 Juni 2026 19.40 WITA',
-    status: 'pending', // 'pending' | 'validated' | 'rejected'
-    isModifiedByEO: false,
-    rejectionMessage: ''
-  },
-  {
-    id: 2,
-    eventId: 6,
-    eoName: 'EO Esai',
-    title: 'Pameran Seni Buleleng (Event)',
-    tags: [
-      { label: 'Kerjasama Event Organizer', color: '#00bcd4' },
-      { label: 'Event Indoor', color: '#f87171' },
-      { label: 'Event Outdoor', color: '#38bdf8' },
-      { label: 'Ditolak', color: '#3730a3' }
-    ],
-    requestTime: '12 Juni 2026 19.40 WITA',
-    // Skenario 1: Ditolak & EO belum mengubah isinya -> Ubah Keputusan menyala & bisa dicancel
-    status: 'rejected',
-    isModifiedByEO: false,
-    rejectionMessage: 'Mohon lengkapi deskripsi lokasi pameran pada poster.'
-  },
-  {
-    id: 3,
-    eventId: 3,
-    eoName: 'EO Esai',
-    title: 'Festival Musik Lovina (Event)',
-    tags: [
-      { label: 'Kerjasama Event Organizer', color: '#00bcd4' },
-      { label: 'Event Outdoor', color: '#38bdf8' },
-      { label: 'Ditolak', color: '#3730a3' }
-    ],
-    requestTime: '12 Juni 2026 18.15 WITA',
-    // Skenario 2: Ditolak & EO sudah mengubah isinya -> Ubah Keputusan redup & memunculkan peringatan
-    status: 'rejected',
-    isModifiedByEO: true,
-    rejectionMessage: 'Gambar denah panggung utama masih buram.'
-  }
-]
+const PAGE_SIZE = 10
 
-const STATUS_TAG_LABELS = [
-  'Sudah Dipublish',
-  'Draft',
-  'Belum Dipublish',
-  'Menunggu Publish',
-  'Menunggu Verifikasi',
-  'Ditolak'
-]
-
-function updateCardStatusTag(tags = [], newBadgeLabel) {
-  const hasStatusTag = tags.some((t) => STATUS_TAG_LABELS.includes(t.label))
-  if (hasStatusTag) {
-    return tags.map((t) =>
-      STATUS_TAG_LABELS.includes(t.label)
-        ? { ...t, label: newBadgeLabel, color: '#3730a3' }
-        : t
-    )
-  }
-  return [...tags, { label: newBadgeLabel, color: '#3730a3' }]
+const getAuthHeaders = (withJson = false) => {
+  const token =
+    localStorage.getItem('access_token') || localStorage.getItem('token') || ''
+  const h = {}
+  if (withJson) h['Content-Type'] = 'application/json'
+  if (token) h.Authorization = `Bearer ${token}`
+  return h
 }
 
-function normalizeValidationItem(item) {
-  const rawStatus = item.adminStatus || item.status || 'pending'
-  let normalizedStatus = 'pending'
-  let badgeLabel = 'Menunggu Publish'
+function formatWitaDateTime(isoString) {
+  if (!isoString) return '-'
+  const dt = new Date(isoString)
+  if (Number.isNaN(dt.getTime())) return isoString
+  const datePart = dt.toLocaleDateString('id-ID', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  })
+  const timePart = dt.toLocaleTimeString('id-ID', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  })
+  return `${datePart} ${timePart.replace(':', '.')} WITA`
+}
 
-  if (rawStatus === 'validated' || rawStatus === 'Diterima') {
-    normalizedStatus = 'validated'
-    badgeLabel = 'Sudah Dipublish'
-  } else if (rawStatus === 'rejected' || rawStatus === 'Ditolak') {
-    normalizedStatus = 'rejected'
-    badgeLabel = 'Ditolak'
+function buildEventTags(ev, badgeLabel) {
+  const tags = [{ label: 'Kerjasama Event Organizer', color: '#00bcd4' }]
+  const jenis = (ev?.jenis_event || '').toLowerCase()
+  const tipe = (ev?.tipe_lokasi || '').toLowerCase()
+
+  if (jenis.includes('indoor') && jenis.includes('outdoor')) {
+    tags.push({ label: 'Event Indoor', color: '#f87171' })
+    tags.push({ label: 'Event Outdoor', color: '#38bdf8' })
+  } else if (jenis.includes('indoor') || tipe === 'indoor') {
+    tags.push({ label: 'Event Indoor', color: '#f87171' })
+  } else if (jenis.includes('outdoor') || tipe === 'outdoor') {
+    tags.push({ label: 'Event Outdoor', color: '#38bdf8' })
+  } else if (tipe === 'hybrid') {
+    tags.push({ label: 'Event Indoor', color: '#f87171' })
+    tags.push({ label: 'Event Outdoor', color: '#38bdf8' })
   }
+
+  tags.push({ label: badgeLabel, color: '#3730a3' })
+  return tags
+}
+
+function mapRequestToAdminCard(req, eventMap) {
+  const ev = eventMap.get(req.id_event) || null
+  const baseTitle = ev?.nama_event || `Event #${req.id_event}`
+  const mapItems = Array.isArray(req.items)
+    ? req.items.filter((it) => it.jenis_item === 'map')
+    : []
+  const hasEventItem = Array.isArray(req.items)
+    ? req.items.some((it) => it.jenis_item === 'event')
+    : true
+
+  let suffix = '(Event)'
+  if (!hasEventItem && mapItems.length > 0) {
+    suffix = '(Denah)'
+  } else if (hasEventItem && mapItems.length > 0) {
+    suffix = `(Event & ${mapItems.length} Denah)`
+  }
+
+  let status = 'pending'
+  let badgeLabel = 'Menunggu Publish'
+  if (req.status_request === 'disetujui') {
+    status = 'validated'
+    badgeLabel = 'Sudah Dipublish'
+  } else if (req.status_request === 'ditolak') {
+    status = 'rejected'
+    badgeLabel = 'Ditolak'
+  } else if (req.status_request === 'dibatalkan') {
+    status = 'cancelled'
+    badgeLabel = 'Dibatalkan'
+  }
+
+  const updatedAt = ev?.diperbarui_pada || ev?.updated_at
+  const isModifiedByEO =
+    status === 'rejected' &&
+    Boolean(req.waktu_diputuskan) &&
+    Boolean(updatedAt) &&
+    new Date(updatedAt).getTime() > new Date(req.waktu_diputuskan).getTime()
 
   return {
-    ...item,
-    status: normalizedStatus,
-    tags: updateCardStatusTag(item.tags || [], badgeLabel),
-    requestTime: item.requestTime || item.eventDate || 'Baru saja',
-    isModifiedByEO: Boolean(item.isModifiedByEO),
-    rejectionMessage: item.rejectionMessage || ''
+    id: req.id_request,
+    id_request: req.id_request,
+    eventId: req.id_event,
+    eoName: ev?.nama_organizer || `Pengelola #${req.id_pengirim ?? '-'}`,
+    cleanTitle: baseTitle,
+    title: `${baseTitle} ${suffix}`,
+    tags: buildEventTags(ev, badgeLabel),
+    requestTime: formatWitaDateTime(req.waktu_dikirim),
+    status,
+    isModifiedByEO,
+    rejectionMessage: req.catatan_admin || '',
+    catatanPengirim: req.catatan_pengirim || '',
+    eventData: ev,
+    rawRequest: req
   }
-}
-
-function mapAdminStatusToEOStatus(adminStatus) {
-  if (adminStatus === 'validated') return 'Diterima'
-  if (adminStatus === 'rejected') return 'Ditolak'
-  return 'Menunggu Verifikasi'
 }
 
 function DaftarValidasiAdmin() {
   const navigate = useNavigate()
   const [searchTerm, setSearchTerm] = useState('')
   const [activePage, setActivePage] = useState(1)
+
+  const [validations, setValidations] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [errorMsg, setErrorMsg] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   // State Overlay Modal
   const [showRejectModal, setShowRejectModal] = useState(false)
@@ -122,157 +131,63 @@ function DaftarValidasiAdmin() {
   const [selectedId, setSelectedId] = useState(null)
   const [rejectReason, setRejectReason] = useState('')
 
-  // Data Request Validasi dari EO
-  const [validations, setValidations] = useState(() => {
+  const loadValidations = useCallback(async () => {
+    setIsLoading(true)
+    setErrorMsg('')
     try {
-      const saved = localStorage.getItem(VALIDATION_STORAGE_KEY)
-      if (saved) {
-        const parsed = JSON.parse(saved)
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.map(normalizeValidationItem)
-        }
+      const headers = getAuthHeaders()
+      const [resReq, resEv] = await Promise.all([
+        fetch(`${API_BASE}/api/request-publish`, { headers }),
+        fetch(`${API_BASE}/api/events`, { headers })
+      ])
+
+      const reqData = await resReq.json().catch(() => [])
+      if (!resReq.ok) {
+        throw new Error(reqData.detail || 'Gagal memuat daftar validasi')
       }
-      return INITIAL_VALIDATIONS
-    } catch {
-      return INITIAL_VALIDATIONS
-    }
-  })
 
-  // Dengarkan perubahan localStorage dari halaman EO
-  useEffect(() => {
-    const syncFromStorage = () => {
-      try {
-        const saved = localStorage.getItem(VALIDATION_STORAGE_KEY)
-        if (saved) {
-          const parsed = JSON.parse(saved)
-          if (Array.isArray(parsed)) {
-            setValidations(parsed.map(normalizeValidationItem))
-          }
-        }
-      } catch {
-        // Abaikan error parsing
-      }
-    }
-
-    window.addEventListener('storage', syncFromStorage)
-    return () => window.removeEventListener('storage', syncFromStorage)
-  }, [])
-
-  // Simpan setiap perubahan status validasi agar sinkron dengan halaman EO
-  useEffect(() => {
-    try {
-      const payloadForStorage = validations.map((item) => ({
-        ...item,
-        adminStatus: item.status,
-        status: mapAdminStatusToEOStatus(item.status)
-      }))
-      localStorage.setItem(VALIDATION_STORAGE_KEY, JSON.stringify(payloadForStorage))
-    } catch (err) {
-      console.error('Gagal menyimpan daftar validasi admin:', err)
-    }
-  }, [validations])
-
-  // Sinkronkan status event ke DaftarEventEO & DaftarEventAdmin
-  const syncEventPublishState = (targetItem, isPublished) => {
-    if (!targetItem) return
-    const cleanTitle = targetItem.title
-      .replace(/\s*\((Event|Denah[^)]*)\)$/i, '')
-      .trim()
-    const nextEventStatus = isPublished ? 'Sudah Dipublish' : 'Draft'
-    const nextColor = isPublished ? '#3b82f6' : '#3730a3'
-
-    // 1. Update status di Daftar Event EO
-    try {
-      const eoList = JSON.parse(localStorage.getItem('festnav_eo_events') || '[]')
-      if (Array.isArray(eoList) && eoList.length > 0) {
-        const updatedEo = eoList.map((evt) => {
-          const isMatch =
-            (targetItem.eventId && evt.id === targetItem.eventId) ||
-            evt.title === cleanTitle
-          if (!isMatch) return evt
-
-          const updatedTags = Array.isArray(evt.tags)
-            ? evt.tags.map((t) =>
-                STATUS_TAG_LABELS.includes(t.label)
-                  ? { ...t, label: nextEventStatus, color: '#312e81' }
-                  : t
-              )
-            : evt.tags
-
-          return {
-            ...evt,
-            status: nextEventStatus,
-            statusColor: nextColor,
-            tags: updatedTags
-          }
-        })
-        localStorage.setItem('festnav_eo_events', JSON.stringify(updatedEo))
-      }
-    } catch (err) {
-      console.error('Gagal menyinkronkan festnav_eo_events:', err)
-    }
-
-    // 2. Update atau Tambahkan (Upsert) Event buatan EO ke Daftar Event Admin
-    try {
-      const adminList = JSON.parse(localStorage.getItem('festnav_admin_events') || '[]')
-      const safeAdminList = Array.isArray(adminList) ? adminList : []
-
-      const alreadyInAdmin = safeAdminList.some(
-        (evt) =>
-          (targetItem.eventId && evt.id === targetItem.eventId) ||
-          evt.title === cleanTitle
+      const evData = resEv.ok ? await resEv.json().catch(() => []) : []
+      const eventMap = new Map(
+        (Array.isArray(evData) ? evData : []).map((ev) => [ev.id_event, ev])
       )
 
-      let updatedAdminList
-      if (alreadyInAdmin) {
-        updatedAdminList = safeAdminList.map((evt) => {
-          const isMatch =
-            (targetItem.eventId && evt.id === targetItem.eventId) ||
-            evt.title === cleanTitle
-          if (!isMatch) return evt
-          return {
-            ...evt,
-            status: nextEventStatus,
-            statusColor: nextColor
+      // Ambil detail event jika ada id_event yang belum masuk di list utama
+      const missingIds = [
+        ...new Set(
+          (Array.isArray(reqData) ? reqData : [])
+            .map((r) => r.id_event)
+            .filter((idEv) => idEv && !eventMap.has(idEv))
+        )
+      ]
+
+      await Promise.all(
+        missingIds.map(async (idEv) => {
+          const r = await fetch(`${API_BASE}/api/events/${idEv}`, { headers })
+          if (r.ok) {
+            const detailEv = await r.json()
+            eventMap.set(idEv, detailEv)
           }
         })
-      } else if (isPublished) {
-        const sourceData = targetItem.eventData || {}
-        const cleanTags = (targetItem.tags || []).filter(
-          (t) => !STATUS_TAG_LABELS.includes(t.label)
-        )
+      )
 
-        const newAdminEntry = {
-          ...sourceData,
-          id: targetItem.eventId || Date.now(),
-          title: cleanTitle,
-          namaEvent: cleanTitle,
-          type: 'eo',
-          tags:
-            cleanTags.length > 0
-              ? cleanTags
-              : [{ label: 'Kerjasama Event Organizer', color: '#00bcd4' }],
-          status: 'Sudah Dipublish',
-          statusColor: '#3b82f6',
-          dateRange:
-            sourceData.dateRange ||
-            sourceData.eventDate ||
-            targetItem.eventDate ||
-            'Tanggal belum diatur',
-          eventOrganizer: sourceData.eventOrganizer || targetItem.eoName || 'EO Esai',
-          sumber: 'Kerjasama Event Organizer'
-        }
-
-        updatedAdminList = [newAdminEntry, ...safeAdminList]
-      } else {
-        updatedAdminList = safeAdminList
-      }
-
-      localStorage.setItem('festnav_admin_events', JSON.stringify(updatedAdminList))
+      const mapped = (Array.isArray(reqData) ? reqData : []).map((req) =>
+        mapRequestToAdminCard(req, eventMap)
+      )
+      setValidations(mapped)
     } catch (err) {
-      console.error('Gagal menyinkronkan festnav_admin_events:', err)
+      setErrorMsg(err.message || 'Gagal memuat daftar validasi dari server.')
+    } finally {
+      setIsLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    loadValidations()
+  }, [loadValidations])
+
+  useEffect(() => {
+    setActivePage(1)
+  }, [searchTerm])
 
   // Buka Modal Penolakan
   const handleOpenRejectModal = (id) => {
@@ -282,25 +197,35 @@ function DaftarValidasiAdmin() {
     setShowRejectModal(true)
   }
 
-  // Kirim Pesan Penolakan -> Ubah ke status 'rejected'
-  const handleSendRejection = () => {
-    const targetItem = validations.find((v) => v.id === selectedId)
-    setValidations((prev) =>
-      prev.map((item) =>
-        item.id === selectedId
-          ? {
-              ...item,
-              status: 'rejected',
-              isModifiedByEO: false,
-              rejectionMessage: rejectReason,
-              tags: updateCardStatusTag(item.tags, 'Ditolak')
-            }
-          : item
+  // Kirim Pesan Penolakan -> PATCH /api/request-publish/{id}/keputusan (ditolak)
+  const handleSendRejection = async () => {
+    if (!selectedId || isSubmitting) return
+    setIsSubmitting(true)
+    try {
+      const res = await fetch(
+        `${API_BASE}/api/request-publish/${selectedId}/keputusan`,
+        {
+          method: 'PATCH',
+          headers: getAuthHeaders(true),
+          body: JSON.stringify({
+            status_request: 'ditolak',
+            catatan_admin: rejectReason.trim() || null
+          })
+        }
       )
-    )
-    syncEventPublishState(targetItem, false)
-    setShowRejectModal(false)
-    setShowSuccessModal(true)
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(data.detail || 'Gagal mengirim penolakan')
+      }
+
+      await loadValidations()
+      setShowRejectModal(false)
+      setShowSuccessModal(true)
+    } catch (err) {
+      alert(err.message)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   // Klik tombol "Validasi" (saat status pending) -> Buka Konfirmasi Publish
@@ -311,36 +236,44 @@ function DaftarValidasiAdmin() {
 
   // Klik tombol "Ubah Keputusan" (saat status rejected)
   const handleDecisionChangeClick = (item) => {
-    // Jika EO sudah membuat perubahan baru sejak penolakan -> tidak bisa dicancel
     if (item.isModifiedByEO) {
       setSelectedId(item.id)
       setShowCannotChangeModal(true)
       return
     }
-
-    // Jika EO belum mengubah isinya -> buka konfirmasi untuk langsung validasi & publish
     setSelectedId(item.id)
     setShowConfirmValidateModal(true)
   }
 
-  // Konfirmasi "Yakin" -> Validasi & Publish Event, lalu kunci ketiga tombol
-  const handleConfirmValidateAndPublish = () => {
-    const targetItem = validations.find((v) => v.id === selectedId)
-    setValidations((prev) =>
-      prev.map((item) =>
-        item.id === selectedId
-          ? {
-              ...item,
-              status: 'validated',
-              rejectionMessage: '',
-              tags: updateCardStatusTag(item.tags, 'Sudah Dipublish')
-            }
-          : item
+  // Konfirmasi "Yakin" -> PATCH /api/request-publish/{id}/keputusan (disetujui)
+  const handleConfirmValidateAndPublish = async () => {
+    if (!selectedId || isSubmitting) return
+    setIsSubmitting(true)
+    try {
+      const res = await fetch(
+        `${API_BASE}/api/request-publish/${selectedId}/keputusan`,
+        {
+          method: 'PATCH',
+          headers: getAuthHeaders(true),
+          body: JSON.stringify({
+            status_request: 'disetujui',
+            catatan_admin: null
+          })
+        }
       )
-    )
-    syncEventPublishState(targetItem, true)
-    setShowConfirmValidateModal(false)
-    setShowPublishSuccessModal(true)
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(data.detail || 'Gagal memvalidasi permintaan publish')
+      }
+
+      await loadValidations()
+      setShowConfirmValidateModal(false)
+      setShowPublishSuccessModal(true)
+    } catch (err) {
+      alert(err.message)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const filteredValidations = validations.filter(
@@ -349,19 +282,23 @@ function DaftarValidasiAdmin() {
       item.eoName.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
+  const totalPages = Math.max(1, Math.ceil(filteredValidations.length / PAGE_SIZE))
+  const currentPage = Math.min(activePage, totalPages)
+  const paginatedValidations = filteredValidations.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE
+  )
+
   return (
     <div className="validasi-container">
       <NavbarAdmin />
 
-      {/* Hero Header */}
       <div className="validasi-hero">
         <h1 className="hero-title">Daftar Validasi</h1>
         <p className="hero-subtitle">Festival Navigation</p>
       </div>
 
-      {/* Main Content Area */}
       <main className="validasi-content">
-        {/* Search Bar */}
         <div className="search-bar-wrapper">
           <input
             type="text"
@@ -372,135 +309,169 @@ function DaftarValidasiAdmin() {
           />
         </div>
 
-        {/* Validation List Cards */}
+        {errorMsg && (
+          <div
+            style={{
+              backgroundColor: 'rgba(239, 68, 68, 0.15)',
+              color: '#fecaca',
+              padding: '16px',
+              borderRadius: '10px',
+              marginBottom: '16px'
+            }}
+          >
+            {errorMsg}
+          </div>
+        )}
+
         <div className="validasi-list">
-          {filteredValidations.map((item) => {
-            const isValidated = item.status === 'validated'
-            const isRejected = item.status === 'rejected'
-            const canCancelRejection = isRejected && !item.isModifiedByEO
-            const cleanEventTitle = item.title
-              .replace(/\s*\((Event|Denah[^)]*)\)$/i, '')
-              .trim()
+          {isLoading ? (
+            <div
+              style={{
+                backgroundColor: '#ffffff',
+                padding: '32px',
+                borderRadius: '12px',
+                textAlign: 'center',
+                color: '#475569'
+              }}
+            >
+              Memuat daftar validasi dari database...
+            </div>
+          ) : paginatedValidations.length === 0 ? (
+            <div
+              style={{
+                backgroundColor: '#ffffff',
+                padding: '32px',
+                borderRadius: '12px',
+                textAlign: 'center',
+                color: '#475569'
+              }}
+            >
+              Belum ada permintaan publish dari Event Organizer.
+            </div>
+          ) : (
+            paginatedValidations.map((item) => {
+              const isValidated = item.status === 'validated'
+              const isRejected = item.status === 'rejected'
+              const isCancelled = item.status === 'cancelled'
+              const isLocked = isValidated || isCancelled
+              const canCancelRejection = isRejected && !item.isModifiedByEO
 
-            return (
-              <div key={item.id} className="validasi-card">
-                <div className="validasi-info">
-                  <div className="eo-author-row">
-                    <div className="avatar-small">👤</div>
-                    <span className="eo-name">{item.eoName}</span>
+              return (
+                <div key={item.id} className="validasi-card">
+                  <div className="validasi-info">
+                    <div className="eo-author-row">
+                      <div className="avatar-small">👤</div>
+                      <span className="eo-name">{item.eoName}</span>
+                    </div>
+                    <h2 className="validasi-item-title">{item.title}</h2>
+                    <div className="tags-row">
+                      {item.tags.map((tag, idx) => (
+                        <span
+                          key={idx}
+                          className="validasi-tag"
+                          style={{ backgroundColor: tag.color }}
+                        >
+                          {tag.label}
+                        </span>
+                      ))}
+                    </div>
+                    <p className="request-time">
+                      Waktu Request: {item.requestTime}
+                    </p>
                   </div>
-                  <h2 className="validasi-item-title">{item.title}</h2>
-                  <div className="tags-row">
-                    {item.tags.map((tag, idx) => (
-                      <span
-                        key={idx}
-                        className="validasi-tag"
-                        style={{ backgroundColor: tag.color }}
-                      >
-                        {tag.label}
-                      </span>
-                    ))}
-                  </div>
-                  <p className="request-time">Waktu Request: {item.requestTime}</p>
-                </div>
 
-                {/* Right Action Buttons */}
-                <div className="validasi-actions">
-                  {/* 1. Tombol Cek Detail: Disabled jika sudah divalidasi, menyala jika pending/ditolak */}
-                  <button
-                    type="button"
-                    className="btn-action btn-detail"
-                    disabled={isValidated}
-                    style={
-                      isValidated
-                        ? { opacity: 0.5, cursor: 'not-allowed' }
-                        : undefined
-                    }
-                    onClick={() =>
-                      navigate('/detail-event', {
-                        state: {
-                          validation: item,
-                          eventId: item.eventId,
-                          eventTitle: cleanEventTitle,
-                          eventData: item.eventData
-                        }
-                      })
-                    }
-                  >
-                    Cek Detail
-                  </button>
-
-                  {/* 2. Tombol Tengah:
-                      - Jika ditolak -> "Ubah Keputusan" (menyala jika EO belum edit, redup jika EO sudah edit)
-                      - Jika pending -> "Validasi" (aktif)
-                      - Jika sudah divalidasi -> tetap "Validasi" & disabled */}
-                  {isRejected ? (
+                  <div className="validasi-actions">
                     <button
                       type="button"
-                      className="btn-action btn-ubah-keputusan"
+                      className="btn-action btn-detail"
+                      disabled={isLocked}
                       style={
-                        !canCancelRejection
-                          ? { opacity: 0.55, cursor: 'not-allowed' }
-                          : undefined
-                      }
-                      onClick={() => handleDecisionChangeClick(item)}
-                    >
-                      Ubah Keputusan
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      className="btn-action btn-validasi"
-                      disabled={isValidated}
-                      style={
-                        isValidated
+                        isLocked
                           ? { opacity: 0.5, cursor: 'not-allowed' }
                           : undefined
                       }
-                      onClick={() => handleOpenValidateConfirm(item.id)}
+                      onClick={() =>
+                        navigate('/detail-event', {
+                          state: {
+                            validation: item,
+                            eventId: item.eventId,
+                            id_event: item.eventId,
+                            eventTitle: item.cleanTitle,
+                            eventData: item.eventData
+                          }
+                        })
+                      }
                     >
-                      Validasi
+                      Cek Detail
                     </button>
-                  )}
 
-                  {/* 3. Tombol Tolak: Aktif hanya saat pending; disabled saat sudah divalidasi atau sudah ditolak */}
-                  <button
-                    type="button"
-                    className={`btn-action ${
-                      isValidated || isRejected ? 'btn-tolak-processed' : 'btn-tolak'
-                    }`}
-                    disabled={isValidated || isRejected}
-                    style={
-                      isValidated
-                        ? { opacity: 0.5, cursor: 'not-allowed' }
-                        : isRejected
-                        ? { cursor: 'not-allowed' }
-                        : undefined
-                    }
-                    onClick={() => handleOpenRejectModal(item.id)}
-                  >
-                    Tolak
-                  </button>
+                    {isRejected ? (
+                      <button
+                        type="button"
+                        className="btn-action btn-ubah-keputusan"
+                        style={
+                          !canCancelRejection
+                            ? { opacity: 0.55, cursor: 'not-allowed' }
+                            : undefined
+                        }
+                        onClick={() => handleDecisionChangeClick(item)}
+                      >
+                        Ubah Keputusan
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn-action btn-validasi"
+                        disabled={isLocked}
+                        style={
+                          isLocked
+                            ? { opacity: 0.5, cursor: 'not-allowed' }
+                            : undefined
+                        }
+                        onClick={() => handleOpenValidateConfirm(item.id)}
+                      >
+                        Validasi
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      className={`btn-action ${
+                        isLocked || isRejected
+                          ? 'btn-tolak-processed'
+                          : 'btn-tolak'
+                      }`}
+                      disabled={isLocked || isRejected}
+                      style={
+                        isLocked
+                          ? { opacity: 0.5, cursor: 'not-allowed' }
+                          : isRejected
+                          ? { cursor: 'not-allowed' }
+                          : undefined
+                      }
+                      onClick={() => handleOpenRejectModal(item.id)}
+                    >
+                      Tolak
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )
-          })}
+              )
+            })
+          )}
         </div>
 
-        {/* Pagination */}
         <div className="validasi-footer">
           <div className="pagination">
-            {[1, 2, 3, 4, 5].map((num) => (
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((num) => (
               <button
                 key={num}
                 type="button"
-                className={`page-num ${activePage === num ? 'active' : ''}`}
+                className={`page-num ${currentPage === num ? 'active' : ''}`}
                 onClick={() => setActivePage(num)}
               >
                 {num}
               </button>
             ))}
-            <span className="page-dots">...</span>
           </div>
         </div>
       </main>
@@ -521,6 +492,7 @@ function DaftarValidasiAdmin() {
               <button
                 type="button"
                 className="btn-modal btn-batalkan"
+                disabled={isSubmitting}
                 onClick={() => setShowRejectModal(false)}
               >
                 Batalkan
@@ -528,9 +500,10 @@ function DaftarValidasiAdmin() {
               <button
                 type="button"
                 className="btn-modal btn-kirim"
+                disabled={isSubmitting}
                 onClick={handleSendRejection}
               >
-                Kirim
+                {isSubmitting ? 'Mengirim...' : 'Kirim'}
               </button>
             </div>
           </div>
@@ -660,6 +633,7 @@ function DaftarValidasiAdmin() {
               <button
                 type="button"
                 className="btn-modal btn-batalkan"
+                disabled={isSubmitting}
                 onClick={() => setShowConfirmValidateModal(false)}
               >
                 Batalkan
@@ -667,9 +641,10 @@ function DaftarValidasiAdmin() {
               <button
                 type="button"
                 className="btn-modal btn-kirim"
+                disabled={isSubmitting}
                 onClick={handleConfirmValidateAndPublish}
               >
-                Yakin
+                {isSubmitting ? 'Memproses...' : 'Yakin'}
               </button>
             </div>
           </div>

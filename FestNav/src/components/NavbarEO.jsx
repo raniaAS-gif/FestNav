@@ -7,15 +7,29 @@ function NavbarEO() {
   const location = useLocation()
   const [showLogoutModal, setShowLogoutModal] = useState(false)
 
+  let displayName = 'Event Organizer'
+  try {
+    const u = JSON.parse(localStorage.getItem('user') || 'null')
+    if (u?.nama_organisasi || u?.nama) displayName = u.nama_organisasi || u.nama
+  } catch {
+    // Abaikan
+  }
+
   const handleConfirmLogout = () => {
     setShowLogoutModal(false)
+    localStorage.removeItem('access_token')
+    localStorage.removeItem('token')
+    localStorage.removeItem('user_type')
+    localStorage.removeItem('peran')
+    localStorage.removeItem('role')
+    localStorage.removeItem('user')
+    sessionStorage.removeItem('festnav_editor_ctx')
     navigate('/login')
   }
 
   return (
     <>
       <header className="eo-navbar">
-        {/* Klik FestNav -> Ke Dashboard EO */}
         <div
           className="nav-brand"
           onClick={() => navigate('/dashboard-eo')}
@@ -25,7 +39,6 @@ function NavbarEO() {
         </div>
 
         <div className="nav-actions">
-          {/* Klik Lihat Daftar Eventku -> Ke Daftar Denah Event EO */}
           <button
             type="button"
             className={`btn-cyan ${location.pathname === '/daftar-event-eo' ? 'active-nav' : ''}`}
@@ -34,7 +47,6 @@ function NavbarEO() {
             Lihat Daftar Eventku
           </button>
 
-          {/* Klik + Tambah Peta baru -> Ke Form Tambah Event (Role EO) */}
           <button
             type="button"
             className={`btn-cyan ${location.pathname === '/tambah-event-eo' ? 'active-nav' : ''}`}
@@ -43,19 +55,16 @@ function NavbarEO() {
             + Tambah Peta baru
           </button>
 
-          {/* User Profile & Logout */}
           <div className="user-profile">
-            {/* Klik Nama / Avatar -> Ke Profile Admin dengan tetap menggunakan Navbar EO */}
             <div
               className="user-info-clickable"
               onClick={() => navigate('/profile-admin', { state: { fromEO: true } })}
-              title="Lihat Profil Admin"
+              title="Lihat Profil"
             >
-              <span className="user-name">EO Esai</span>
+              <span className="user-name">{displayName}</span>
               <div className="avatar-placeholder">👤</div>
             </div>
 
-            {/* Klik Icon Logout -> Munculkan Overlay Peringatan Log Out */}
             <button
               type="button"
               className="logout-btn"
@@ -81,7 +90,6 @@ function NavbarEO() {
         </div>
       </header>
 
-      {/* OVERLAY MODAL PERINGATAN LOG OUT */}
       {showLogoutModal && (
         <div className="logout-modal-overlay">
           <div className="logout-modal-card">

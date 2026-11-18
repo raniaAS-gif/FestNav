@@ -1,7 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import NavbarAdmin from '../components/NavbarAdmin'
 import './DetailEventAdmin.css'
+
+const API_BASE =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
+  'http://127.0.0.1:8000'
 
 const DEFAULT_POSTER_URL =
   'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=600&q=80'
@@ -11,194 +15,205 @@ const DEFAULT_DENAH_IMAGES = [
   'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1000&q=80'
 ]
 
-const DEFAULT_ADMIN_EVENT = {
-  id: 1,
-  namaEvent: 'Dies Natalis Udayana 2026',
-  tanggalEvent: '21 Oktober 2025 – 31 Desember 2025',
-  lokasiEvent: 'Rektorat Universitas Udayana',
-  jenisEvent: 'Event Indoor & Outdoor',
-  eventOrganizer: 'Universitas Udayana',
-  sumber: 'Kerjasama Event Organizer',
-  status: 'Draft',
-  posterUrl: DEFAULT_POSTER_URL,
-  deskripsiSingkat:
-    'Informasi dan panduan denah resmi kegiatan untuk navigasi pengunjung.',
-  denahList: [
-    {
-      id: 1,
-      namaDenah: 'Day 1: Lapangan Rektorat',
-      status: 'draft',
-      imageUrl: DEFAULT_DENAH_IMAGES[0]
-    },
-    {
-      id: 2,
-      namaDenah: 'Day 2: Gedung Rektorat',
-      status: 'draft',
-      imageUrl: DEFAULT_DENAH_IMAGES[1]
-    }
-  ]
+const getAuthHeaders = (withJson = false) => {
+  const token =
+    localStorage.getItem('access_token') ||
+    localStorage.getItem('token') ||
+    ''
+  const h = {}
+  if (withJson) h['Content-Type'] = 'application/json'
+  if (token) h.Authorization = `Bearer ${token}`
+  return h
 }
 
-function resolveJenisFromTags(tags = []) {
-  const labels = tags.map((t) => t.label)
-  const hasIndoor = labels.includes('Event Indoor')
-  const hasOutdoor = labels.includes('Event Outdoor')
-  if (hasIndoor && hasOutdoor) return 'Event Indoor & Outdoor'
-  if (hasIndoor) return 'Event Indoor'
-  if (hasOutdoor) return 'Event Outdoor'
-  return 'Event Indoor & Outdoor'
+function formatDateRange(mulai, selesai) {
+  if (!mulai && !selesai) return '-'
+  const fmt = (d) =>
+    new Date(d).toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    })
+  if (mulai && selesai && mulai !== selesai) return `${fmt(mulai)} – ${fmt(selesai)}`
+  return fmt(mulai || selesai)
+}
+
+function formatStatusLabel(statusEvent) {
+  if (statusEvent === 'published') return 'Sudah Dipublish'
+  if (statusEvent === 'selesai') return 'Selesai'
+  return 'Draft'
 }
 
 function DetailEventAdmin() {
   const navigate = useNavigate()
   const location = useLocation()
 
-  const [resolvedSource] = useState(() => {
-    const navState = location.state || {}
-
-    let storedEvent = null
-    try {
-      const savedList = JSON.parse(localStorage.getItem('festnav_admin_events') || '[]')
-      if (Array.isArray(savedList)) {
-        storedEvent =
-          savedList.find(
-            (item) =>
-              (navState.eventId && item.id === navState.eventId) ||
-              (navState.eventTitle && item.title === navState.eventTitle)
-          ) || null
-      }
-    } catch {
-      storedEvent = null
-    }
-
-    const source = storedEvent || navState.eventData
-    if (!source && !navState.eventTitle) {
-      return DEFAULT_ADMIN_EVENT
-    }
-
-    const title =
-      navState.eventTitle || source?.namaEvent || source?.title || DEFAULT_ADMIN_EVENT.namaEvent
-    const isDefault = title === DEFAULT_ADMIN_EVENT.namaEvent
-
-    const resolvedStatus =
-      storedEvent?.status || navState.eventStatus || source?.status || 'Draft'
-
-    const resolvedDenah =
-      Array.isArray(source?.denahList) && source.denahList.length > 0
-        ? source.denahList.map((d, idx) => ({
-            id: d.id || idx + 1,
-            namaDenah: d.namaDenah || d.title || `Denah ${idx + 1}`,
-            status: d.status || 'draft',
-            imageUrl:
-              d.imageUrl ||
-              d.mapUrl ||
-              DEFAULT_DENAH_IMAGES[idx % DEFAULT_DENAH_IMAGES.length]
-          }))
-        : Array.isArray(navState.denah) && navState.denah.length > 0
-        ? navState.denah
-        : isDefault
-        ? DEFAULT_ADMIN_EVENT.denahList
-        : [
-            {
-              id: 1,
-              namaDenah: `Denah Utama - ${title}`,
-              status: 'draft',
-              imageUrl: DEFAULT_DENAH_IMAGES[0]
-            }
-          ]
-
-    return {
-      id: source?.id || navState.eventId || Date.now(),
-      namaEvent: title,
-      tanggalEvent:
-        navState.eventDate ||
-        source?.tanggalEvent ||
-        source?.dateRange ||
-        DEFAULT_ADMIN_EVENT.tanggalEvent,
-      lokasiEvent:
-        navState.location ||
-        source?.lokasiEvent ||
-        (isDefault ? DEFAULT_ADMIN_EVENT.lokasiEvent : 'Bali, Indonesia'),
-      jenisEvent:
-        source?.jenisEvent ||
-        (source?.tags ? resolveJenisFromTags(source.tags) : DEFAULT_ADMIN_EVENT.jenisEvent),
-      eventOrganizer:
-        source?.eventOrganizer ||
-        (isDefault ? DEFAULT_ADMIN_EVENT.eventOrganizer : 'EO Esai'),
-      sumber:
-        source?.sumber ||
-        (source?.type === 'scrapping' ? 'Hasil Scrapping' : 'Kerjasama Event Organizer'),
-      status: resolvedStatus,
-      posterUrl: navState.posterUrl || source?.posterUrl || DEFAULT_POSTER_URL,
-      deskripsiSingkat:
-        navState.description ||
-        source?.deskripsiSingkat ||
-        (isDefault
-          ? DEFAULT_ADMIN_EVENT.deskripsiSingkat
-          : `Informasi dan panduan denah resmi untuk kegiatan ${title}.`),
-      denahList: resolvedDenah
-    }
-  })
-
-  const [eventStatus, setEventStatus] = useState(resolvedSource.status)
-  const [denahList, setDenahList] = useState(resolvedSource.denahList)
+  const [eventData, setEventData] = useState(null)
+  const [denahList, setDenahList] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [errorMsg, setErrorMsg] = useState('')
   const [showPublishModal, setShowPublishModal] = useState(false)
 
-  const eventInfo = {
-    id: resolvedSource.id,
-    namaEvent: resolvedSource.namaEvent,
-    tanggalEvent: resolvedSource.tanggalEvent,
-    lokasiEvent: resolvedSource.lokasiEvent,
-    jenisEvent: resolvedSource.jenisEvent,
-    eventOrganizer: resolvedSource.eventOrganizer,
-    sumber: resolvedSource.sumber,
-    posterUrl: resolvedSource.posterUrl,
-    deskripsiSingkat: resolvedSource.deskripsiSingkat
-  }
+  useEffect(() => {
+    let cancelled = false
+    const navState = location.state || {}
+    const requestedId =
+      navState.eventId || navState.id_event || navState.eventData?.id_event || navState.eventData?.id
 
-  const buildFullEventPayload = (overrideStatus = eventStatus) => ({
-    ...eventInfo,
-    title: eventInfo.namaEvent,
-    dateRange: eventInfo.tanggalEvent,
-    status: overrideStatus,
-    denahList
-  })
+    const loadDetail = async () => {
+      setIsLoading(true)
+      setErrorMsg('')
+      try {
+        let ev = null
 
-  const syncAdminStorage = (nextStatus, nextDenahList = denahList) => {
-    try {
-      const savedList = JSON.parse(localStorage.getItem('festnav_admin_events') || '[]')
-      if (Array.isArray(savedList) && savedList.length > 0) {
-        const updatedList = savedList.map((item) => {
-          if (item.id !== eventInfo.id && item.title !== eventInfo.namaEvent) {
-            return item
+        if (requestedId) {
+          const resEv = await fetch(`${API_BASE}/api/events/${requestedId}`, {
+            headers: getAuthHeaders()
+          })
+          if (resEv.ok) {
+            ev = await resEv.json()
           }
-          return {
-            ...item,
-            status: nextStatus,
-            statusColor: nextStatus === 'Sudah Dipublish' ? '#3b82f6' : '#3730a3',
-            denahList: nextDenahList
+        }
+
+        // Fallback: ambil event pertama dari backend jika dibuka tanpa state
+        if (!ev) {
+          const resList = await fetch(`${API_BASE}/api/events`, {
+            headers: getAuthHeaders()
+          })
+          if (!resList.ok) throw new Error('Gagal memuat daftar event dari server')
+          const allEvents = await resList.json()
+          if (!allEvents.length) {
+            throw new Error('Belum ada data event di database. Silakan buat event terlebih dahulu.')
           }
+          ev =
+            (navState.eventTitle &&
+              allEvents.find((item) => item.nama_event === navState.eventTitle)) ||
+            allEvents[0]
+        }
+
+        const resMaps = await fetch(`${API_BASE}/api/maps/event/${ev.id_event}`, {
+          headers: getAuthHeaders()
         })
-        localStorage.setItem('festnav_admin_events', JSON.stringify(updatedList))
+        const maps = resMaps.ok ? await resMaps.json() : []
+
+        if (cancelled) return
+
+        setEventData(ev)
+        setDenahList(
+          maps.map((m, idx) => ({
+            id: m.id_map,
+            id_map: m.id_map,
+            namaDenah: m.nama_map,
+            status: m.status_map,
+            imageUrl:
+              m.gambar_layout ||
+              DEFAULT_DENAH_IMAGES[idx % DEFAULT_DENAH_IMAGES.length],
+            rawMap: m
+          }))
+        )
+      } catch (err) {
+        if (!cancelled) setErrorMsg(err.message || 'Gagal memuat detail event')
+      } finally {
+        if (!cancelled) setIsLoading(false)
       }
+    }
+
+    loadDetail()
+    return () => {
+      cancelled = true
+    }
+  }, [location.state])
+
+  const handleCreateFirstMap = async () => {
+    if (!eventData) return
+    try {
+      const res = await fetch(`${API_BASE}/api/maps`, {
+        method: 'POST',
+        headers: getAuthHeaders(true),
+        body: JSON.stringify({
+          id_event: eventData.id_event,
+          nama_map: `Denah Utama - ${eventData.nama_event}`,
+          tipe_map: eventData.tipe_lokasi === 'indoor' ? 'indoor' : 'outdoor',
+          is_utama: true,
+          garis_lintang_pusat: eventData.garis_lintang ?? -8.6724,
+          garis_bujur_pusat: eventData.garis_bujur ?? 115.2362
+        })
+      })
+      const created = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(created.detail || 'Gagal membuat denah peta baru')
+
+      setDenahList((prev) => [
+        ...prev,
+        {
+          id: created.id_map,
+          id_map: created.id_map,
+          namaDenah: created.nama_map,
+          status: created.status_map,
+          imageUrl: created.gambar_layout || DEFAULT_DENAH_IMAGES[0],
+          rawMap: created
+        }
+      ])
     } catch (err) {
-      console.error('Gagal menyinkronkan status event admin:', err)
+      alert(err.message)
     }
   }
 
-  const handlePublishEvent = () => {
-    setEventStatus('Sudah Dipublish')
-    syncAdminStorage('Sudah Dipublish', denahList)
-    setShowPublishModal(true)
+  const handlePublishEvent = async () => {
+    if (!eventData) return
+    try {
+      const res = await fetch(`${API_BASE}/api/events/${eventData.id_event}`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(true),
+        body: JSON.stringify({ status_event: 'published' })
+      })
+      const updated = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(updated.detail || 'Gagal mempublish event')
+
+      setEventData(updated)
+      setShowPublishModal(true)
+    } catch (err) {
+      alert(err.message)
+    }
   }
 
-  const handlePublishDenah = (denahId) => {
-    const updatedDenah = denahList.map((item) =>
-      item.id === denahId ? { ...item, status: 'published' } : item
-    )
-    setDenahList(updatedDenah)
-    syncAdminStorage(eventStatus, updatedDenah)
-    setShowPublishModal(true)
+  const handlePublishDenah = async (idMap) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/maps/${idMap}`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(true),
+        body: JSON.stringify({ status_map: 'published' })
+      })
+      const updated = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(updated.detail || 'Gagal mempublish denah')
+
+      setDenahList((prev) =>
+        prev.map((item) =>
+          item.id_map === idMap ? { ...item, status: 'published', rawMap: updated } : item
+        )
+      )
+      setShowPublishModal(true)
+    } catch (err) {
+      alert(err.message)
+    }
+  }
+
+  const openMapEditor = (denah) => {
+    const editorPayload = {
+      role: 'admin',
+      eventId: eventData.id_event,
+      id_event: eventData.id_event,
+      id_map: denah.id_map,
+      eventTitle: eventData.nama_event,
+      selectedDenah: { ...denah, title: denah.namaDenah },
+      eventData,
+      denah
+    }
+    try {
+      sessionStorage.setItem('festnav_editor_ctx', JSON.stringify(editorPayload))
+    } catch {
+      // Abaikan
+    }
+    navigate('/map-editor', { state: editorPayload })
   }
 
   return (
@@ -211,133 +226,149 @@ function DetailEventAdmin() {
       </div>
 
       <main className="detail-eo-content">
-        <div className="event-top-header">
-          <h2 className="event-main-title">{eventInfo.namaEvent}</h2>
-          <button
-            type="button"
-            className="btn-cyan-edit"
-            onClick={() =>
-              navigate('/edit-event', {
-                state: { eventData: buildFullEventPayload(), role: 'admin' }
-              })
-            }
-          >
-            Edit Detail
-          </button>
-        </div>
-
-        <div className="detail-eo-card">
-          <div className="detail-top-grid">
-            <div className="poster-box">
-              <img
-                src={eventInfo.posterUrl}
-                alt={eventInfo.namaEvent}
-                className="event-poster-img"
-              />
-            </div>
-
-            <div className="metadata-list">
-              <p>
-                <strong>Nama Event:</strong> {eventInfo.namaEvent}
-              </p>
-              <p>
-                <strong>Tanggal Event:</strong> {eventInfo.tanggalEvent}
-              </p>
-              <p>
-                <strong>Lokasi Event:</strong> {eventInfo.lokasiEvent}
-              </p>
-              <p>
-                <strong>Jenis Event:</strong> {eventInfo.jenisEvent}
-              </p>
-              <p>
-                <strong>Event Organizer:</strong> {eventInfo.eventOrganizer}
-              </p>
-              <p>
-                <strong>Sumber:</strong> {eventInfo.sumber}
-              </p>
-              <p>
-                <strong>Status:</strong> {eventStatus}
-              </p>
-
-              <div className="deskripsi-block">
-                <strong>Deskripsi Singkat:</strong>
-                <p className="deskripsi-text">{eventInfo.deskripsiSingkat}</p>
-              </div>
-            </div>
+        {isLoading ? (
+          <div className="detail-eo-card" style={{ textAlign: 'center', padding: '48px' }}>
+            Memuat detail event dari database...
           </div>
+        ) : errorMsg || !eventData ? (
+          <div className="detail-eo-card" style={{ textAlign: 'center', padding: '48px' }}>
+            <p style={{ color: '#b91c1c', marginBottom: 16 }}>{errorMsg || 'Event tidak ditemukan'}</p>
+            <button type="button" className="btn-cyan-footer" onClick={() => navigate('/daftar-event')}>
+              Kembali ke Daftar Event
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="event-top-header">
+              <h2 className="event-main-title">{eventData.nama_event}</h2>
+              <button
+                type="button"
+                className="btn-cyan-edit"
+                onClick={() =>
+                  navigate('/edit-event', {
+                    state: { eventId: eventData.id_event, eventData, role: 'admin' }
+                  })
+                }
+              >
+                Edit Detail
+              </button>
+            </div>
 
-          <hr className="detail-divider" />
-
-          <div className="denah-acara-section">
-            <h2 className="denah-section-heading">Denah Acara</h2>
-
-            {denahList.map((denah) => (
-              <div key={denah.id} className="denah-item-wrapper">
-                <div className="denah-title-row">
-                  <h3 className="denah-item-name">{denah.namaDenah}</h3>
-                </div>
-
-                <div className="denah-image-frame">
+            <div className="detail-eo-card">
+              <div className="detail-top-grid">
+                <div className="poster-box">
                   <img
-                    src={denah.imageUrl}
-                    alt={denah.namaDenah}
-                    className="denah-map-img"
+                    src={eventData.poster_url || DEFAULT_POSTER_URL}
+                    alt={eventData.nama_event}
+                    className="event-poster-img"
                   />
                 </div>
 
-                <div className="denah-btn-row">
-                  <button
-                    type="button"
-                    className="btn-cyan-denah"
-                    onClick={() => handlePublishDenah(denah.id)}
-                  >
-                    {denah.status === 'published' ? 'Sudah Dipublish' : 'Publish Denah'}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-cyan-denah"
-                    onClick={() =>
-                      navigate('/map-editor', {
-                        state: {
-                          role: 'admin',
-                          eventId: eventInfo.id,
-                          eventTitle: eventInfo.namaEvent,
-                          selectedDenah: { ...denah, title: denah.namaDenah },
-                          eventData: buildFullEventPayload(),
-                          denah
-                        }
-                      })
-                    }
-                  >
-                    Buka Map Editor
-                  </button>
+                <div className="metadata-list">
+                  <p>
+                    <strong>Nama Event:</strong> {eventData.nama_event}
+                  </p>
+                  <p>
+                    <strong>Tanggal Event:</strong>{' '}
+                    {formatDateRange(eventData.tanggal_mulai, eventData.tanggal_selesai)}
+                  </p>
+                  <p>
+                    <strong>Lokasi Event:</strong> {eventData.lokasi || '-'}
+                  </p>
+                  <p>
+                    <strong>Jenis Event:</strong> {eventData.jenis_event || '-'}
+                  </p>
+                  <p>
+                    <strong>Event Organizer:</strong> {eventData.nama_organizer || 'Admin FestNav'}
+                  </p>
+                  <p>
+                    <strong>Sumber:</strong>{' '}
+                    {eventData.sumber === 'scraping' ? 'Hasil Scrapping' : 'Kerjasama Event Organizer'}
+                  </p>
+                  <p>
+                    <strong>Status:</strong> {formatStatusLabel(eventData.status_event)}
+                  </p>
+
+                  <div className="deskripsi-block">
+                    <strong>Deskripsi Singkat:</strong>
+                    <p className="deskripsi-text">{eventData.deskripsi || '-'}</p>
+                  </div>
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
 
-        <div className="detail-eo-footer">
-          <div className="footer-dual-buttons">
-            <button
-              type="button"
-              className="btn-cyan-footer"
-              onClick={handlePublishEvent}
-            >
-              Publish Event
-            </button>
-            <button
-              type="button"
-              className="btn-cyan-footer"
-              onClick={() => navigate('/daftar-event')}
-            >
-              Kembali
-            </button>
-          </div>
-        </div>
+              <hr className="detail-divider" />
+
+              <div className="denah-acara-section">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                  <h2 className="denah-section-heading" style={{ margin: 0 }}>Denah Acara</h2>
+                  <button type="button" className="btn-cyan-denah" onClick={handleCreateFirstMap}>
+                    + Tambah Denah Peta
+                  </button>
+                </div>
+
+                {denahList.length === 0 ? (
+                  <p style={{ color: '#64748b' }}>
+                    Event ini belum memiliki denah peta. Klik <strong>+ Tambah Denah Peta</strong> di atas untuk membuat peta baru.
+                  </p>
+                ) : (
+                  denahList.map((denah) => (
+                    <div key={denah.id_map} className="denah-item-wrapper">
+                      <div className="denah-title-row">
+                        <h3 className="denah-item-name">{denah.namaDenah}</h3>
+                      </div>
+
+                      <div className="denah-image-frame">
+                        <img
+                          src={denah.imageUrl}
+                          alt={denah.namaDenah}
+                          className="denah-map-img"
+                        />
+                      </div>
+
+                      <div className="denah-btn-row">
+                        <button
+                          type="button"
+                          className="btn-cyan-denah"
+                          onClick={() => handlePublishDenah(denah.id_map)}
+                        >
+                          {denah.status === 'published' ? 'Sudah Dipublish' : 'Publish Denah'}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-cyan-denah"
+                          onClick={() => openMapEditor(denah)}
+                        >
+                          Buka Map Editor
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div className="detail-eo-footer">
+              <div className="footer-dual-buttons">
+                <button
+                  type="button"
+                  className="btn-cyan-footer"
+                  onClick={handlePublishEvent}
+                >
+                  Publish Event
+                </button>
+                <button
+                  type="button"
+                  className="btn-cyan-footer"
+                  onClick={() => navigate('/daftar-event')}
+                >
+                  Kembali
+                </button>
+              </div>
+            </div>
+          </>
+        )}
       </main>
 
-      {/* MODAL PUBLISHED */}
       {showPublishModal && (
         <div
           onClick={() => setShowPublishModal(false)}
