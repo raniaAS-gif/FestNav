@@ -35,6 +35,20 @@ function formatWitaDateTime(isoString) {
   return `${datePart} ${timePart.replace(':', '.')} WITA`
 }
 
+function getRequestTargetKey(req) {
+  const items = Array.isArray(req.items) ? req.items : []
+  const hasEvent = items.some((it) => it.jenis_item === 'event')
+  const mapIds = items
+    .filter((it) => it.jenis_item === 'map' && it.id_map != null)
+    .map((it) => it.id_map)
+    .sort((a, b) => a - b)
+
+  if (!hasEvent && mapIds.length > 0) {
+    return `map-${req.id_event}-${mapIds.join(',')}`
+  }
+  return `event-${req.id_event}`
+}
+
 function buildEventTags(ev, badgeLabel) {
   const tags = [{ label: 'Kerjasama Event Organizer', color: '#00bcd4' }]
   const jenis = (ev?.jenis_event || '').toLowerCase()
@@ -56,7 +70,7 @@ function buildEventTags(ev, badgeLabel) {
   return tags
 }
 
-function mapRequestToAdminCard(req, eventMap) {
+function mapRequestToAdminCard(req, eventMap, mapNameById) {
   const ev = eventMap.get(req.id_event) || null
   const baseTitle = ev?.nama_event || `Event #${req.id_event}`
   const mapItems = Array.isArray(req.items)
@@ -68,7 +82,13 @@ function mapRequestToAdminCard(req, eventMap) {
 
   let suffix = '(Event)'
   if (!hasEventItem && mapItems.length > 0) {
-    suffix = '(Denah)'
+    const namaDenahList = mapItems
+      .map((it) => mapNameById.get(it.id_map))
+      .filter(Boolean)
+    suffix =
+      namaDenahList.length > 0
+        ? `(Denah: ${namaDenahList.join(', ')})`
+        : '(Denah)'
   } else if (hasEventItem && mapItems.length > 0) {
     suffix = `(Event & ${mapItems.length} Denah)`
   }
@@ -143,7 +163,7 @@ function DaftarValidasiAdmin() {
     try {
       const headers = getAuthHeaders()
       const [resReq, resEv] = await Promise.all([
-        fetch(`${API_BASE}/api/request-publish`, { headers }),
+        fetch(`${API_BASE}/api/request-publish?latest_per_event=true`, { headers }),
         fetch(`${API_BASE}/api/events`, { headers })
       ])
 
@@ -152,15 +172,27 @@ function DaftarValidasiAdmin() {
         throw new Error(reqData.detail || 'Gagal memuat daftar validasi')
       }
 
+      // 1 card terbaru per target (event atau denah tertentu)
+      const sortedRaw = [...(Array.isArray(reqData) ? reqData : [])].sort(
+        (a, b) => (b.id_request ?? 0) - (a.id_request ?? 0)
+      )
+      const latestByTarget = new Map()
+      for (const req of sortedRaw) {
+        const key = getRequestTargetKey(req)
+        if (!latestByTarget.has(key)) {
+          latestByTarget.set(key, req)
+        }
+      }
+      const uniqueRequests = [...latestByTarget.values()]
+
       const evData = resEv.ok ? await resEv.json().catch(() => []) : []
       const eventMap = new Map(
         (Array.isArray(evData) ? evData : []).map((ev) => [ev.id_event, ev])
       )
 
-      // Ambil detail event jika ada id_event yang belum masuk di list utama
       const missingIds = [
         ...new Set(
-          (Array.isArray(reqData) ? reqData : [])
+          uniqueRequests
             .map((r) => r.id_event)
             .filter((idEv) => idEv && !eventMap.has(idEv))
         )
@@ -176,8 +208,31 @@ function DaftarValidasiAdmin() {
         })
       )
 
-      const mapped = (Array.isArray(reqData) ? reqData : []).map((req) =>
-        mapRequestToAdminCard(req, eventMap)
+      // Ambil nama denah untuk request yang khusus mengajukan denah
+      const eventsWithMapReq = [
+        ...new Set(
+          uniqueRequests
+            .filter((r) =>
+              Array.isArray(r.items) && r.items.some((it) => it.jenis_item === 'map')
+            )
+            .map((r) => r.id_event)
+        )
+      ]
+      const mapNameById = new Map()
+      await Promise.all(
+        eventsWithMapReq.map(async (idEv) => {
+          const r = await fetch(`${API_BASE}/api/maps/event/${idEv}`, { headers })
+          if (r.ok) {
+            const maps = await r.json().catch(() => [])
+            if (Array.isArray(maps)) {
+              maps.forEach((m) => mapNameById.set(m.id_map, m.nama_map))
+            }
+          }
+        })
+      )
+
+      const mapped = uniqueRequests.map((req) =>
+        mapRequestToAdminCard(req, eventMap, mapNameById)
       )
       setValidations(mapped)
     } catch (err) {
@@ -192,10 +247,15 @@ function DaftarValidasiAdmin() {
   }, [loadValidations])
 
   useEffect(() => {
+    const onFocus = () => loadValidations()
+    window.addEventListener('focus', onFocus)
+    return () => window.removeEventListener('focus', onFocus)
+  }, [loadValidations])
+
+  useEffect(() => {
     setActivePage(1)
   }, [searchTerm])
 
-  // Buka Modal Penolakan
   const handleOpenRejectModal = (id) => {
     setSelectedId(id)
     const currentItem = validations.find((v) => v.id === id)
@@ -203,7 +263,6 @@ function DaftarValidasiAdmin() {
     setShowRejectModal(true)
   }
 
-  // Kirim Pesan Penolakan -> PATCH /api/request-publish/{id}/keputusan (ditolak)
   const handleSendRejection = async () => {
     if (!selectedId || isSubmitting) return
     setIsSubmitting(true)
@@ -234,13 +293,11 @@ function DaftarValidasiAdmin() {
     }
   }
 
-  // Klik tombol "Validasi" (saat status pending) -> Buka Konfirmasi Publish
   const handleOpenValidateConfirm = (id) => {
     setSelectedId(id)
     setShowConfirmValidateModal(true)
   }
 
-  // Klik tombol "Ubah Keputusan" (saat status rejected)
   const handleDecisionChangeClick = (item) => {
     if (item.isModifiedByEO) {
       setSelectedId(item.id)
@@ -251,7 +308,6 @@ function DaftarValidasiAdmin() {
     setShowConfirmValidateModal(true)
   }
 
-  // Konfirmasi "Yakin" -> PATCH /api/request-publish/{id}/keputusan (disetujui)
   const handleConfirmValidateAndPublish = async () => {
     if (!selectedId || isSubmitting) return
     setIsSubmitting(true)
@@ -366,8 +422,14 @@ function DaftarValidasiAdmin() {
               const isValidated = item.status === 'validated'
               const isRejected = item.status === 'rejected'
               const isCancelled = item.status === 'cancelled'
-              const isLocked = isValidated || isCancelled
-              const canCancelRejection = isRejected && !item.isModifiedByEO
+              const isFinalPublished = isValidated || isCancelled
+              const canChangeDecision = isRejected && !item.isModifiedByEO
+
+              const dimStyle = {
+                opacity: 0.45,
+                cursor: 'not-allowed',
+                pointerEvents: 'none'
+              }
 
               return (
                 <div key={item.id} className="validasi-card">
@@ -397,15 +459,10 @@ function DaftarValidasiAdmin() {
                     <button
                       type="button"
                       className="btn-action btn-detail"
-                      disabled={isLocked}
-                      style={
-                        isLocked
-                          ? { opacity: 0.5, cursor: 'not-allowed' }
-                          : undefined
-                      }
                       onClick={() =>
                         navigate('/detail-event', {
                           state: {
+                            role: 'admin',
                             validation: item,
                             eventId: item.eventId,
                             id_event: item.eventId,
@@ -422,10 +479,12 @@ function DaftarValidasiAdmin() {
                       <button
                         type="button"
                         className="btn-action btn-ubah-keputusan"
-                        style={
-                          !canCancelRejection
-                            ? { opacity: 0.55, cursor: 'not-allowed' }
-                            : undefined
+                        disabled={!canChangeDecision}
+                        style={!canChangeDecision ? dimStyle : undefined}
+                        title={
+                          !canChangeDecision
+                            ? 'Tidak dapat diubah karena EO sudah memperbarui data event'
+                            : 'Ubah keputusan menjadi valid & langsung publish'
                         }
                         onClick={() => handleDecisionChangeClick(item)}
                       >
@@ -435,12 +494,8 @@ function DaftarValidasiAdmin() {
                       <button
                         type="button"
                         className="btn-action btn-validasi"
-                        disabled={isLocked}
-                        style={
-                          isLocked
-                            ? { opacity: 0.5, cursor: 'not-allowed' }
-                            : undefined
-                        }
+                        disabled={isFinalPublished}
+                        style={isFinalPublished ? dimStyle : undefined}
                         onClick={() => handleOpenValidateConfirm(item.id)}
                       >
                         Validasi
@@ -450,17 +505,13 @@ function DaftarValidasiAdmin() {
                     <button
                       type="button"
                       className={`btn-action ${
-                        isLocked || isRejected
+                        isFinalPublished || isRejected
                           ? 'btn-tolak-processed'
                           : 'btn-tolak'
                       }`}
-                      disabled={isLocked || isRejected}
+                      disabled={isFinalPublished || isRejected}
                       style={
-                        isLocked
-                          ? { opacity: 0.5, cursor: 'not-allowed' }
-                          : isRejected
-                          ? { cursor: 'not-allowed' }
-                          : undefined
+                        isFinalPublished || isRejected ? dimStyle : undefined
                       }
                       onClick={() => handleOpenRejectModal(item.id)}
                     >

@@ -26,9 +26,13 @@ class RiwayatRequestResponse(BaseModel):
 class RequestPublishCreate(BaseModel):
     id_event: int
     catatan_pengirim: Optional[str] = None
+    include_event: Optional[bool] = Field(
+        default=None,
+        description="True untuk mengajukan publish event. Jika None, otomatis True bila map_ids kosong.",
+    )
     map_ids: Optional[List[int]] = Field(
         default=None,
-        description="Daftar id_map yang ikut diajukan. Kosongkan (null) untuk otomatis mengikutsertakan semua map milik event.",
+        description="Daftar id_map yang diajukan publish terpisah. Kosongkan ([]) jika hanya mengajukan publish event.",
     )
 
 

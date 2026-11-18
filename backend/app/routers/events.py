@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.auth import decode_token, get_current_pengelola
 from app.database import get_db
-from app.models import Event, LogAktivitas, Pengelola
+from app.models import Event, LogAktivitas, Pengelola, SumberScraping
 from app.schemas_event import EventCreate, EventResponse, EventUpdate
 
 router = APIRouter(prefix="/api/events", tags=["Events"])
@@ -77,6 +77,15 @@ def _validasi_organizer(db: Session, id_organizer: Optional[int]):
 
 
 def _serialize_event(db: Session, ev: Event) -> EventResponse:
+    is_scraping = str(ev.sumber or "").lower() in ("scraping", "scrapping")
+    if not is_scraping:
+        linked_scraping = (
+            db.query(SumberScraping.id_scraping)
+            .filter(SumberScraping.id_event == ev.id_event)
+            .first()
+        )
+        is_scraping = linked_scraping is not None
+
     return EventResponse(
         id_event=ev.id_event,
         id_organizer=ev.id_organizer,
@@ -91,7 +100,7 @@ def _serialize_event(db: Session, ev: Event) -> EventResponse:
         jenis_event=ev.jenis_event,
         tipe_lokasi=ev.tipe_lokasi,
         mode_event=ev.mode_event,
-        sumber=ev.sumber,
+        sumber="scraping" if is_scraping else (ev.sumber or "manual"),
         status_event=ev.status_event,
         poster_url=ev.poster_url,
         poster_public_id=ev.poster_public_id,
@@ -176,6 +185,7 @@ def create_event(
     if pengelola.peran == "event_organizer":
         data["id_organizer"] = pengelola.id_pengelola
         data["status_event"] = "draft"  # EO wajib lewat request_publish untuk menerbitkan
+        data["sumber"] = "manual"
     else:
         _validasi_organizer(db, data.get("id_organizer"))
 
@@ -190,7 +200,7 @@ def create_event(
     if data["status_event"] == "published":
         data["dipublish_pada"] = datetime.now(timezone.utc)
 
-    ev = Event(**data, sumber="manual")
+    ev = Event(**data)
     db.add(ev)
     db.flush()
 
@@ -232,6 +242,7 @@ def update_event(
 
     if pengelola.peran == "event_organizer":
         updates.pop("id_organizer", None)
+        updates.pop("sumber", None)
         if "status_event" in updates and updates["status_event"] != "draft":
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
