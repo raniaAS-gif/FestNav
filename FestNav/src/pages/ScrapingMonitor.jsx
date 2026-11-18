@@ -3,9 +3,13 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import './ScrapingMonitor.css';
 import NavbarScraping from '../components/NavbarScraping';
 
-const API_BASE =
-  (typeof import.meta !== 'undefined' && import.meta.env.VITE_API_BASE_URL) ||
-  'http://127.0.0.1:8000';
+const isLocal =
+  window.location.hostname === 'localhost' ||
+  window.location.hostname === '127.0.0.1'
+
+const API_BASE = isLocal
+  ? 'http://127.0.0.1:8000'
+  : 'https://festnav.onrender.com'
 
 const TAHAP = ['Membuka halaman', 'Mengambil teks', 'Mengunduh denah', 'Upload gambar', 'Geocoding', 'Selesai'];
 const STATUS_JOB = { antri: ['Antri', 'a'], berjalan: ['Berjalan', 'c'], selesai: ['Selesai', 'g'], gagal: ['Gagal', 'r'], dibatalkan: ['Dibatalkan', 'x'] };

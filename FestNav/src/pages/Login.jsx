@@ -2,9 +2,13 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './Login.css'
 
-const API_BASE =
-  (typeof import.meta !== 'undefined' && import.meta.env.VITE_API_BASE_URL) ||
-  'http://127.0.0.1:8000'
+const isLocal =
+  window.location.hostname === 'localhost' ||
+  window.location.hostname === '127.0.0.1'
+
+const API_BASE = isLocal
+  ? 'http://127.0.0.1:8000'
+  : 'https://festnav.onrender.com'
 
 function Login() {
   const navigate = useNavigate()

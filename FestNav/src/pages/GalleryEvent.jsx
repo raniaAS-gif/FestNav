@@ -4,9 +4,13 @@ import './common.css';
 import './GalleryEvent.css';
 import NavbarEditing from '../components/NavbarEditing';
 
-const API_BASE =
-  (typeof import.meta !== 'undefined' && import.meta.env.VITE_API_BASE_URL) ||
-  'http://127.0.0.1:8000';
+const isLocal =
+  window.location.hostname === 'localhost' ||
+  window.location.hostname === '127.0.0.1'
+
+const API_BASE = isLocal
+  ? 'http://127.0.0.1:8000'
+  : 'https://festnav.onrender.com'
 
 /* gambar_event: id_gambar, id_event, url_gambar, public_id, jenis_gambar, keterangan, waktu_diunggah
    jenis_gambar hanya: foto_venue | jadwal | lainnya (poster utama disimpan di event.poster_url) */
