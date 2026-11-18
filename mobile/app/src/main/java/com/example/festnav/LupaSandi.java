@@ -1,20 +1,27 @@
 package com.example.festnav;
 
-import android.content.Intent;
 import android.os.Bundle;
+import android.text.TextUtils;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
+
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
 
 public class LupaSandi extends AppCompatActivity {
 
-    private FirebaseAuth auth;
-    private EditText inputEmail;
-    private Button btnKirim;
-    private View btnKembaliMasuk, btnKembali;
+    private static final String TAG = "DEBUG_FESTNAV";
+
+    private EditText etEmailLupa;
+    private Button btnKirimReset;
+    private FirebaseAuth mAuth;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -22,47 +29,48 @@ public class LupaSandi extends AppCompatActivity {
         setContentView(R.layout.activity_lupa_sandi);
 
         // Inisialisasi Firebase Auth
-        auth = FirebaseAuth.getInstance();
+        mAuth = FirebaseAuth.getInstance();
 
-        // Menghubungkan variabel dengan ID yang ada di XML kamu
-        inputEmail = findViewById(R.id.etEmailLupaSandi);
-        btnKirim = findViewById(R.id.btnKirimReset);
-        btnKembaliMasuk = findViewById(R.id.btnKembaliMasuk);
-        btnKembali = findViewById(R.id.btnKembali);
+        // Hubungkan komponen UI dengan ID di XML (pastikan ID di XML sesuai)
+        etEmailLupa = findViewById(R.id.etEmailLupa);
+        btnKirimReset = findViewById(R.id.btnKirimReset);
 
-        // Aksi ketika tombol "Kirim tautan reset" diklik
-        btnKirim.setOnClickListener(v -> {
-            String email = inputEmail.getText().toString().trim();
+        // Aksi ketika tombol kirim reset sandi diklik
+        btnKirimReset.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String email = etEmailLupa.getText().toString().trim();
 
-            if (email.isEmpty()) {
-                inputEmail.setError("Email tidak boleh kosong!");
-                inputEmail.requestFocus();
-                return;
+                // Validasi input email tidak boleh kosong
+                if (TextUtils.isEmpty(email)) {
+                    etEmailLupa.setError("Email tidak boleh kosong!");
+                    etEmailLupa.requestFocus();
+                    return;
+                }
+
+                Log.d(TAG, "Mencoba mengirim email reset sandi ke: " + email);
+
+                // Eksekusi fungsi pengiriman email dari Firebase Auth
+                mAuth.sendPasswordResetEmail(email)
+                        .addOnCompleteListener(new OnCompleteListener<Void>() {
+                            @Override
+                            public void onComplete(@NonNull Task<Void> task) {
+                                if (task.isSuccessful()) {
+                                    Log.d(TAG, "Email reset sandi BERHASIL dikirim oleh server Firebase.");
+                                    Toast.makeText(LupaSandi.this,
+                                            "Instruksi pemulihan sandi telah dikirim ke email. Cek Kotak Masuk / Spam!",
+                                            Toast.LENGTH_LONG).show();
+                                } else {
+                                    Log.e(TAG, "GAGAL mengirim email reset: ", task.getException());
+                                    String errorMessage = task.getException() != null ?
+                                            task.getException().getMessage() : "Terjadi kesalahan.";
+                                    Toast.makeText(LupaSandi.this,
+                                            "Gagal mengirim: " + errorMessage,
+                                            Toast.LENGTH_LONG).show();
+                                }
+                            }
+                        });
             }
-
-            // Kirim email reset password via Firebase
-            auth.sendPasswordResetEmail(email)
-                    .addOnCompleteListener(task -> {
-                        if (task.isSuccessful()) {
-                            Toast.makeText(
-                                    LupaSandi.this,
-                                    "Instruksi reset sandi telah dikirim ke email Anda. Cek kotak masuk atau spam.",
-                                    Toast.LENGTH_LONG
-                            ).show();
-                            finish(); // Kembali ke halaman sebelumnya
-                        } else {
-                            Toast.makeText(
-                                    LupaSandi.this,
-                                    "Gagal mengirim email: " + (task.getException() != null ? task.getException().getMessage() : ""),
-                                    Toast.LENGTH_LONG
-                            ).show();
-                        }
-                    });
         });
-
-        // Aksi tambahan untuk tombol kembali/masuk jika ingin diarahkan manual
-        View.OnClickListener kembaliListener = v -> finish();
-        btnKembali.setOnClickListener(kembaliListener);
-        btnKembaliMasuk.setOnClickListener(kembaliListener);
     }
 }

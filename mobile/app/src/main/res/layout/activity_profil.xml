@@ -1,183 +1,277 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView
+<RelativeLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fillViewport="true"
-    android:scrollbars="vertical"
     android:background="#FFFFFF"
     tools:context=".Profil">
 
-    <androidx.constraintlayout.widget.ConstraintLayout
+    <!-- Konten Utama yang Bisa Di-scroll -->
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:paddingBottom="80dp">
+        android:layout_height="match_parent"
+        android:layout_above="@+id/bottomNavigation"
+        android:fillViewport="true">
 
-        <!-- Latar Belakang Gambar Profil -->
-        <ImageView
-            android:id="@+id/imgBackgroundProfil"
-            android:layout_width="0dp"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:adjustViewBounds="true"
-            android:scaleType="fitXY"
-            android:src="@drawable/profil"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            android:orientation="vertical"
+            android:padding="24dp">
 
-        <!-- TextView untuk Nama Pengunjung di Bagian Atas -->
+            <!-- Judul Halaman -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Profil"
+                android:textSize="26sp"
+                android:textStyle="bold"
+                android:textColor="#000000"
+                android:layout_marginBottom="20dp"/>
+
+            <!-- Header Info: Inisial Avatar & Nama/Username -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="24dp">
+
+                <!-- Lingkaran Inisial / Avatar (Background Ungu Langsung) -->
+                <TextView
+                    android:id="@+id/tvAvatarInisial"
+                    android:layout_width="70dp"
+                    android:layout_height="70dp"
+                    android:text="EA"
+                    android:textSize="24sp"
+                    android:textStyle="bold"
+                    android:textColor="#FFFFFF"
+                    android:gravity="center"
+                    android:background="#7C3AED"
+                    android:layout_marginEnd="16dp"/>
+
+                <!-- Nama Lengkap & @username -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/tvNamaHeader"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Nama Pengunjung"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:textColor="#000000"
+                        android:layout_marginBottom="2dp"/>
+
+                    <TextView
+                        android:id="@+id/tvUsernameHeader"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@username"
+                        android:textSize="14sp"
+                        android:textColor="#6B7280"/>
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Card Informasi Data User (Bisa Diedit) -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                android:radius="16dp"
+                android:elevation="2dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="20dp"
+                    android:background="#FFFFFF">
+
+                    <!-- 1. Nama Lengkap -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Nama lengkap"
+                        android:textSize="12sp"
+                        android:textColor="#6B7280"
+                        android:layout_marginBottom="2dp"/>
+
+                    <EditText
+                        android:id="@+id/etProfilNamaLengkap"
+                        android:layout_width="match_parent"
+                        android:layout_height="42dp"
+                        android:text="Nama Pengunjung"
+                        android:textSize="15sp"
+                        android:textColor="#000000"
+                        android:enabled="false"
+                        android:inputType="textPersonName"
+                        android:autofillHints="name"
+                        android:background="@android:drawable/editbox_background_normal"
+                        android:layout_marginBottom="14dp"/>
+
+                    <!-- 2. Username -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Username"
+                        android:textSize="12sp"
+                        android:textColor="#6B7280"
+                        android:layout_marginBottom="2dp"/>
+
+                    <EditText
+                        android:id="@+id/etProfilUsername"
+                        android:layout_width="match_parent"
+                        android:layout_height="42dp"
+                        android:text="Username"
+                        android:textSize="15sp"
+                        android:textColor="#000000"
+                        android:enabled="false"
+                        android:inputType="text"
+                        android:autofillHints="username"
+                        android:background="@android:drawable/editbox_background_normal"
+                        android:layout_marginBottom="14dp"/>
+
+                    <!-- 3. Email -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Email"
+                        android:textSize="12sp"
+                        android:textColor="#6B7280"
+                        android:layout_marginBottom="2dp"/>
+
+                    <EditText
+                        android:id="@+id/etProfilEmail"
+                        android:layout_width="match_parent"
+                        android:layout_height="42dp"
+                        android:text="nama@gmail.com"
+                        android:textSize="15sp"
+                        android:textColor="#000000"
+                        android:enabled="false"
+                        android:inputType="textEmailAddress"
+                        android:autofillHints="emailAddress"
+                        android:background="@android:drawable/editbox_background_normal"
+                        android:layout_marginBottom="14dp"/>
+
+                    <!-- 4. Nomor Telepon -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Nomor telepon"
+                        android:textSize="12sp"
+                        android:textColor="#6B7280"
+                        android:layout_marginBottom="2dp"/>
+
+                    <EditText
+                        android:id="@+id/etProfilTelepon"
+                        android:layout_width="match_parent"
+                        android:layout_height="42dp"
+                        android:text="08xx xxxx xxxx"
+                        android:textSize="15sp"
+                        android:textColor="#000000"
+                        android:enabled="false"
+                        android:inputType="phone"
+                        android:autofillHints="phone"
+                        android:background="@android:drawable/editbox_background_normal"/>
+
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- Tombol Edit Profil / Simpan -->
+            <Button
+                android:id="@+id/btnEditSimpanProfil"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:backgroundTint="#7C3AED"
+                android:text="Edit Profil"
+                android:textColor="#FFFFFF"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="14dp"/>
+
+            <!-- Tombol Keluar (Log Out) -->
+            <Button
+                android:id="@+id/btnKeluar"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:backgroundTint="#FFFFFF"
+                android:text="Keluar"
+                android:textColor="#EF4444"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:stateListAnimator="@null"
+                android:elevation="0dp"
+                style="?android:attr/buttonStyleSmall"/>
+
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- Bottom Navigation Bar (4 Tombol di Bawah) -->
+    <LinearLayout
+        android:id="@+id/bottomNavigation"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:layout_alignParentBottom="true"
+        android:orientation="horizontal"
+        android:background="#FFFFFF"
+        android:elevation="8dp"
+        android:weightSum="4"
+        android:gravity="center">
+
+        <!-- 1. Tombol Event -->
         <TextView
-            android:id="@+id/tvNamaHeader"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="140dp"
-            android:layout_marginEnd="28dp"
-            android:layout_marginTop="35dp"
-            android:text="Nama Pengunjung"
-            android:textColor="#000000"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            app:layout_constraintTop_toTopOf="@id/imgBackgroundProfil"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
-
-        <!-- TextView untuk Username di Bagian Atas -->
-        <TextView
-            android:id="@+id/tvUsernameHeader"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="140dp"
-            android:layout_marginEnd="28dp"
-            android:layout_marginTop="60dp"
-            android:text="\@username"
-            android:textColor="#6B7280"
-            android:textSize="13sp"
-            app:layout_constraintTop_toTopOf="@id/imgBackgroundProfil"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
-
-        <!-- Kotak Informasi Data Diri -->
-        <!-- 1. Nama Lengkap -->
-        <TextView
-            android:id="@+id/tvNamaLengkapVal"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="50dp"
-            android:layout_marginEnd="50dp"
-            android:layout_marginTop="160dp"
-            android:text="Nama Pengunjung"
-            android:textColor="#000000"
-            android:textSize="13sp"
-            android:textStyle="bold"
-            app:layout_constraintTop_toTopOf="@id/imgBackgroundProfil"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
-
-        <!-- 2. Username -->
-        <TextView
-            android:id="@+id/tvUsernameVal"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="50dp"
-            android:layout_marginEnd="50dp"
-            android:layout_marginTop="230dp"
-            android:text="Username"
-            android:textColor="#000000"
-            android:textSize="13sp"
-            android:textStyle="bold"
-            app:layout_constraintTop_toTopOf="@id/imgBackgroundProfil"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
-
-        <!-- 3. Email -->
-        <TextView
-            android:id="@+id/tvEmailVal"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="50dp"
-            android:layout_marginEnd="50dp"
-            android:layout_marginTop="300dp"
-            android:text="nama@gmail.com"
-            android:textColor="#000000"
-            android:textSize="13sp"
-            android:textStyle="bold"
-            app:layout_constraintTop_toTopOf="@id/imgBackgroundProfil"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
-
-        <!-- 4. Nomor Telepon -->
-        <TextView
-            android:id="@+id/tvTeleponVal"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="50dp"
-            android:layout_marginEnd="50dp"
-            android:layout_marginTop="370dp"
-            android:text="08xxxxxxxxxx"
-            android:textColor="#000000"
-            android:textSize="13sp"
-            android:textStyle="bold"
-            app:layout_constraintTop_toTopOf="@id/imgBackgroundProfil"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
-
-        <!-- Tombol Keluar (Logout) -->
-        <View
-            android:id="@+id/btnKeluar"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:layout_marginStart="36dp"
-            android:layout_marginEnd="36dp"
-            android:layout_marginTop="450dp"
-            android:background="@android:color/transparent"
-            app:layout_constraintTop_toTopOf="@id/imgBackgroundProfil"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
-
-        <!-- Menu Navigasi Bawah (Event, Peta, Favorit, Profil) -->
-        <View
             android:id="@+id/navEvent"
-            android:layout_width="65dp"
-            android:layout_height="50dp"
-            android:layout_marginStart="30dp"
-            android:layout_marginTop="530dp"
-            android:background="@android:color/transparent"
-            app:layout_constraintTop_toTopOf="@id/imgBackgroundProfil"
-            app:layout_constraintStart_toStartOf="parent" />
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="Event"
+            android:gravity="center"
+            android:textSize="12sp"
+            android:textColor="#4B5563"
+            android:textStyle="bold"/>
 
-        <View
+        <!-- 2. Tombol Peta -->
+        <TextView
             android:id="@+id/navPeta"
-            android:layout_width="65dp"
-            android:layout_height="50dp"
-            android:layout_marginTop="530dp"
-            android:background="@android:color/transparent"
-            app:layout_constraintTop_toTopOf="@id/imgBackgroundProfil"
-            app:layout_constraintStart_toEndOf="@id/navEvent"
-            app:layout_constraintEnd_toStartOf="@id/navFavorit" />
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="Peta"
+            android:gravity="center"
+            android:textSize="12sp"
+            android:textColor="#4B5563"
+            android:textStyle="bold"/>
 
-        <View
+        <!-- 3. Tombol Favorit -->
+        <TextView
             android:id="@+id/navFavorit"
-            android:layout_width="65dp"
-            android:layout_height="50dp"
-            android:layout_marginTop="530dp"
-            android:background="@android:color/transparent"
-            app:layout_constraintTop_toTopOf="@id/imgBackgroundProfil"
-            app:layout_constraintStart_toEndOf="@id/navPeta"
-            app:layout_constraintEnd_toStartOf="@id/navProfil" />
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="Favorit"
+            android:gravity="center"
+            android:textSize="12sp"
+            android:textColor="#4B5563"
+            android:textStyle="bold"/>
 
-        <!-- Tombol Profil (Aktif di halaman ini) -->
-        <View
+        <!-- 4. Tombol Profil (Aktif di sini) -->
+        <TextView
             android:id="@+id/navProfil"
-            android:layout_width="65dp"
-            android:layout_height="50dp"
-            android:layout_marginEnd="30dp"
-            android:layout_marginTop="530dp"
-            android:background="@android:color/transparent"
-            app:layout_constraintTop_toTopOf="@id/imgBackgroundProfil"
-            app:layout_constraintEnd_toEndOf="parent" />
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="Profil"
+            android:gravity="center"
+            android:textSize="12sp"
+            android:textColor="#7C3AED"
+            android:textStyle="bold"/>
 
-    </androidx.constraintlayout.widget.ConstraintLayout>
+    </LinearLayout>
 
-</ScrollView>
+</RelativeLayout>
