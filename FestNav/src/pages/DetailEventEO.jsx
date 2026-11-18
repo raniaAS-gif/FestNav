@@ -38,6 +38,22 @@ function formatDateRange(mulai, selesai) {
   return fmt(mulai || selesai)
 }
 
+function formatApiError(detail, fallback = 'Terjadi kesalahan pada server.') {
+  if (!detail) return fallback
+  if (typeof detail === 'string') return detail
+  if (Array.isArray(detail)) {
+    return detail
+      .map((item) => {
+        const field = Array.isArray(item.loc)
+          ? item.loc[item.loc.length - 1]
+          : 'field'
+        return `${field}: ${item.msg}`
+      })
+      .join('\n')
+  }
+  return JSON.stringify(detail)
+}
+
 function DetailEventEO() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -45,6 +61,8 @@ function DetailEventEO() {
   const [eventData, setEventData] = useState(null)
   const [denahList, setDenahList] = useState([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isSubmittingRequest, setIsSubmittingRequest] = useState(false)
+  const [activeRequestId, setActiveRequestId] = useState(null)
   const [errorMsg, setErrorMsg] = useState('')
   const [eventStatus, setEventStatus] = useState('draft')
   const [warningDenahId, setWarningDenahId] = useState(null)
@@ -53,7 +71,11 @@ function DetailEventEO() {
     let cancelled = false
     const navState = location.state || {}
     const requestedId =
-      navState.eventId || navState.id_event || navState.eventData?.id_event || navState.eventData?.id
+      navState.eventId ||
+      navState.id_event ||
+      navState.id ||
+      navState.eventData?.id_event ||
+      navState.eventData?.id
 
     const loadDetail = async () => {
       setIsLoading(true)
@@ -83,21 +105,39 @@ function DetailEventEO() {
             myEvents[0]
         }
 
-        const resMaps = await fetch(`${API_BASE}/api/maps/event/${ev.id_event}`, {
-          headers: getAuthHeaders()
-        })
+        const [resMaps, resReqs] = await Promise.all([
+          fetch(`${API_BASE}/api/maps/event/${ev.id_event}`, {
+            headers: getAuthHeaders()
+          }),
+          fetch(`${API_BASE}/api/request-publish?status_request=menunggu`, {
+            headers: getAuthHeaders()
+          })
+        ])
+
         const maps = resMaps.ok ? await resMaps.json() : []
+        const pendingReqs = resReqs.ok ? await resReqs.json() : []
+        const myPendingReq = Array.isArray(pendingReqs)
+          ? pendingReqs.find((r) => r.id_event === ev.id_event)
+          : null
 
         if (cancelled) return
 
+        const pendingMapIds = new Set(
+          (myPendingReq?.items || [])
+            .filter((it) => it.jenis_item === 'map' && it.id_map)
+            .map((it) => it.id_map)
+        )
+
         setEventData(ev)
-        setEventStatus(ev.is_locked ? 'pending' : ev.status_event || 'draft')
+        setActiveRequestId(myPendingReq?.id_request || null)
+        const isPending = Boolean(myPendingReq) || ev.is_locked
+        setEventStatus(isPending ? 'pending' : ev.status_event || 'draft')
         setDenahList(
           maps.map((m, idx) => ({
             id: m.id_map,
             id_map: m.id_map,
             namaDenah: m.nama_map,
-            status: m.status_map,
+            status: pendingMapIds.has(m.id_map) ? 'pending' : m.status_map,
             imageUrl:
               m.gambar_layout ||
               DEFAULT_DENAH_IMAGES[idx % DEFAULT_DENAH_IMAGES.length],
@@ -127,13 +167,15 @@ function DetailEventEO() {
           id_event: eventData.id_event,
           nama_map: `Denah Utama - ${eventData.nama_event}`,
           tipe_map: eventData.tipe_lokasi === 'indoor' ? 'indoor' : 'outdoor',
-          is_utama: true,
+          is_utama: denahList.length === 0,
           garis_lintang_pusat: eventData.garis_lintang ?? -8.6724,
           garis_bujur_pusat: eventData.garis_bujur ?? 115.2362
         })
       })
       const created = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(created.detail || 'Gagal membuat denah peta baru')
+      if (!res.ok) {
+        throw new Error(formatApiError(created.detail, 'Gagal membuat denah peta baru'))
+      }
 
       setDenahList((prev) => [
         ...prev,
@@ -151,15 +193,135 @@ function DetailEventEO() {
     }
   }
 
-  const handleRequestPublishDenah = (idMap) => {
+  // Kirim Request Publish Event (beserta seluruh denahnya) ke database
+  const handleSendRequestPublishEvent = async () => {
+    if (!eventData || isSubmittingRequest) return
+    setIsSubmittingRequest(true)
+    try {
+      const res = await fetch(`${API_BASE}/api/request-publish`, {
+        method: 'POST',
+        headers: getAuthHeaders(true),
+        body: JSON.stringify({
+          id_event: Number(eventData.id_event),
+          catatan_pengirim: null,
+          map_ids: null
+        })
+      })
+      const created = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(
+          formatApiError(created.detail, 'Gagal mengirim request publish event.')
+        )
+      }
+
+      setActiveRequestId(created.id_request)
+      setEventStatus('pending')
+      setWarningDenahId(null)
+      setDenahList((prev) =>
+        prev.map((item) =>
+          item.status === 'draft' ? { ...item, status: 'pending' } : item
+        )
+      )
+      alert(`Permintaan publish untuk "${eventData.nama_event}" berhasil dikirim ke Admin!`)
+    } catch (err) {
+      alert(err.message || 'Gagal mengirim request publish event.')
+    } finally {
+      setIsSubmittingRequest(false)
+    }
+  }
+
+  // Batalkan Request Publish yang sedang menunggu di database
+  const handleCancelRequestPublish = async () => {
+    if (!eventData || isSubmittingRequest) return
+    setIsSubmittingRequest(true)
+    try {
+      let reqId = activeRequestId
+      if (!reqId) {
+        const resList = await fetch(
+          `${API_BASE}/api/request-publish?status_request=menunggu`,
+          { headers: getAuthHeaders() }
+        )
+        const list = resList.ok ? await resList.json() : []
+        const found = Array.isArray(list)
+          ? list.find((r) => r.id_event === eventData.id_event)
+          : null
+        reqId = found?.id_request || null
+      }
+
+      if (!reqId) {
+        throw new Error('Data pengajuan publish yang aktif tidak ditemukan.')
+      }
+
+      const res = await fetch(`${API_BASE}/api/request-publish/${reqId}/batal`, {
+        method: 'PATCH',
+        headers: getAuthHeaders()
+      })
+      const cancelledData = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(
+          formatApiError(cancelledData.detail, 'Gagal membatalkan request publish.')
+        )
+      }
+
+      setActiveRequestId(null)
+      setEventStatus(eventData.status_event === 'published' ? 'published' : 'draft')
+      setDenahList((prev) =>
+        prev.map((item) =>
+          item.status === 'pending'
+            ? { ...item, status: item.rawMap?.status_map || 'draft' }
+            : item
+        )
+      )
+      alert('Pengajuan request publish berhasil dibatalkan.')
+    } catch (err) {
+      alert(err.message || 'Gagal membatalkan request publish.')
+    } finally {
+      setIsSubmittingRequest(false)
+    }
+  }
+
+  const handleRequestPublishDenah = async (idMap) => {
     if (eventStatus === 'draft') {
       setWarningDenahId((prev) => (prev === idMap ? null : idMap))
       return
     }
+    if (eventStatus === 'pending') {
+      alert('Event ini sudah dalam proses verifikasi Admin bersama denahnya.')
+      return
+    }
+    if (isSubmittingRequest) return
+
     setWarningDenahId(null)
-    setDenahList((prev) =>
-      prev.map((item) => (item.id_map === idMap ? { ...item, status: 'pending' } : item))
-    )
+    setIsSubmittingRequest(true)
+    try {
+      const res = await fetch(`${API_BASE}/api/request-publish`, {
+        method: 'POST',
+        headers: getAuthHeaders(true),
+        body: JSON.stringify({
+          id_event: Number(eventData.id_event),
+          catatan_pengirim: null,
+          map_ids: [Number(idMap)]
+        })
+      })
+      const created = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(
+          formatApiError(created.detail, 'Gagal mengirim request publish denah.')
+        )
+      }
+
+      setActiveRequestId(created.id_request)
+      setDenahList((prev) =>
+        prev.map((item) =>
+          item.id_map === idMap ? { ...item, status: 'pending' } : item
+        )
+      )
+      alert('Permintaan publish denah berhasil dikirim ke Admin!')
+    } catch (err) {
+      alert(err.message || 'Gagal mengirim request publish denah.')
+    } finally {
+      setIsSubmittingRequest(false)
+    }
   }
 
   const openMapEditor = (denah) => {
@@ -203,8 +365,14 @@ function DetailEventEO() {
           </div>
         ) : errorMsg || !eventData ? (
           <div className="detail-eo-card" style={{ textAlign: 'center', padding: '48px' }}>
-            <p style={{ color: '#b91c1c', marginBottom: 16 }}>{errorMsg || 'Event tidak ditemukan'}</p>
-            <button type="button" className="btn-cyan-footer" onClick={() => navigate('/daftar-event-eo')}>
+            <p style={{ color: '#b91c1c', marginBottom: 16 }}>
+              {errorMsg || 'Event tidak ditemukan'}
+            </p>
+            <button
+              type="button"
+              className="btn-cyan-footer"
+              onClick={() => navigate('/daftar-event-eo')}
+            >
               Kembali ke Daftar Event
             </button>
           </div>
@@ -223,9 +391,10 @@ function DetailEventEO() {
                 <button
                   type="button"
                   className="btn-red-action"
-                  onClick={() => setEventStatus('draft')}
+                  disabled={isSubmittingRequest}
+                  onClick={handleCancelRequestPublish}
                 >
-                  Batalkan Request Publish
+                  {isSubmittingRequest ? 'Memproses...' : 'Batalkan Request Publish'}
                 </button>
               ) : (
                 <button
@@ -271,7 +440,9 @@ function DetailEventEO() {
                   </p>
                   <p>
                     <strong>Sumber:</strong>{' '}
-                    {eventData.sumber === 'scraping' ? 'Hasil Scrapping' : 'Kerjasama Event Organizer'}
+                    {eventData.sumber === 'scraping'
+                      ? 'Hasil Scrapping'
+                      : 'Kerjasama Event Organizer'}
                   </p>
                   <p>
                     <strong>Status:</strong> {getStatusLabel()}
@@ -287,16 +458,31 @@ function DetailEventEO() {
               <hr className="detail-divider" />
 
               <div className="denah-acara-section">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                  <h2 className="denah-section-heading" style={{ margin: 0 }}>Denah Acara</h2>
-                  <button type="button" className="btn-cyan-denah" onClick={handleCreateFirstMap}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: 16
+                  }}
+                >
+                  <h2 className="denah-section-heading" style={{ margin: 0 }}>
+                    Denah Acara
+                  </h2>
+                  <button
+                    type="button"
+                    className="btn-cyan-denah"
+                    onClick={handleCreateFirstMap}
+                  >
                     + Tambah Denah Peta
                   </button>
                 </div>
 
                 {denahList.length === 0 ? (
                   <p style={{ color: '#64748b' }}>
-                    Event ini belum memiliki denah peta. Klik <strong>+ Tambah Denah Peta</strong> di atas untuk membuat peta baru.
+                    Event ini belum memiliki denah peta. Klik{' '}
+                    <strong>+ Tambah Denah Peta</strong> di atas untuk membuat peta
+                    baru.
                   </p>
                 ) : (
                   denahList.map((denah) => {
@@ -311,15 +497,12 @@ function DetailEventEO() {
                             <button
                               type="button"
                               className="btn-red-action"
-                              onClick={() =>
-                                setDenahList((prev) =>
-                                  prev.map((item) =>
-                                    item.id_map === denah.id_map ? { ...item, status: 'draft' } : item
-                                  )
-                                )
-                              }
+                              disabled={isSubmittingRequest}
+                              onClick={handleCancelRequestPublish}
                             >
-                              Batalkan Request Publish
+                              {isSubmittingRequest
+                                ? 'Memproses...'
+                                : 'Batalkan Request Publish'}
                             </button>
                           )}
                         </div>
@@ -342,6 +525,7 @@ function DetailEventEO() {
                               <button
                                 type="button"
                                 className="btn-cyan-denah"
+                                disabled={isSubmittingRequest}
                                 onClick={() => handleRequestPublishDenah(denah.id_map)}
                               >
                                 Kirim Request Publish
@@ -359,9 +543,9 @@ function DetailEventEO() {
                               <div className="warning-dropdown-box">
                                 <div className="warning-dropdown-content">
                                   <span>
-                                    <strong>Peta belum dapat dipublish!</strong> Ajukan request
-                                    publish pada event utama terlebih dahulu sebelum mengajukan
-                                    publish peta.
+                                    <strong>Peta belum dapat dipublish!</strong> Ajukan
+                                    request publish pada event utama terlebih dahulu
+                                    sebelum mengajukan publish peta.
                                   </span>
                                 </div>
                                 <button
@@ -389,16 +573,18 @@ function DetailEventEO() {
                 </div>
               ) : (
                 <div className="footer-dual-buttons">
-                  <button
-                    type="button"
-                    className="btn-cyan-footer"
-                    onClick={() => {
-                      setEventStatus('pending')
-                      setWarningDenahId(null)
-                    }}
-                  >
-                    Kirim Request Publish Event
-                  </button>
+                  {eventStatus !== 'published' && (
+                    <button
+                      type="button"
+                      className="btn-cyan-footer"
+                      disabled={isSubmittingRequest}
+                      onClick={handleSendRequestPublishEvent}
+                    >
+                      {isSubmittingRequest
+                        ? 'Mengirim...'
+                        : 'Kirim Request Publish Event'}
+                    </button>
+                  )}
                   <button
                     type="button"
                     className="btn-cyan-footer"

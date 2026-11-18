@@ -96,14 +96,23 @@ function parseDateRangeInput(text, fallbackMulai, fallbackSelesai) {
         fallbackSelesai || fallbackMulai || new Date().toISOString().slice(0, 10)
     }
   }
-  const parts = raw.split(/\s*(?:–|—|-|\bsampai\b|\bs\/d\b)\s*/i).filter(Boolean)
-  // Jika format ISO "2026-11-20 - 2026-11-22", hindari terpotong oleh tanda "-" di dalam tanggal
-  const isoRange = raw.match(/(\d{4}-\d{2}-\d{2})\s*(?:–|—|-|\bsampai\b|\bs\/d\b)\s*(\d{4}-\d{2}-\d{2})/i)
+
+  // Format ISO "2026-11-20 - 2026-11-22"
+  const isoRange = raw.match(
+    /(\d{4}-\d{2}-\d{2})\s*(?:–|—|-|\bsampai\b|\bs\/d\b)\s*(\d{4}-\d{2}-\d{2})/i
+  )
   if (isoRange) {
-    return { tanggal_mulai: isoRange[1], tanggal_selesai: isoRange[2] }
+    const start = isoRange[1]
+    const end = isoRange[2] < start ? start : isoRange[2]
+    return { tanggal_mulai: start, tanggal_selesai: end }
   }
 
-  const start = parseSingleDate(parts[0]) || fallbackMulai || new Date().toISOString().slice(0, 10)
+  const parts = raw
+    .split(/\s*(?:–|—|-|\bsampai\b|\bs\/d\b)\s*/i)
+    .filter(Boolean)
+
+  const start =
+    parseSingleDate(parts[0]) || fallbackMulai || new Date().toISOString().slice(0, 10)
   const end =
     (parts[1] ? parseSingleDate(parts[1]) : parseSingleDate(parts[0])) ||
     fallbackSelesai ||
@@ -115,10 +124,27 @@ function parseDateRangeInput(text, fallbackMulai, fallbackSelesai) {
   }
 }
 
+// Disesuaikan dengan Literal["outdoor", "indoor", "campuran"] di schemas_event.py
 function mapJenisToTipeLokasi(jenisEvent) {
   if (jenisEvent === 'Event Indoor') return 'indoor'
   if (jenisEvent === 'Event Outdoor') return 'outdoor'
-  return 'hybrid'
+  return 'campuran'
+}
+
+function formatApiError(detail, fallback = 'Gagal menyimpan perubahan event.') {
+  if (!detail) return fallback
+  if (typeof detail === 'string') return detail
+  if (Array.isArray(detail)) {
+    return detail
+      .map((item) => {
+        const field = Array.isArray(item.loc)
+          ? item.loc[item.loc.length - 1]
+          : 'field'
+        return `${field}: ${item.msg}`
+      })
+      .join('\n')
+  }
+  return JSON.stringify(detail)
 }
 
 function EditEventAdmin({ role = 'admin' }) {
@@ -128,9 +154,13 @@ function EditEventAdmin({ role = 'admin' }) {
   const activeRole = location.state?.role || role
   const isEO = activeRole === 'eo'
   const navState = location.state || {}
-  const incomingEvent = navState.eventData || null
+  const incomingEvent = navState.eventData || navState.event || null
   const targetEventId =
-    navState.eventId || navState.id_event || incomingEvent?.id_event || incomingEvent?.id
+    navState.eventId ||
+    navState.id_event ||
+    navState.id ||
+    incomingEvent?.id_event ||
+    incomingEvent?.id
 
   const [eventObj, setEventObj] = useState(incomingEvent)
   const [isLoading, setIsLoading] = useState(Boolean(targetEventId))
@@ -138,10 +168,9 @@ function EditEventAdmin({ role = 'admin' }) {
 
   const [formData, setFormData] = useState({
     namaEvent: incomingEvent?.nama_event || incomingEvent?.namaEvent || '',
-    tanggalEvent:
-      incomingEvent?.tanggal_mulai
-        ? formatDateRange(incomingEvent.tanggal_mulai, incomingEvent.tanggal_selesai)
-        : incomingEvent?.tanggalEvent || '',
+    tanggalEvent: incomingEvent?.tanggal_mulai
+      ? formatDateRange(incomingEvent.tanggal_mulai, incomingEvent.tanggal_selesai)
+      : incomingEvent?.tanggalEvent || '',
     lokasiEvent: incomingEvent?.lokasi || incomingEvent?.lokasiEvent || '',
     jenisEvent: JENIS_EVENT_OPTIONS.includes(incomingEvent?.jenis_event)
       ? incomingEvent.jenis_event
@@ -307,22 +336,24 @@ function EditEventAdmin({ role = 'admin' }) {
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!targetEventId || isSaving) {
-      alert('ID event tidak ditemukan.')
+      if (!targetEventId) alert('ID event tidak ditemukan.')
+      return
+    }
+
+    const namaEventClean = formData.namaEvent.trim()
+    if (namaEventClean.length < 3) {
+      alert('Nama Event wajib diisi minimal 3 karakter.')
       return
     }
 
     setIsSaving(true)
     try {
-      const resolvedSumber = isEO
-        ? 'eo'
-        : formData.sumber === 'Hasil Scrapping'
-        ? 'scraping'
-        : 'eo'
-
       const resolvedJenis =
         formData.jenisEvent === 'Belum dipilih'
           ? 'Event Indoor & Outdoor'
           : formData.jenisEvent
+
+      const tipeLokasi = mapJenisToTipeLokasi(resolvedJenis)
 
       const { tanggal_mulai, tanggal_selesai } = parseDateRangeInput(
         formData.tanggalEvent,
@@ -334,26 +365,25 @@ function EditEventAdmin({ role = 'admin' }) {
         ? await fileToDataUrl(posterFile)
         : posterPreview || null
 
-      // 1. Update data utama Event ke PostgreSQL
+      // 1. Update data utama Event sesuai schema EventUpdate
       const resEvent = await fetch(`${API_BASE}/api/events/${targetEventId}`, {
         method: 'PATCH',
         headers: getAuthHeaders(true),
         body: JSON.stringify({
-          nama_event: formData.namaEvent.trim() || 'Event Tanpa Judul',
+          nama_event: namaEventClean,
+          deskripsi: formData.deskripsiSingkat.trim() || null,
           tanggal_mulai,
           tanggal_selesai,
           lokasi: formData.lokasiEvent.trim() || null,
           jenis_event: resolvedJenis,
-          tipe_lokasi: mapJenisToTipeLokasi(resolvedJenis),
-          nama_organizer: formData.eventOrganizer.trim() || null,
-          sumber: resolvedSumber,
-          deskripsi: formData.deskripsiSingkat.trim() || null,
+          tipe_lokasi: tipeLokasi,
           poster_url: finalPosterUrl
         })
       })
+
       const updatedEvent = await resEvent.json().catch(() => ({}))
       if (!resEvent.ok) {
-        throw new Error(updatedEvent.detail || 'Gagal menyimpan perubahan event')
+        throw new Error(formatApiError(updatedEvent.detail))
       }
 
       // 2. Sinkronisasi daftar denah (hapus yang dibuang, update existing, buat baru)
@@ -381,7 +411,7 @@ function EditEventAdmin({ role = 'admin' }) {
           : d.imagePreview || null
 
         if (d.isExisting) {
-          await fetch(`${API_BASE}/api/maps/${d.id}`, {
+          const resPatchMap = await fetch(`${API_BASE}/api/maps/${d.id}`, {
             method: 'PATCH',
             headers: getAuthHeaders(true),
             body: JSON.stringify({
@@ -390,17 +420,18 @@ function EditEventAdmin({ role = 'admin' }) {
               tampilkan_denah: Boolean(gambarLayout)
             })
           })
+          if (!resPatchMap.ok) {
+            const errMap = await resPatchMap.json().catch(() => ({}))
+            console.error('Gagal memperbarui denah:', formatApiError(errMap.detail))
+          }
         } else {
-          await fetch(`${API_BASE}/api/maps`, {
+          const resPostMap = await fetch(`${API_BASE}/api/maps`, {
             method: 'POST',
             headers: getAuthHeaders(true),
             body: JSON.stringify({
               id_event: Number(targetEventId),
               nama_map: namaMap,
-              tipe_map:
-                mapJenisToTipeLokasi(resolvedJenis) === 'indoor'
-                  ? 'indoor'
-                  : 'outdoor',
+              tipe_map: tipeLokasi === 'indoor' ? 'indoor' : 'outdoor',
               is_utama: initialMapIds.length === 0 && i === 0,
               gambar_layout: gambarLayout,
               tampilkan_denah: Boolean(gambarLayout),
@@ -408,21 +439,27 @@ function EditEventAdmin({ role = 'admin' }) {
               garis_bujur_pusat: updatedEvent.garis_bujur ?? 115.2362
             })
           })
+          if (!resPostMap.ok) {
+            const errMap = await resPostMap.json().catch(() => ({}))
+            console.error('Gagal menambah denah:', formatApiError(errMap.detail))
+          }
         }
       }
 
       alert('Perubahan event berhasil disimpan!')
-      if (isEO) {
-        navigate('/detail-event-eo', {
-          state: { eventId: Number(targetEventId), id_event: Number(targetEventId) }
-        })
-      } else {
-        navigate('/detail-event', {
-          state: { eventId: Number(targetEventId), id_event: Number(targetEventId) }
-        })
-      }
+
+      const numericId = Number(targetEventId)
+      navigate(isEO ? '/detail-event-eo' : '/detail-event', {
+        state: {
+          role: activeRole,
+          event: updatedEvent,
+          eventId: numericId,
+          id_event: numericId,
+          id: numericId
+        }
+      })
     } catch (err) {
-      alert(err.message || 'Gagal menyimpan perubahan event')
+      alert(err.message || 'Gagal menyimpan perubahan event.')
     } finally {
       setIsSaving(false)
     }
@@ -490,6 +527,7 @@ function EditEventAdmin({ role = 'admin' }) {
                       value={formData.namaEvent}
                       onChange={handleInputChange}
                       className="form-input"
+                      required
                     />
                   </div>
 
