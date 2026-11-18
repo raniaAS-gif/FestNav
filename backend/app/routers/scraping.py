@@ -3,13 +3,14 @@ import sys
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import List, Optional
+from urllib.parse import urljoin
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.auth import get_current_pengelola
 from app.database import get_db
-from app.models import Event, GambarEvent, LogAktivitas, Pengelola, SumberScraping
+from app.models import Event, GambarEvent, LogAktivitas, Map, Pengelola, SumberScraping
 from app.schemas_scraping import (
     ScrapingCreate,
     ScrapingProgressUpdate,
@@ -37,6 +38,212 @@ def _parse_date_aman(val) -> Optional[date]:
         return date.fromisoformat(str(val)[:10])
     except ValueError:
         return None
+
+
+def _parse_float_aman(val, min_val: float, max_val: float) -> Optional[float]:
+    if val is None or val == "":
+        return None
+    try:
+        num = float(val)
+        return num if min_val <= num <= max_val else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _normalisasi_url_gambar(url_raw: Optional[str], base_url: Optional[str]) -> Optional[str]:
+    if not url_raw or not str(url_raw).strip():
+        return None
+    clean = str(url_raw).strip()
+    if clean.startswith("data:image/"):
+        return clean
+    if base_url and not clean.startswith(("http://", "https://")):
+        return urljoin(base_url, clean)
+    return clean
+
+
+def _ekstrak_daftar_gambar(raw: dict, base_url: Optional[str] = None) -> list[dict]:
+    """Menormalisasi list gambar dari hasil_mentah bot scraping."""
+    sumber_list = raw.get("gambar") or raw.get("images") or []
+    hasil = []
+    seen = set()
+
+    for idx, g in enumerate(sumber_list, start=1):
+        url_img = None
+        public_id = None
+        keterangan = f"Gambar Scraping #{idx}"
+
+        if isinstance(g, str):
+            url_img = _normalisasi_url_gambar(g, base_url)
+        elif isinstance(g, dict):
+            raw_u = (
+                g.get("secure_url")
+                or g.get("url_asli")
+                or g.get("url")
+                or g.get("src")
+            )
+            url_img = _normalisasi_url_gambar(raw_u, base_url)
+            public_id = g.get("public_id")
+            keterangan = (
+                g.get("keterangan")
+                or g.get("alt")
+                or f"Gambar Scraping #{idx}"
+            )
+
+        if url_img and url_img not in seen:
+            seen.add(url_img)
+            hasil.append(
+                {
+                    "url": url_img,
+                    "public_id": public_id,
+                    "keterangan": str(keterangan)[:200],
+                }
+            )
+
+    # Cadangan jika daftar gambar kosong tetapi poster_url tersedia di hasil_mentah
+    if not hasil:
+        fallback_poster = _normalisasi_url_gambar(
+            raw.get("poster_url") or raw.get("gambar_poster"), base_url
+        )
+        if fallback_poster:
+            hasil.append(
+                {
+                    "url": fallback_poster,
+                    "public_id": None,
+                    "keterangan": "Poster Hasil Scraping",
+                }
+            )
+
+    return hasil
+
+
+def _simpan_kandidat_gambar(
+    db: Session, id_event: int, raw: dict, base_url: Optional[str] = None
+) -> int:
+    """Memasukkan kandidat gambar hasil scraping ke gambar_event tanpa duplikat."""
+    daftar = _ekstrak_daftar_gambar(raw, base_url)
+    if not daftar:
+        return 0
+
+    # Kumpulkan URL yang sudah ada di galeri, poster utama, maupun denah map
+    existing_urls = {
+        row[0]
+        for row in db.query(GambarEvent.url_gambar)
+        .filter(GambarEvent.id_event == id_event)
+        .all()
+        if row[0]
+    }
+
+    ev = db.query(Event).filter(Event.id_event == id_event).first()
+    if ev and ev.poster_url:
+        existing_urls.add(ev.poster_url)
+
+    map_urls = {
+        row[0]
+        for row in db.query(Map.gambar_layout)
+        .filter(Map.id_event == id_event)
+        .all()
+        if row[0]
+    }
+    existing_urls.update(map_urls)
+
+    ditambahkan = 0
+    for item_img in daftar:
+        if item_img["url"] not in existing_urls:
+            db.add(
+                GambarEvent(
+                    id_event=id_event,
+                    url_gambar=item_img["url"],
+                    public_id=item_img["public_id"],
+                    jenis_gambar="lainnya",
+                    keterangan=item_img["keterangan"],
+                )
+            )
+            existing_urls.add(item_img["url"])
+            ditambahkan += 1
+    return ditambahkan
+
+
+def _buat_draft_event_dari_scraping(
+    db: Session,
+    item: SumberScraping,
+    pengelola: Pengelola,
+    payload: Optional[ScrapingReviewAction] = None,
+) -> Event:
+    raw = item.hasil_mentah or {}
+    daftar_gambar = _ekstrak_daftar_gambar(raw, item.url_sumber)
+    gambar_pertama = daftar_gambar[0] if daftar_gambar else {}
+
+    poster_terpilih = (
+        _normalisasi_url_gambar(payload.poster_url, item.url_sumber)
+        if (payload and payload.poster_url)
+        else gambar_pertama.get("url")
+    )
+    poster_pid = (
+        gambar_pertama.get("public_id")
+        if not (payload and payload.poster_url)
+        else None
+    )
+
+    nama_ev = (
+        (payload.nama_event if payload else None)
+        or raw.get("nama_event")
+        or item.nama_sumber
+        or "Event Hasil Scraping"
+    )
+
+    tgl_mulai = (payload.tanggal_mulai if payload else None) or _parse_date_aman(
+        raw.get("tanggal_mulai")
+    )
+    tgl_selesai = (payload.tanggal_selesai if payload else None) or _parse_date_aman(
+        raw.get("tanggal_selesai")
+    )
+    if tgl_mulai and tgl_selesai and tgl_selesai < tgl_mulai:
+        tgl_selesai = tgl_mulai
+
+    lat = (
+        payload.garis_lintang
+        if (payload and payload.garis_lintang is not None)
+        else _parse_float_aman(raw.get("garis_lintang"), -90.0, 90.0)
+    )
+    lng = (
+        payload.garis_bujur
+        if (payload and payload.garis_bujur is not None)
+        else _parse_float_aman(raw.get("garis_bujur"), -180.0, 180.0)
+    )
+
+    raw_tipe = str(raw.get("tipe_lokasi") or "").lower().strip()
+    if raw_tipe == "hybrid":
+        raw_tipe = "campuran"
+    tipe_lokasi = raw_tipe if raw_tipe in ("indoor", "outdoor", "campuran") else "outdoor"
+
+    raw_mode = str(raw.get("mode_event") or "").lower().strip()
+    mode_event = raw_mode if raw_mode in ("interaktif", "direktori") else "interaktif"
+
+    event_baru = Event(
+        id_organizer=(payload.id_organizer if payload else None)
+        or pengelola.id_pengelola,
+        nama_event=nama_ev[:150],
+        deskripsi=(payload.deskripsi if payload else None) or raw.get("deskripsi"),
+        tanggal_mulai=tgl_mulai,
+        tanggal_selesai=tgl_selesai,
+        lokasi=(payload.lokasi if payload else None)
+        or raw.get("lokasi_teks")
+        or raw.get("lokasi"),
+        garis_lintang=lat,
+        garis_bujur=lng,
+        jenis_event=(payload.jenis_event if payload else None)
+        or raw.get("jenis_event"),
+        tipe_lokasi=tipe_lokasi,
+        mode_event=mode_event,
+        sumber="scraping",
+        status_event="draft",
+        poster_url=poster_terpilih,
+        poster_public_id=poster_pid,
+    )
+    db.add(event_baru)
+    db.flush()
+    item.id_event = event_baru.id_event
+    return event_baru
 
 
 def _jalankan_bot_background(id_scraping: int, url: str, bind_engine):
@@ -119,7 +326,7 @@ def get_list_scraping(
     return query.order_by(SumberScraping.id_scraping.desc()).all()
 
 
-# 2. Detail 1 job scraping (dipakai frontend untuk memantau progres & log)
+# 2. Detail 1 job scraping
 @router.get("/{id_scraping}", response_model=ScrapingResponse)
 def get_detail_scraping(
     id_scraping: int,
@@ -178,7 +385,7 @@ def create_scraping_job(
     return job
 
 
-# 4. Batalkan job scraping yang sedang antri / berjalan
+# 4. Batalkan job scraping
 @router.patch("/{id_scraping}/batal", response_model=ScrapingResponse)
 def batalkan_scraping_job(
     id_scraping: int,
@@ -207,7 +414,7 @@ def batalkan_scraping_job(
     return item
 
 
-# 5. Update progres manual (opsional jika bot dijalankan terpisah via CLI)
+# 5. Update progres manual
 @router.patch("/{id_scraping}/progress", response_model=ScrapingResponse)
 def update_scraping_progress(
     id_scraping: int,
@@ -237,7 +444,42 @@ def update_scraping_progress(
     return item
 
 
-# 6. Admin review hasil scraping -> otomatis jadi Draft Event + simpan kandidat gambar
+# 6. Siapkan Draft Event + Masukkan Kandidat Gambar ke Galeri sebelum Review selesai
+@router.post("/{id_scraping}/siapkan-galeri", response_model=ScrapingResponse)
+def siapkan_galeri_scraping(
+    id_scraping: int,
+    db: Session = Depends(get_db),
+    pengelola: Pengelola = Depends(get_current_pengelola),
+):
+    if pengelola.peran != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Hanya admin yang dapat mengelola galeri hasil scraping",
+        )
+
+    item = (
+        db.query(SumberScraping)
+        .filter(SumberScraping.id_scraping == id_scraping)
+        .first()
+    )
+    if not item:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Data scraping tidak ditemukan",
+        )
+
+    if item.id_event is None:
+        _buat_draft_event_dari_scraping(db, item, pengelola)
+
+    _simpan_kandidat_gambar(
+        db, item.id_event, item.hasil_mentah or {}, item.url_sumber
+    )
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+# 7. Admin review hasil scraping -> simpan draft event + pastikan semua kandidat gambar masuk galeri
 @router.post("/{id_scraping}/review", response_model=ScrapingResponse)
 def review_hasil_scraping(
     id_scraping: int,
@@ -266,71 +508,43 @@ def review_hasil_scraping(
 
     if payload.id_event and item.id_event is None:
         item.id_event = payload.id_event
-        
-    if payload.status_review == "disimpan" and item.id_event is None:
-        raw = item.hasil_mentah or {}
-        daftar_gambar = raw.get("gambar") or []
-        gambar_pertama = daftar_gambar[0] if daftar_gambar else {}
 
-        poster_terpilih = (
-            payload.poster_url
-            or gambar_pertama.get("secure_url")
-            or gambar_pertama.get("url_asli")
-        )
-        poster_pid = (
-            gambar_pertama.get("public_id")
-            if not payload.poster_url
-            else None
-        )
+    if payload.status_review == "disimpan":
+        if item.id_event is None:
+            _buat_draft_event_dari_scraping(db, item, pengelola, payload)
+        else:
+            ev = db.query(Event).filter(Event.id_event == item.id_event).first()
+            if ev:
+                if payload.nama_event:
+                    ev.nama_event = payload.nama_event[:150]
+                if payload.deskripsi is not None:
+                    ev.deskripsi = payload.deskripsi
+                if payload.tanggal_mulai is not None:
+                    ev.tanggal_mulai = payload.tanggal_mulai
+                if payload.tanggal_selesai is not None:
+                    ev.tanggal_selesai = payload.tanggal_selesai
+                if payload.lokasi is not None:
+                    ev.lokasi = payload.lokasi
+                if payload.garis_lintang is not None:
+                    ev.garis_lintang = payload.garis_lintang
+                if payload.garis_bujur is not None:
+                    ev.garis_bujur = payload.garis_bujur
+                if payload.jenis_event is not None:
+                    ev.jenis_event = payload.jenis_event
+                if payload.poster_url is not None:
+                    ev.poster_url = _normalisasi_url_gambar(
+                        payload.poster_url, item.url_sumber
+                    )
 
-        nama_ev = (
-            payload.nama_event
-            or raw.get("nama_event")
-            or item.nama_sumber
-            or "Event Hasil Scraping"
+        _simpan_kandidat_gambar(
+            db, item.id_event, item.hasil_mentah or {}, item.url_sumber
         )
-
-        event_baru = Event(
-            id_organizer=payload.id_organizer or pengelola.id_pengelola,
-            nama_event=nama_ev[:150],
-            deskripsi=payload.deskripsi or raw.get("deskripsi"),
-            tanggal_mulai=payload.tanggal_mulai
-            or _parse_date_aman(raw.get("tanggal_mulai")),
-            tanggal_selesai=payload.tanggal_selesai
-            or _parse_date_aman(raw.get("tanggal_selesai")),
-            lokasi=payload.lokasi or raw.get("lokasi_teks") or raw.get("lokasi"),
-            garis_lintang=(
-                payload.garis_lintang
-                if payload.garis_lintang is not None
-                else raw.get("garis_lintang")
-            ),
-            garis_bujur=(
-                payload.garis_bujur
-                if payload.garis_bujur is not None
-                else raw.get("garis_bujur")
-            ),
-            jenis_event=payload.jenis_event or raw.get("jenis_event"),
-            sumber="scraping",
-            status_event="draft",
-            poster_url=poster_terpilih,
-            poster_public_id=poster_pid,
-        )
-        db.add(event_baru)
-        db.flush()
-        item.id_event = event_baru.id_event
-
-        for g in daftar_gambar:
-            url_img = g.get("secure_url") or g.get("url_asli")
-            if url_img:
-                db.add(
-                 GambarEvent(
-                     id_event=event_baru.id_event,
-                     url_gambar=url_img,
-                     public_id=g.get("public_id"),
-                     jenis_gambar="lainnya",
-                     keterangan="Hasil ekstraksi otomatis bot scraping",
-                 )
-                )
+    elif payload.status_review == "dibuang" and item.id_event is not None:
+        # Bersihkan draft sementara jika hasil scraping dibuang oleh Admin
+        ev_draft = db.query(Event).filter(Event.id_event == item.id_event).first()
+        if ev_draft and ev_draft.status_event == "draft" and ev_draft.sumber == "scraping":
+            item.id_event = None
+            db.delete(ev_draft)
 
     db.add(
         LogAktivitas(

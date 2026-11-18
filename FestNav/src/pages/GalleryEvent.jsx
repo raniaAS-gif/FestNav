@@ -156,7 +156,7 @@ export default function GalleryEvent({
   const editorCtx = getEditorContext();
   const navState = location.state || {};
 
-  const id =
+  const initialId =
     idEvent ??
     navState.eventId ??
     navState.idEvent ??
@@ -164,8 +164,9 @@ export default function GalleryEvent({
     params.idEvent ??
     editorCtx.eventId ??
     editorCtx.id_event ??
-    1;
+    null;
 
+  const [activeEventId, setActiveEventId] = useState(initialId);
   const [judulEvent, setJudulEvent] = useState(
     navState.eventTitle || navState.namaEvent || editorCtx.eventTitle || namaEvent
   );
@@ -195,23 +196,66 @@ export default function GalleryEvent({
   const [busy, setBusy] = useState(false);
   const input = useRef();
 
-  const muat = () =>
-    api.list(id).then((r) => {
-      setItems(r.gambar || []);
-      setAdaPoster(!!r.poster_url);
-      if (r.event?.nama_event) {
-        setJudulEvent(r.event.nama_event);
-      }
-    });
+  const muat = async (targetId = activeEventId) => {
+    if (!targetId) return;
+    const r = await api.list(targetId);
+    setItems(r.gambar || []);
+    setAdaPoster(!!r.poster_url);
+    if (r.event?.nama_event) {
+      setJudulEvent(r.event.nama_event);
+    }
+  };
 
   useEffect(() => {
-    setLoading(true);
-    setError('');
-    muat()
-      .catch((err) => setError(err.message || 'Gagal memuat gambar event.'))
-      .finally(() => setLoading(false));
+    let cancelled = false;
+
+    const initGaleri = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        let resolvedId = initialId;
+
+        // Jika dibuka dari Review Scraping, siapkan draft event & kandidat gambar scraping dulu
+        if (navState.idScraping) {
+          const resPrep = await fetch(
+            `${API_BASE}/api/scraping/${navState.idScraping}/siapkan-galeri`,
+            {
+              method: 'POST',
+              headers: getAuthHeaders(),
+            }
+          );
+          if (resPrep.ok) {
+            const jobData = await resPrep.json();
+            if (jobData?.id_event) {
+              resolvedId = jobData.id_event;
+            }
+          }
+        }
+
+        if (!resolvedId) {
+          throw new Error(
+            'ID event tidak ditemukan. Buka galeri dari halaman Review Scraping atau Detail Event.'
+          );
+        }
+
+        if (cancelled) return;
+        setActiveEventId(resolvedId);
+        await muat(resolvedId);
+      } catch (err) {
+        if (!cancelled) {
+          setError(err.message || 'Gagal memuat gambar event.');
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    initGaleri();
+    return () => {
+      cancelled = true;
+    };
     /* eslint-disable-next-line */
-  }, [id, api]);
+  }, [initialId, navState.idScraping, api]);
 
   const tampil = items.filter(
     (d) =>
@@ -261,13 +305,15 @@ export default function GalleryEvent({
   };
 
   const unggah = async () => {
+    if (!activeEventId)
+      return setFormErr('ID event belum tersedia. Muat ulang halaman ini.');
     if (!form.file && !form.imageUrl.trim())
       return setFormErr('Pilih file gambar atau tempel URL gambar terlebih dahulu.');
     if (!form.keterangan.trim()) return setFormErr('Nama gambar wajib diisi.');
     setBusy(true);
     setFormErr('');
     try {
-      const baru = await api.upload(id, {
+      const baru = await api.upload(activeEventId, {
         file: form.file,
         imageUrl: form.imageUrl,
         keterangan: form.keterangan.trim(),
@@ -330,8 +376,8 @@ export default function GalleryEvent({
           try {
             const nextCtx = {
               ...editorCtx,
-              eventId: id,
-              id_event: id,
+              eventId: activeEventId,
+              id_event: activeEventId,
               id_map: resDenah.id_map,
               eventTitle: judulEvent,
               selectedDenah: {
@@ -347,7 +393,7 @@ export default function GalleryEvent({
           }
         }
       }
-      await muat();
+      await muat(activeEventId);
       setBusy(false);
       setModal(null);
       setItem(null);
@@ -368,6 +414,9 @@ export default function GalleryEvent({
       state: {
         view: 'review',
         idScraping: navState.idScraping,
+        eventId: activeEventId,
+        idEvent: activeEventId,
+        id_event: activeEventId,
         posterSudahDiatur: adaPoster,
         denahSudahDiatur: denahDipilih,
       },
@@ -381,6 +430,7 @@ export default function GalleryEvent({
         src={thumb(d.url_gambar)}
         alt={d.keterangan ?? ''}
         loading="lazy"
+        referrerPolicy="no-referrer"
       />
     ) : (
       <div
@@ -522,7 +572,11 @@ export default function GalleryEvent({
             <h2 style={{ fontSize: 26 }}>Upload Gambar Event</h2>
             <button className="drop" onClick={() => input.current.click()}>
               {form.preview ? (
-                <img src={form.preview} alt="Pratinjau" />
+                <img
+                  src={form.preview}
+                  alt="Pratinjau"
+                  referrerPolicy="no-referrer"
+                />
               ) : (
                 <span>
                   <span className="plus">+</span>

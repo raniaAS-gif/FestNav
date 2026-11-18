@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.auth import get_current_pengelola
@@ -113,49 +114,62 @@ def create_request_publish(
                 detail="Sebagian id_map tidak valid atau bukan milik event tersebut",
             )
 
-    req_baru = RequestPublish(
-        id_event=payload.id_event,
-        id_pengirim=pengelola.id_pengelola,
-        catatan_pengirim=payload.catatan_pengirim,
-        status_request="menunggu",
-    )
-    db.add(req_baru)
-    db.flush()
+    try:
+        req_baru = RequestPublish(
+            id_event=payload.id_event,
+            id_pengirim=pengelola.id_pengelola,
+            catatan_pengirim=payload.catatan_pengirim,
+            status_request="menunggu",
+        )
+        db.add(req_baru)
+        db.flush()
 
-    # Simpan item event & item map
-    db.add(RequestItem(id_request=req_baru.id_request, jenis_item="event", id_map=None))
-    for peta in daftar_map:
+        # Simpan item event (jika belum published) & item map
+        if ev.status_event != "published":
+            db.add(
+                RequestItem(
+                    id_request=req_baru.id_request,
+                    jenis_item="event",
+                    id_map=None,
+                )
+            )
+
+        for peta in daftar_map:
+            db.add(
+                RequestItem(
+                    id_request=req_baru.id_request,
+                    jenis_item="map",
+                    id_map=peta.id_map,
+                )
+            )
+
         db.add(
-            RequestItem(
+            RiwayatRequest(
                 id_request=req_baru.id_request,
-                jenis_item="map",
-                id_map=peta.id_map,
+                aksi="dikirim",
+                catatan=payload.catatan_pengirim,
+                id_pelaku=pengelola.id_pengelola,
+            )
+        )
+        db.add(
+            LogAktivitas(
+                id_pengelola=pengelola.id_pengelola,
+                aksi="ajukan_publish",
+                objek_tipe="request_publish",
+                objek_id=req_baru.id_request,
+                deskripsi=f"Mengajukan publish event '{ev.nama_event}'",
             )
         )
 
-    ev.status_event = "menunggu_review"
-
-    db.add(
-        RiwayatRequest(
-            id_request=req_baru.id_request,
-            aksi="dikirim",
-            catatan=payload.catatan_pengirim,
-            id_pelaku=pengelola.id_pengelola,
+        db.commit()
+        db.refresh(req_baru)
+        return req_baru
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Gagal menyimpan pengajuan publish ke database: {exc}",
         )
-    )
-    db.add(
-        LogAktivitas(
-            id_pengelola=pengelola.id_pengelola,
-            aksi="ajukan_publish",
-            objek_tipe="request_publish",
-            objek_id=req_baru.id_request,
-            deskripsi=f"Mengajukan publish event '{ev.nama_event}'",
-        )
-    )
-
-    db.commit()
-    db.refresh(req_baru)
-    return req_baru
 
 
 # 4. Admin memutuskan request publish (disetujui / ditolak)
@@ -180,54 +194,61 @@ def keputusan_request_publish(
         )
 
     if req.status_request not in ("menunggu", "ditolak") or (
-            req.status_request == "ditolak" and payload.status_request != "disetujui"
-        ):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Request sudah berstatus '{req.status_request}' dan tidak bisa diubah lagi",
+        req.status_request == "ditolak" and payload.status_request != "disetujui"
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Request sudah berstatus '{req.status_request}' dan tidak bisa diubah lagi",
+        )
+
+    try:
+        sekarang = datetime.now(timezone.utc)
+        req.status_request = payload.status_request
+        req.catatan_admin = payload.catatan_admin
+        req.id_pemutus = pengelola.id_pengelola
+        req.waktu_diputuskan = sekarang
+
+        ev = db.query(Event).filter(Event.id_event == req.id_event).first()
+        if payload.status_request == "disetujui":
+            if ev and ev.status_event != "published":
+                ev.status_event = "published"
+                ev.dipublish_pada = sekarang
+            for item in req.items:
+                if item.jenis_item == "map" and item.id_map:
+                    peta = db.query(Map).filter(Map.id_map == item.id_map).first()
+                    if peta:
+                        peta.status_map = "published"
+                        peta.dipublish_pada = sekarang
+        else:
+            if ev and ev.status_event != "published":
+                ev.status_event = "draft"
+
+        db.add(
+            RiwayatRequest(
+                id_request=req.id_request,
+                aksi=payload.status_request,
+                catatan=payload.catatan_admin,
+                id_pelaku=pengelola.id_pengelola,
             )
-
-    sekarang = datetime.now(timezone.utc)
-    req.status_request = payload.status_request
-    req.catatan_admin = payload.catatan_admin
-    req.id_pemutus = pengelola.id_pengelola
-    req.waktu_diputuskan = sekarang
-
-    ev = db.query(Event).filter(Event.id_event == req.id_event).first()
-    if payload.status_request == "disetujui":
-        if ev:
-            ev.status_event = "published"
-            ev.dipublish_pada = sekarang
-        for item in req.items:
-            if item.jenis_item == "map" and item.id_map:
-                peta = db.query(Map).filter(Map.id_map == item.id_map).first()
-                if peta:
-                    peta.status_map = "published"
-                    peta.dipublish_pada = sekarang
-    else:
-        if ev:
-            ev.status_event = "draft"
-
-    db.add(
-        RiwayatRequest(
-            id_request=req.id_request,
-            aksi=payload.status_request,
-            catatan=payload.catatan_admin,
-            id_pelaku=pengelola.id_pengelola,
         )
-    )
-    db.add(
-        LogAktivitas(
-            id_pengelola=pengelola.id_pengelola,
-            aksi=f"request_{payload.status_request}",
-            objek_tipe="request_publish",
-            objek_id=req.id_request,
+        db.add(
+            LogAktivitas(
+                id_pengelola=pengelola.id_pengelola,
+                aksi=f"request_{payload.status_request}",
+                objek_tipe="request_publish",
+                objek_id=req.id_request,
+            )
         )
-    )
 
-    db.commit()
-    db.refresh(req)
-    return req
+        db.commit()
+        db.refresh(req)
+        return req
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Gagal memperbarui keputusan publish: {exc}",
+        )
 
 
 # 5. Pengirim membatalkan request yang masih berstatus 'menunggu'
@@ -258,7 +279,7 @@ def batalkan_request_publish(
 
     req.status_request = "dibatalkan"
     ev = db.query(Event).filter(Event.id_event == req.id_event).first()
-    if ev and ev.status_event == "menunggu_review":
+    if ev and ev.status_event != "published":
         ev.status_event = "draft"
 
     db.add(
