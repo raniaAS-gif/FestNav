@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:scrollbars="vertical"
+    android:background="#FFFFFF"
+    tools:context=".Profil">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingBottom="80dp">
+
+        <!-- Latar Belakang Gambar Profil -->
+        <ImageView
+            android:id="@+id/imgBackgroundProfil"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:adjustViewBounds="true"
+            android:scaleType="fitXY"
+            android:src="@drawable/profil"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <!-- TextView untuk Nama Pengunjung di Bagian Atas -->
+        <TextView
+            android:id="@+id/tvNamaHeader"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="140dp"
+            android:layout_marginEnd="28dp"
+            android:layout_marginTop="35dp"
+            android:text="Nama Pengunjung"
+            android:textColor="#000000"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            app:layout_constraintTop_toTopOf="@id/imgBackgroundProfil"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <!-- TextView untuk Username di Bagian Atas -->
+        <TextView
+            android:id="@+id/tvUsernameHeader"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="140dp"
+            android:layout_marginEnd="28dp"
+            android:layout_marginTop="60dp"
+            android:text="\@username"
+            android:textColor="#6B7280"
+            android:textSize="13sp"
+            app:layout_constraintTop_toTopOf="@id/imgBackgroundProfil"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <!-- Kotak Informasi Data Diri -->
+        <!-- 1. Nama Lengkap -->
+        <TextView
+            android:id="@+id/tvNamaLengkapVal"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="50dp"
+            android:layout_marginEnd="50dp"
+            android:layout_marginTop="160dp"
+            android:text="Nama Pengunjung"
+            android:textColor="#000000"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            app:layout_constraintTop_toTopOf="@id/imgBackgroundProfil"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <!-- 2. Username -->
+        <TextView
+            android:id="@+id/tvUsernameVal"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="50dp"
+            android:layout_marginEnd="50dp"
+            android:layout_marginTop="230dp"
+            android:text="Username"
+            android:textColor="#000000"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            app:layout_constraintTop_toTopOf="@id/imgBackgroundProfil"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <!-- 3. Email -->
+        <TextView
+            android:id="@+id/tvEmailVal"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="50dp"
+            android:layout_marginEnd="50dp"
+            android:layout_marginTop="300dp"
+            android:text="nama@gmail.com"
+            android:textColor="#000000"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            app:layout_constraintTop_toTopOf="@id/imgBackgroundProfil"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <!-- 4. Nomor Telepon -->
+        <TextView
+            android:id="@+id/tvTeleponVal"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="50dp"
+            android:layout_marginEnd="50dp"
+            android:layout_marginTop="370dp"
+            android:text="08xxxxxxxxxx"
+            android:textColor="#000000"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            app:layout_constraintTop_toTopOf="@id/imgBackgroundProfil"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <!-- Tombol Keluar (Logout) -->
+        <View
+            android:id="@+id/btnKeluar"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="36dp"
+            android:layout_marginEnd="36dp"
+            android:layout_marginTop="450dp"
+            android:background="@android:color/transparent"
+            app:layout_constraintTop_toTopOf="@id/imgBackgroundProfil"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <!-- Menu Navigasi Bawah (Event, Peta, Favorit, Profil) -->
+        <View
+            android:id="@+id/navEvent"
+            android:layout_width="65dp"
+            android:layout_height="50dp"
+            android:layout_marginStart="30dp"
+            android:layout_marginTop="530dp"
+            android:background="@android:color/transparent"
+            app:layout_constraintTop_toTopOf="@id/imgBackgroundProfil"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <View
+            android:id="@+id/navPeta"
+            android:layout_width="65dp"
+            android:layout_height="50dp"
+            android:layout_marginTop="530dp"
+            android:background="@android:color/transparent"
+            app:layout_constraintTop_toTopOf="@id/imgBackgroundProfil"
+            app:layout_constraintStart_toEndOf="@id/navEvent"
+            app:layout_constraintEnd_toStartOf="@id/navFavorit" />
+
+        <View
+            android:id="@+id/navFavorit"
+            android:layout_width="65dp"
+            android:layout_height="50dp"
+            android:layout_marginTop="530dp"
+            android:background="@android:color/transparent"
+            app:layout_constraintTop_toTopOf="@id/imgBackgroundProfil"
+            app:layout_constraintStart_toEndOf="@id/navPeta"
+            app:layout_constraintEnd_toStartOf="@id/navProfil" />
+
+        <!-- Tombol Profil (Aktif di halaman ini) -->
+        <View
+            android:id="@+id/navProfil"
+            android:layout_width="65dp"
+            android:layout_height="50dp"
+            android:layout_marginEnd="30dp"
+            android:layout_marginTop="530dp"
+            android:background="@android:color/transparent"
+            app:layout_constraintTop_toTopOf="@id/imgBackgroundProfil"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</ScrollView>
