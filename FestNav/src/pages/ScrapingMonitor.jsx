@@ -224,45 +224,19 @@ export const httpApi = {
     if (detailObj?.event?.id_event) return detailObj.event.id_event;
 
     const job = detailObj.job;
-    const raw = job.hasil_mentah || {};
-    const today = new Date().toISOString().slice(0, 10);
-    const mulai = raw.tanggal_mulai ? String(raw.tanggal_mulai).slice(0, 10) : today;
-    const selesai = raw.tanggal_selesai ? String(raw.tanggal_selesai).slice(0, 10) : mulai;
-
-    const resEv = await fetch(`${API_BASE}/api/events`, {
-      method: 'POST',
-      headers: getAuthHeaders(true),
-      body: JSON.stringify({
-        nama_event: (raw.nama_event || job.nama_event || 'Event Hasil Scraping').slice(0, 150),
-        deskripsi: raw.deskripsi || null,
-        tanggal_mulai: mulai,
-        tanggal_selesai: selesai < mulai ? mulai : selesai,
-        lokasi: raw.lokasi_teks || raw.lokasi || null,
-        garis_lintang: raw.garis_lintang ?? -8.6724,
-        garis_bujur: raw.garis_bujur ?? 115.2362,
-        jenis_event: raw.jenis_event || 'Event Outdoor',
-        tipe_lokasi: 'outdoor',
-        sumber: 'scraping',
-      }),
-    }).then(checkOk);
-    const createdEv = await resEv.json();
-    const newEventId = createdEv.id_event;
-
-    const kandidat = extractRawImages(raw);
-    for (const g of kandidat) {
-      await fetch(`${API_BASE}/api/gambar-event/event/${newEventId}`, {
+    const resPrep = await fetch(
+      `${API_BASE}/api/scraping/${job.id_scraping}/siapkan-galeri`,
+      {
         method: 'POST',
-        headers: getAuthHeaders(true),
-        body: JSON.stringify({
-          url_gambar: g.url_gambar,
-          public_id: g.public_id || null,
-          jenis_gambar: 'lainnya',
-          keterangan: g.keterangan || 'Hasil ekstraksi otomatis bot scraping',
-        }),
-      }).catch(() => {});
-    }
+        headers: getAuthHeaders(),
+      }
+    ).then(checkOk);
+    const preparedJob = await resPrep.json();
+    const newEventId = preparedJob.id_event;
 
-    setLinkedEventId(job.id_scraping, newEventId);
+    if (newEventId) {
+      setLinkedEventId(job.id_scraping, newEventId);
+    }
     return newEventId;
   },
 
@@ -459,7 +433,7 @@ export default function ScrapingMonitor({ namaAdmin, api = httpApi, viewAwal = '
 
   // Arahkan ke halaman Galeri Gambar Event (/galeri) dengan id_event asli di database
   const bukaGaleri = async () => {
-    if (!detail) return;
+    if (!detail || busy) return;
     setBusy(true);
     try {
       const realEventId =
@@ -487,16 +461,23 @@ export default function ScrapingMonitor({ namaAdmin, api = httpApi, viewAwal = '
 
   // Simpan event dari Review Event dan arahkan ke /daftar-event (tab Hasil Scrapping)
   const handleSimpanEvent = async (d) => {
+    if (busy) return;
     const linkedEventId = d.event.id_event || getLinkedEventId(d.job.id_scraping);
-    await aksi(
-      () => api.simpan(d.job.id_scraping, linkedEventId),
-      'Event disimpan.'
-    );
-    navigate('/daftar-event', {
-      state: {
-        activeTab: 'scrapping',
-      },
-    });
+    setBusy(true);
+    try {
+      await api.simpan(d.job.id_scraping, linkedEventId);
+      await muat();
+      flash('Event disimpan.');
+      navigate('/daftar-event', {
+        state: {
+          activeTab: 'scrapping',
+        },
+      });
+    } catch (err) {
+      setError(err.message || 'Gagal menyimpan event.');
+    } finally {
+      setBusy(false);
+    }
   };
 
   const q = cari.toLowerCase();

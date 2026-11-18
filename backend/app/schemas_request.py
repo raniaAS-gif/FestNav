@@ -47,6 +47,8 @@ class RequestPublishResponse(BaseModel):
     id_pemutus: Optional[int] = None
     waktu_dikirim: datetime
     waktu_diputuskan: Optional[datetime] = None
+    event_diubah_setelah_ditolak: bool = False
+    bisa_ubah_keputusan: bool = False
     items: List[RequestItemResponse] = []
     riwayat: List[RiwayatRequestResponse] = []
 

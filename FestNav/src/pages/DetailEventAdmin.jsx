@@ -44,6 +44,22 @@ function formatStatusLabel(statusEvent) {
   return 'Draft'
 }
 
+function formatApiError(detail, fallback = 'Terjadi kesalahan pada server.') {
+  if (!detail) return fallback
+  if (typeof detail === 'string') return detail
+  if (Array.isArray(detail)) {
+    return detail
+      .map((item) => {
+        const field = Array.isArray(item.loc)
+          ? item.loc[item.loc.length - 1]
+          : 'field'
+        return `${field}: ${item.msg}`
+      })
+      .join('\n')
+  }
+  return JSON.stringify(detail)
+}
+
 function DetailEventAdmin() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -51,14 +67,20 @@ function DetailEventAdmin() {
   const [eventData, setEventData] = useState(null)
   const [denahList, setDenahList] = useState([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
-  const [showPublishModal, setShowPublishModal] = useState(false)
+  const [feedbackModal, setFeedbackModal] = useState(null)
+  const [showUnpublishConfirm, setShowUnpublishConfirm] = useState(false)
 
   useEffect(() => {
     let cancelled = false
     const navState = location.state || {}
     const requestedId =
-      navState.eventId || navState.id_event || navState.eventData?.id_event || navState.eventData?.id
+      navState.eventId ||
+      navState.id_event ||
+      navState.id ||
+      navState.eventData?.id_event ||
+      navState.eventData?.id
 
     const loadDetail = async () => {
       setIsLoading(true)
@@ -83,7 +105,9 @@ function DetailEventAdmin() {
           if (!resList.ok) throw new Error('Gagal memuat daftar event dari server')
           const allEvents = await resList.json()
           if (!allEvents.length) {
-            throw new Error('Belum ada data event di database. Silakan buat event terlebih dahulu.')
+            throw new Error(
+              'Belum ada data event di database. Silakan buat event terlebih dahulu.'
+            )
           }
           ev =
             (navState.eventTitle &&
@@ -134,13 +158,17 @@ function DetailEventAdmin() {
           id_event: eventData.id_event,
           nama_map: `Denah Utama - ${eventData.nama_event}`,
           tipe_map: eventData.tipe_lokasi === 'indoor' ? 'indoor' : 'outdoor',
-          is_utama: true,
+          is_utama: denahList.length === 0,
           garis_lintang_pusat: eventData.garis_lintang ?? -8.6724,
           garis_bujur_pusat: eventData.garis_bujur ?? 115.2362
         })
       })
       const created = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(created.detail || 'Gagal membuat denah peta baru')
+      if (!res.ok) {
+        throw new Error(
+          formatApiError(created.detail, 'Gagal membuat denah peta baru')
+        )
+      }
 
       setDenahList((prev) => [
         ...prev,
@@ -159,7 +187,8 @@ function DetailEventAdmin() {
   }
 
   const handlePublishEvent = async () => {
-    if (!eventData) return
+    if (!eventData || isUpdatingStatus) return
+    setIsUpdatingStatus(true)
     try {
       const res = await fetch(`${API_BASE}/api/events/${eventData.id_event}`, {
         method: 'PATCH',
@@ -167,12 +196,42 @@ function DetailEventAdmin() {
         body: JSON.stringify({ status_event: 'published' })
       })
       const updated = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(updated.detail || 'Gagal mempublish event')
+      if (!res.ok) {
+        throw new Error(formatApiError(updated.detail, 'Gagal mempublish event'))
+      }
 
       setEventData(updated)
-      setShowPublishModal(true)
+      setFeedbackModal('Berhasil! Event sudah dipublish')
     } catch (err) {
       alert(err.message)
+    } finally {
+      setIsUpdatingStatus(false)
+    }
+  }
+
+  const handleUnpublishEvent = async () => {
+    if (!eventData || isUpdatingStatus) return
+    setIsUpdatingStatus(true)
+    try {
+      const res = await fetch(`${API_BASE}/api/events/${eventData.id_event}`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(true),
+        body: JSON.stringify({ status_event: 'draft' })
+      })
+      const updated = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(
+          formatApiError(updated.detail, 'Gagal melakukan unpublish event')
+        )
+      }
+
+      setEventData(updated)
+      setShowUnpublishConfirm(false)
+      setFeedbackModal('Event berhasil di-unpublish dan dikembalikan ke Draft')
+    } catch (err) {
+      alert(err.message)
+    } finally {
+      setIsUpdatingStatus(false)
     }
   }
 
@@ -184,14 +243,18 @@ function DetailEventAdmin() {
         body: JSON.stringify({ status_map: 'published' })
       })
       const updated = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(updated.detail || 'Gagal mempublish denah')
+      if (!res.ok) {
+        throw new Error(formatApiError(updated.detail, 'Gagal mempublish denah'))
+      }
 
       setDenahList((prev) =>
         prev.map((item) =>
-          item.id_map === idMap ? { ...item, status: 'published', rawMap: updated } : item
+          item.id_map === idMap
+            ? { ...item, status: 'published', rawMap: updated }
+            : item
         )
       )
-      setShowPublishModal(true)
+      setFeedbackModal('Berhasil! Denah sudah dipublish')
     } catch (err) {
       alert(err.message)
     }
@@ -216,6 +279,8 @@ function DetailEventAdmin() {
     navigate('/map-editor', { state: editorPayload })
   }
 
+  const isPublished = eventData?.status_event === 'published'
+
   return (
     <div className="detail-eo-container">
       <NavbarAdmin />
@@ -227,13 +292,25 @@ function DetailEventAdmin() {
 
       <main className="detail-eo-content">
         {isLoading ? (
-          <div className="detail-eo-card" style={{ textAlign: 'center', padding: '48px' }}>
+          <div
+            className="detail-eo-card"
+            style={{ textAlign: 'center', padding: '48px' }}
+          >
             Memuat detail event dari database...
           </div>
         ) : errorMsg || !eventData ? (
-          <div className="detail-eo-card" style={{ textAlign: 'center', padding: '48px' }}>
-            <p style={{ color: '#b91c1c', marginBottom: 16 }}>{errorMsg || 'Event tidak ditemukan'}</p>
-            <button type="button" className="btn-cyan-footer" onClick={() => navigate('/daftar-event')}>
+          <div
+            className="detail-eo-card"
+            style={{ textAlign: 'center', padding: '48px' }}
+          >
+            <p style={{ color: '#b91c1c', marginBottom: 16 }}>
+              {errorMsg || 'Event tidak ditemukan'}
+            </p>
+            <button
+              type="button"
+              className="btn-cyan-footer"
+              onClick={() => navigate('/daftar-event')}
+            >
               Kembali ke Daftar Event
             </button>
           </div>
@@ -246,7 +323,11 @@ function DetailEventAdmin() {
                 className="btn-cyan-edit"
                 onClick={() =>
                   navigate('/edit-event', {
-                    state: { eventId: eventData.id_event, eventData, role: 'admin' }
+                    state: {
+                      eventId: eventData.id_event,
+                      eventData,
+                      role: 'admin'
+                    }
                   })
                 }
               >
@@ -270,7 +351,10 @@ function DetailEventAdmin() {
                   </p>
                   <p>
                     <strong>Tanggal Event:</strong>{' '}
-                    {formatDateRange(eventData.tanggal_mulai, eventData.tanggal_selesai)}
+                    {formatDateRange(
+                      eventData.tanggal_mulai,
+                      eventData.tanggal_selesai
+                    )}
                   </p>
                   <p>
                     <strong>Lokasi Event:</strong> {eventData.lokasi || '-'}
@@ -279,14 +363,18 @@ function DetailEventAdmin() {
                     <strong>Jenis Event:</strong> {eventData.jenis_event || '-'}
                   </p>
                   <p>
-                    <strong>Event Organizer:</strong> {eventData.nama_organizer || 'Admin FestNav'}
+                    <strong>Event Organizer:</strong>{' '}
+                    {eventData.nama_organizer || 'Admin FestNav'}
                   </p>
                   <p>
                     <strong>Sumber:</strong>{' '}
-                    {eventData.sumber === 'scraping' ? 'Hasil Scrapping' : 'Kerjasama Event Organizer'}
+                    {eventData.sumber === 'scraping'
+                      ? 'Hasil Scrapping'
+                      : 'Kerjasama Event Organizer'}
                   </p>
                   <p>
-                    <strong>Status:</strong> {formatStatusLabel(eventData.status_event)}
+                    <strong>Status:</strong>{' '}
+                    {formatStatusLabel(eventData.status_event)}
                   </p>
 
                   <div className="deskripsi-block">
@@ -299,16 +387,31 @@ function DetailEventAdmin() {
               <hr className="detail-divider" />
 
               <div className="denah-acara-section">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                  <h2 className="denah-section-heading" style={{ margin: 0 }}>Denah Acara</h2>
-                  <button type="button" className="btn-cyan-denah" onClick={handleCreateFirstMap}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: 16
+                  }}
+                >
+                  <h2 className="denah-section-heading" style={{ margin: 0 }}>
+                    Denah Acara
+                  </h2>
+                  <button
+                    type="button"
+                    className="btn-cyan-denah"
+                    onClick={handleCreateFirstMap}
+                  >
                     + Tambah Denah Peta
                   </button>
                 </div>
 
                 {denahList.length === 0 ? (
                   <p style={{ color: '#64748b' }}>
-                    Event ini belum memiliki denah peta. Klik <strong>+ Tambah Denah Peta</strong> di atas untuk membuat peta baru.
+                    Event ini belum memiliki denah peta. Klik{' '}
+                    <strong>+ Tambah Denah Peta</strong> di atas untuk membuat
+                    peta baru.
                   </p>
                 ) : (
                   denahList.map((denah) => (
@@ -331,7 +434,9 @@ function DetailEventAdmin() {
                           className="btn-cyan-denah"
                           onClick={() => handlePublishDenah(denah.id_map)}
                         >
-                          {denah.status === 'published' ? 'Sudah Dipublish' : 'Publish Denah'}
+                          {denah.status === 'published'
+                            ? 'Sudah Dipublish'
+                            : 'Publish Denah'}
                         </button>
                         <button
                           type="button"
@@ -349,13 +454,31 @@ function DetailEventAdmin() {
 
             <div className="detail-eo-footer">
               <div className="footer-dual-buttons">
-                <button
-                  type="button"
-                  className="btn-cyan-footer"
-                  onClick={handlePublishEvent}
-                >
-                  Publish Event
-                </button>
+                {isPublished ? (
+                  <button
+                    type="button"
+                    className="btn-cyan-footer btn-red-action"
+                    style={{
+                      backgroundColor: '#dc2626',
+                      borderColor: '#dc2626',
+                      color: '#ffffff'
+                    }}
+                    disabled={isUpdatingStatus}
+                    onClick={() => setShowUnpublishConfirm(true)}
+                  >
+                    {isUpdatingStatus ? 'Memproses...' : 'Unpublish Event'}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn-cyan-footer"
+                    disabled={isUpdatingStatus}
+                    onClick={handlePublishEvent}
+                  >
+                    {isUpdatingStatus ? 'Memproses...' : 'Publish Event'}
+                  </button>
+                )}
+
                 <button
                   type="button"
                   className="btn-cyan-footer"
@@ -369,9 +492,78 @@ function DetailEventAdmin() {
         )}
       </main>
 
-      {showPublishModal && (
+      {/* Modal Konfirmasi Unpublish Event */}
+      {showUnpublishConfirm && (
         <div
-          onClick={() => setShowPublishModal(false)}
+          onClick={() => !isUpdatingStatus && setShowUnpublishConfirm(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '16px',
+              textAlign: 'center',
+              maxWidth: '400px',
+              width: '90%',
+              padding: '32px 24px',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)'
+            }}
+          >
+            <h3 style={{ fontSize: 20, marginBottom: 12, color: '#0f172a' }}>
+              Unpublish Event?
+            </h3>
+            <p style={{ fontSize: 14, color: '#475569', marginBottom: 24 }}>
+              Event <strong>{eventData?.nama_event}</strong> akan dikembalikan
+              ke status <strong>Draft</strong> dan tidak tampil untuk pengunjung
+              umum sampai dipublish kembali.
+            </p>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button
+                type="button"
+                className="btn-cyan-footer"
+                style={{
+                  flex: 1,
+                  backgroundColor: '#e2e8f0',
+                  color: '#1e293b'
+                }}
+                disabled={isUpdatingStatus}
+                onClick={() => setShowUnpublishConfirm(false)}
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                className="btn-cyan-footer"
+                style={{
+                  flex: 1,
+                  backgroundColor: '#dc2626',
+                  color: '#ffffff'
+                }}
+                disabled={isUpdatingStatus}
+                onClick={handleUnpublishEvent}
+              >
+                {isUpdatingStatus ? 'Memproses...' : 'Ya, Unpublish'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Sukses Publish / Unpublish */}
+      {feedbackModal && (
+        <div
+          onClick={() => setFeedbackModal(null)}
           style={{
             position: 'fixed',
             inset: 0,
@@ -396,7 +588,13 @@ function DetailEventAdmin() {
               boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)'
             }}
           >
-            <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}>
+            <div
+              style={{
+                marginBottom: 16,
+                display: 'flex',
+                justifyContent: 'center'
+              }}
+            >
               <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
                 <circle cx="32" cy="32" r="30" fill="#22c55e" />
                 <path
@@ -409,13 +607,13 @@ function DetailEventAdmin() {
               </svg>
             </div>
             <h3 style={{ fontSize: 20, marginBottom: 24, color: '#0f172a' }}>
-              Berhasil! Konten sudah dipublish
+              {feedbackModal}
             </h3>
             <button
               type="button"
               className="btn-cyan-footer"
               style={{ width: '100%' }}
-              onClick={() => setShowPublishModal(false)}
+              onClick={() => setFeedbackModal(null)}
             >
               Kembali
             </button>

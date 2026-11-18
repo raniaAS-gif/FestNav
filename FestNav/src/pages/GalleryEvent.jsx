@@ -71,6 +71,26 @@ const parseJsonOrThrow = async (res, fallbackMsg) => {
   return data;
 };
 
+const prepGaleriInFlight = new Map();
+
+function siapkanGaleriSekali(idScraping) {
+  const key = String(idScraping);
+  if (prepGaleriInFlight.has(key)) {
+    return prepGaleriInFlight.get(key);
+  }
+  const req = fetch(`${API_BASE}/api/scraping/${key}/siapkan-galeri`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+  })
+    .then(async (res) => (res.ok ? res.json() : null))
+    .finally(() => {
+      setTimeout(() => prepGaleriInFlight.delete(key), 2000);
+    });
+
+  prepGaleriInFlight.set(key, req);
+  return req;
+}
+
 export const httpApi = {
   list: async (idEvent) => {
     const headers = getAuthHeaders();
@@ -215,20 +235,11 @@ export default function GalleryEvent({
       try {
         let resolvedId = initialId;
 
-        // Jika dibuka dari Review Scraping, siapkan draft event & kandidat gambar scraping dulu
+        // Jika dibuka dari Review Scraping, pastikan draft event & kandidat gambar scraping siap (idempoten)
         if (navState.idScraping) {
-          const resPrep = await fetch(
-            `${API_BASE}/api/scraping/${navState.idScraping}/siapkan-galeri`,
-            {
-              method: 'POST',
-              headers: getAuthHeaders(),
-            }
-          );
-          if (resPrep.ok) {
-            const jobData = await resPrep.json();
-            if (jobData?.id_event) {
-              resolvedId = jobData.id_event;
-            }
+          const jobData = await siapkanGaleriSekali(navState.idScraping);
+          if (jobData?.id_event) {
+            resolvedId = jobData.id_event;
           }
         }
 

@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import './common.css';
 import './MapEditor.css';
 import NavbarEditing from '../components/NavbarEditing';
+import KoordinatPetaBox from '../components/KoordinatPetaBox';
 
 /* Zona = bentuk (kolom fasilitas.bentuk). Pin muncul otomatis begitu zona dipilihkan fasilitasnya.
    Nama, jenis, warna, deskripsi, dan label pin SEMUA datang dari fasilitas, bukan diketik di sini. */
@@ -472,6 +473,46 @@ export default function MapEditor({
   const resetOverlayPos = () => {
     if (!doc.overlay) return;
     commit({ ...doc, overlay: { ...doc.overlay, bounds: [toLL([size.w * 0.2, size.h * 0.78]), toLL([size.w * 0.84, size.h * 0.13])], rotasi: 0 } });
+  };
+
+  const handleArahkanKoordinat = ({ lat, lng, pindahkanOverlay }) => {
+    const targetZoom = Math.max(Math.round(mapView.zoom), ZOOM_AWAL);
+    const nextView = { lat, lng, zoom: targetZoom };
+
+    if (mapInst.current) {
+      mapInst.current.panTo({ lat, lng });
+      mapInst.current.setZoom(targetZoom);
+    }
+
+    setMapView(nextView);
+    setActiveMap((prev) => ({
+      ...prev,
+      garis_lintang_pusat: lat,
+      garis_bujur_pusat: lng,
+    }));
+
+    if (doc.overlay && pindahkanOverlay) {
+      const oldRect = getOverlayRect(doc.overlay);
+      const nextProj = mercatorProj(nextView, size);
+      const halfW = oldRect ? oldRect.w / 2 : size.w * 0.32;
+      const halfH = oldRect ? oldRect.h / 2 : size.h * 0.325;
+      const cx = size.w / 2;
+      const cy = size.h / 2;
+      commit({
+        ...doc,
+        overlay: {
+          ...doc.overlay,
+          bounds: [
+            nextProj.toLL([cx - halfW, cy + halfH]),
+            nextProj.toLL([cx + halfW, cy - halfH]),
+          ],
+        },
+      });
+    } else {
+      setIsDirty(true);
+    }
+
+    flash(`Peta diarahkan ke ${lat.toFixed(5)}, ${lng.toFixed(5)}`);
   };
 
   const closeRoute = (dropLast) => {
@@ -973,6 +1014,13 @@ export default function MapEditor({
                   </button>
                   <span className="map-coord">{mapView.lat.toFixed(5)}, {mapView.lng.toFixed(5)} · z{Math.round(mapView.zoom)}</span>
                 </div>
+
+                <KoordinatPetaBox
+                  lat={mapView.lat}
+                  lng={mapView.lng}
+                  hasOverlay={!!doc.overlay}
+                  onArahkan={handleArahkanKoordinat}
+                />
 
                 {gmError && (
                   <div className="gm-fallback">
