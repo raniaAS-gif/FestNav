@@ -2,6 +2,10 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './Login.css'
 
+const API_BASE =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
+  'http://127.0.0.1:8000'
+
 function Login() {
   const navigate = useNavigate()
 
@@ -10,22 +14,67 @@ function Login() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [errorMsg, setErrorMsg] = useState('')
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault()
+    setErrorMsg('')
 
-    if (!username || !password) {
-      alert('Harap isi Username dan Password!')
+    const identifier = username.trim()
+    if (!identifier || !password) {
+      setErrorMsg('Harap isi Username/Email dan Password!')
       return
     }
 
-    // Simulasi redirect berdasarkan role yang dipilih
-    if (role === 'admin') {
-      console.log('Login sebagai Admin:', { username, password })
-      navigate('/dashboard')
-    } else {
-      console.log('Login sebagai Event Organizer:', { username, password })
-      navigate('/dashboard-eo')
+    setIsLoading(true)
+    try {
+      const response = await fetch(`${API_BASE}/api/auth/pengelola/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          identifier,
+          password,
+        }),
+      })
+
+      const data = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        throw new Error(data.detail || 'Username/email atau password salah')
+      }
+
+      // Validasi kesesuaian tab role yang dipilih dengan peran akun di database
+      const expectedPeran = role === 'admin' ? 'admin' : 'event_organizer'
+      if (data.peran !== expectedPeran) {
+        const labelAsli = data.peran === 'admin' ? 'Admin' : 'Event Organizer'
+        throw new Error(
+          `Akun ini terdaftar sebagai ${labelAsli}. Silakan pindah ke tab ${labelAsli} di atas.`
+        )
+      }
+
+      // Simpan token & identitas pengelola ke localStorage
+      localStorage.setItem('access_token', data.access_token)
+      localStorage.setItem('token', data.access_token)
+      localStorage.setItem('user_type', data.user_type || 'pengelola')
+      localStorage.setItem('peran', data.peran)
+      localStorage.setItem('role', data.peran === 'admin' ? 'admin' : 'eo')
+      if (data.user) {
+        localStorage.setItem('user', JSON.stringify(data.user))
+      }
+
+      // Arahkan ke dashboard sesuai peran dari backend
+      if (data.peran === 'admin') {
+        navigate('/dashboard')
+      } else {
+        navigate('/dashboard-eo')
+      }
+    } catch (err) {
+      setErrorMsg(err.message || 'Gagal terhubung ke server backend')
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -41,14 +90,22 @@ function Login() {
           <button
             type="button"
             className={`role-toggle-btn ${role === 'admin' ? 'active' : ''}`}
-            onClick={() => setRole('admin')}
+            onClick={() => {
+              setRole('admin')
+              setErrorMsg('')
+            }}
+            disabled={isLoading}
           >
             Admin
           </button>
           <button
             type="button"
             className={`role-toggle-btn ${role === 'eo' ? 'active' : ''}`}
-            onClick={() => setRole('eo')}
+            onClick={() => {
+              setRole('eo')
+              setErrorMsg('')
+            }}
+            disabled={isLoading}
           >
             Event Organizer
           </button>
@@ -57,13 +114,15 @@ function Login() {
         {/* Form Login */}
         <form onSubmit={handleLogin} className="login-form">
           <div className="login-input-group">
-            <label>Username</label>
+            <label>Username atau Email</label>
             <input
               type="text"
-              placeholder="Username"
+              placeholder="Username atau email"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               className="login-input"
+              disabled={isLoading}
+              autoComplete="username"
             />
           </div>
 
@@ -72,16 +131,19 @@ function Login() {
             <div className="login-password-wrapper">
               <input
                 type={showPassword ? 'text' : 'password'}
-                placeholder="8 digit"
+                placeholder="Masukkan password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="login-input"
+                disabled={isLoading}
+                autoComplete="current-password"
               />
               <button
                 type="button"
                 className="login-eye-btn"
                 onClick={() => setShowPassword(!showPassword)}
                 title={showPassword ? 'Sembunyikan Password' : 'Lihat Password'}
+                disabled={isLoading}
               >
                 {showPassword ? (
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1e293b" strokeWidth="1.8">
@@ -98,9 +160,27 @@ function Login() {
             </div>
           </div>
 
+          {errorMsg && (
+            <div
+              role="alert"
+              style={{
+                backgroundColor: '#fee2e2',
+                color: '#b91c1c',
+                border: '1px solid #fecaca',
+                borderRadius: '8px',
+                padding: '10px 12px',
+                fontSize: '13px',
+                marginTop: '12px',
+                textAlign: 'center',
+              }}
+            >
+              {errorMsg}
+            </div>
+          )}
+
           <div className="login-btn-container">
-            <button type="submit" className="btn-login-submit">
-              Login
+            <button type="submit" className="btn-login-submit" disabled={isLoading}>
+              {isLoading ? 'Memproses...' : 'Login'}
             </button>
           </div>
         </form>

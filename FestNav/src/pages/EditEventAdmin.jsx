@@ -4,6 +4,10 @@ import NavbarAdmin from '../components/NavbarAdmin'
 import NavbarEO from '../components/NavbarEO'
 import './EditEventAdmin.css'
 
+const API_BASE =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
+  'http://127.0.0.1:8000'
+
 const JENIS_EVENT_OPTIONS = [
   'Event Indoor',
   'Event Outdoor',
@@ -15,123 +19,219 @@ const SUMBER_EVENT_OPTIONS = [
   'Hasil Scrapping'
 ]
 
-const DEFAULT_EDIT_EVENT = {
-  id: 1,
-  namaEvent: 'Dies Natalis Udayana 2026',
-  tanggalEvent: '21 Oktober 2025 - 31 Desember 2025',
-  lokasiEvent: 'Rektorat Universitas Udayana',
-  jenisEvent: 'Event Indoor & Outdoor',
-  eventOrganizer: 'Universitas Udayana',
-  sumber: 'Kerjasama Event Organizer',
-  deskripsiSingkat:
-    'ini adalah itu, itu adalah ini, lalu dia adalah saya, saya adalh kami, kami adalah rambut, rambut adalah bok, bok adalah sayuran, sayuran adalah nama gang, dan lain sebagainya.',
-  posterUrl: '',
-  denahList: [
-    {
-      id: 1,
-      namaDenah: 'Day 1: Lapangan Rektorat',
-      imageFile: null,
-      imagePreview: ''
-    },
-    {
-      id: 2,
-      namaDenah: 'Day 2: Gedung Rektorat',
-      imageFile: null,
-      imagePreview: ''
+const BULAN_ID = {
+  januari: '01',
+  februari: '02',
+  maret: '03',
+  april: '04',
+  mei: '05',
+  juni: '06',
+  juli: '07',
+  agustus: '08',
+  september: '09',
+  oktober: '10',
+  november: '11',
+  desember: '12'
+}
+
+const getAuthHeaders = (withJson = false) => {
+  const token =
+    localStorage.getItem('access_token') || localStorage.getItem('token') || ''
+  const h = {}
+  if (withJson) h['Content-Type'] = 'application/json'
+  if (token) h.Authorization = `Bearer ${token}`
+  return h
+}
+
+const fileToDataUrl = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result)
+    reader.onerror = () => reject(new Error('Gagal membaca file gambar.'))
+    reader.readAsDataURL(file)
+  })
+
+function formatDateRange(mulai, selesai) {
+  if (!mulai && !selesai) return ''
+  const fmt = (d) =>
+    new Date(d).toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    })
+  if (mulai && selesai && mulai !== selesai) return `${fmt(mulai)} - ${fmt(selesai)}`
+  return fmt(mulai || selesai)
+}
+
+function parseSingleDate(token) {
+  if (!token) return null
+  const clean = token.trim()
+  // Format YYYY-MM-DD
+  const isoMatch = clean.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/)
+  if (isoMatch) {
+    return `${isoMatch[1]}-${isoMatch[2].padStart(2, '0')}-${isoMatch[3].padStart(2, '0')}`
+  }
+  // Format DD/MM/YYYY atau DD-MM-YYYY
+  const dmyMatch = clean.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/)
+  if (dmyMatch) {
+    return `${dmyMatch[3]}-${dmyMatch[2].padStart(2, '0')}-${dmyMatch[1].padStart(2, '0')}`
+  }
+  // Format "21 Oktober 2025"
+  const idMatch = clean.match(/^(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})$/)
+  if (idMatch) {
+    const bulanNum = BULAN_ID[idMatch[2].toLowerCase()]
+    if (bulanNum) {
+      return `${idMatch[3]}-${bulanNum}-${idMatch[1].padStart(2, '0')}`
     }
-  ]
+  }
+  return null
+}
+
+function parseDateRangeInput(text, fallbackMulai, fallbackSelesai) {
+  const raw = (text || '').trim()
+  if (!raw) {
+    return {
+      tanggal_mulai: fallbackMulai || new Date().toISOString().slice(0, 10),
+      tanggal_selesai:
+        fallbackSelesai || fallbackMulai || new Date().toISOString().slice(0, 10)
+    }
+  }
+  const parts = raw.split(/\s*(?:–|—|-|\bsampai\b|\bs\/d\b)\s*/i).filter(Boolean)
+  // Jika format ISO "2026-11-20 - 2026-11-22", hindari terpotong oleh tanda "-" di dalam tanggal
+  const isoRange = raw.match(/(\d{4}-\d{2}-\d{2})\s*(?:–|—|-|\bsampai\b|\bs\/d\b)\s*(\d{4}-\d{2}-\d{2})/i)
+  if (isoRange) {
+    return { tanggal_mulai: isoRange[1], tanggal_selesai: isoRange[2] }
+  }
+
+  const start = parseSingleDate(parts[0]) || fallbackMulai || new Date().toISOString().slice(0, 10)
+  const end =
+    (parts[1] ? parseSingleDate(parts[1]) : parseSingleDate(parts[0])) ||
+    fallbackSelesai ||
+    start
+
+  return {
+    tanggal_mulai: start,
+    tanggal_selesai: end < start ? start : end
+  }
+}
+
+function mapJenisToTipeLokasi(jenisEvent) {
+  if (jenisEvent === 'Event Indoor') return 'indoor'
+  if (jenisEvent === 'Event Outdoor') return 'outdoor'
+  return 'hybrid'
 }
 
 function EditEventAdmin({ role = 'admin' }) {
   const navigate = useNavigate()
   const location = useLocation()
 
-  // Deteksi role baik dari prop maupun dari state navigasi DetailEventAdmin
   const activeRole = location.state?.role || role
   const isEO = activeRole === 'eo'
-  const incomingEvent = location.state?.eventData || null
+  const navState = location.state || {}
+  const incomingEvent = navState.eventData || null
+  const targetEventId =
+    navState.eventId || navState.id_event || incomingEvent?.id_event || incomingEvent?.id
 
-  // State Form Utama (Terisi otomatis dari event yang dipilih)
-  const [formData, setFormData] = useState(() => {
-    if (!incomingEvent) {
-      return {
-        namaEvent: DEFAULT_EDIT_EVENT.namaEvent,
-        tanggalEvent: DEFAULT_EDIT_EVENT.tanggalEvent,
-        lokasiEvent: DEFAULT_EDIT_EVENT.lokasiEvent,
-        jenisEvent: DEFAULT_EDIT_EVENT.jenisEvent,
-        eventOrganizer: DEFAULT_EDIT_EVENT.eventOrganizer,
-        sumber: isEO ? 'Kerjasama Event Organizer' : DEFAULT_EDIT_EVENT.sumber,
-        deskripsiSingkat: DEFAULT_EDIT_EVENT.deskripsiSingkat
-      }
-    }
+  const [eventObj, setEventObj] = useState(incomingEvent)
+  const [isLoading, setIsLoading] = useState(Boolean(targetEventId))
+  const [isSaving, setIsSaving] = useState(false)
 
-    const resolvedJenis = JENIS_EVENT_OPTIONS.includes(incomingEvent.jenisEvent)
-      ? incomingEvent.jenisEvent
-      : 'Belum dipilih'
-
-    const resolvedSumber = isEO
+  const [formData, setFormData] = useState({
+    namaEvent: incomingEvent?.nama_event || incomingEvent?.namaEvent || '',
+    tanggalEvent:
+      incomingEvent?.tanggal_mulai
+        ? formatDateRange(incomingEvent.tanggal_mulai, incomingEvent.tanggal_selesai)
+        : incomingEvent?.tanggalEvent || '',
+    lokasiEvent: incomingEvent?.lokasi || incomingEvent?.lokasiEvent || '',
+    jenisEvent: JENIS_EVENT_OPTIONS.includes(incomingEvent?.jenis_event)
+      ? incomingEvent.jenis_event
+      : 'Belum dipilih',
+    eventOrganizer:
+      incomingEvent?.nama_organizer || incomingEvent?.eventOrganizer || '',
+    sumber: isEO
       ? 'Kerjasama Event Organizer'
-      : SUMBER_EVENT_OPTIONS.includes(incomingEvent.sumber)
-      ? incomingEvent.sumber
-      : 'Belum dipilih'
-
-    return {
-      namaEvent: incomingEvent.namaEvent || incomingEvent.title || '',
-      tanggalEvent: incomingEvent.tanggalEvent || incomingEvent.dateRange || '',
-      lokasiEvent:
-        incomingEvent.lokasiEvent && incomingEvent.lokasiEvent !== '-'
-          ? incomingEvent.lokasiEvent
-          : '',
-      jenisEvent: resolvedJenis,
-      eventOrganizer:
-        incomingEvent.eventOrganizer && incomingEvent.eventOrganizer !== '-'
-          ? incomingEvent.eventOrganizer
-          : '',
-      sumber: resolvedSumber,
-      deskripsiSingkat:
-        incomingEvent.deskripsiSingkat && incomingEvent.deskripsiSingkat !== '-'
-          ? incomingEvent.deskripsiSingkat
-          : ''
-    }
+      : incomingEvent?.sumber === 'scraping'
+      ? 'Hasil Scrapping'
+      : 'Kerjasama Event Organizer',
+    deskripsiSingkat:
+      incomingEvent?.deskripsi || incomingEvent?.deskripsiSingkat || ''
   })
 
-  // State Dropdown Terbuka ('jenis' | 'sumber' | null)
   const [openDropdown, setOpenDropdown] = useState(null)
   const jenisDropdownRef = useRef(null)
   const sumberDropdownRef = useRef(null)
 
-  // State Poster Image Existing / Preview
   const [posterFile, setPosterFile] = useState(null)
   const [posterPreview, setPosterPreview] = useState(
-    incomingEvent?.posterUrl || DEFAULT_EDIT_EVENT.posterUrl
+    incomingEvent?.poster_url || incomingEvent?.posterUrl || ''
   )
 
-  // State List Denah Acara (Terisi otomatis dari denah event yang dipilih)
-  const [denahList, setDenahList] = useState(() => {
-    if (!incomingEvent) {
-      return DEFAULT_EDIT_EVENT.denahList
-    }
+  const [denahList, setDenahList] = useState([])
+  const [initialMapIds, setInitialMapIds] = useState([])
 
-    if (Array.isArray(incomingEvent.denahList) && incomingEvent.denahList.length > 0) {
-      return incomingEvent.denahList.map((d, idx) => ({
-        id: d.id || idx + 1,
-        namaDenah: d.namaDenah || d.title || '',
-        imageFile: null,
-        imagePreview: d.imageUrl || d.mapUrl || ''
-      }))
-    }
+  // Muat data event & denah asli dari PostgreSQL
+  useEffect(() => {
+    let cancelled = false
+    if (!targetEventId) return
 
-    return [
-      {
-        id: Date.now(),
-        namaDenah: '',
-        imageFile: null,
-        imagePreview: ''
+    const fetchDetail = async () => {
+      setIsLoading(true)
+      try {
+        const headers = getAuthHeaders()
+        const [resEv, resMaps] = await Promise.all([
+          fetch(`${API_BASE}/api/events/${targetEventId}`, { headers }),
+          fetch(`${API_BASE}/api/maps/event/${targetEventId}`, { headers })
+        ])
+
+        const ev = resEv.ok ? await resEv.json() : incomingEvent
+        const maps = resMaps.ok ? await resMaps.json() : []
+
+        if (cancelled || !ev) return
+
+        setEventObj(ev)
+        setFormData({
+          namaEvent: ev.nama_event || '',
+          tanggalEvent: formatDateRange(ev.tanggal_mulai, ev.tanggal_selesai),
+          lokasiEvent: ev.lokasi || '',
+          jenisEvent: JENIS_EVENT_OPTIONS.includes(ev.jenis_event)
+            ? ev.jenis_event
+            : ev.tipe_lokasi === 'indoor'
+            ? 'Event Indoor'
+            : ev.tipe_lokasi === 'outdoor'
+            ? 'Event Outdoor'
+            : 'Event Indoor & Outdoor',
+          eventOrganizer: ev.nama_organizer || '',
+          sumber: isEO
+            ? 'Kerjasama Event Organizer'
+            : ev.sumber === 'scraping'
+            ? 'Hasil Scrapping'
+            : 'Kerjasama Event Organizer',
+          deskripsiSingkat: ev.deskripsi || ''
+        })
+        setPosterPreview(ev.poster_url || '')
+        setInitialMapIds(maps.map((m) => m.id_map))
+        setDenahList(
+          maps.map((m) => ({
+            id: m.id_map,
+            isExisting: true,
+            namaDenah: m.nama_map || '',
+            imageFile: null,
+            imagePreview: m.gambar_layout || ''
+          }))
+        )
+      } catch (err) {
+        console.error('Gagal memuat data edit event:', err)
+      } finally {
+        if (!cancelled) setIsLoading(false)
       }
-    ]
-  })
+    }
 
-  // Tutup dropdown otomatis jika klik di luar area dropdown
+    fetchDetail()
+    return () => {
+      cancelled = true
+    }
+  }, [targetEventId, incomingEvent, isEO])
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (
@@ -148,19 +248,16 @@ function EditEventAdmin({ role = 'admin' }) {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Handle Input Form Utama
   const handleInputChange = (e) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
-  // Handle Pilih Opsi Custom Dropdown
   const handleSelectOption = (fieldName, value) => {
     setFormData((prev) => ({ ...prev, [fieldName]: value }))
     setOpenDropdown(null)
   }
 
-  // Handle Ganti / Upload Poster
   const handlePosterUpload = (e) => {
     const file = e.target.files[0]
     if (file) {
@@ -169,14 +266,12 @@ function EditEventAdmin({ role = 'admin' }) {
     }
   }
 
-  // Handle Ubah Nama Denah
   const handleDenahNameChange = (id, value) => {
     setDenahList((prev) =>
       prev.map((item) => (item.id === id ? { ...item, namaDenah: value } : item))
     )
   }
 
-  // Handle Upload / Ganti Gambar Denah
   const handleDenahImageUpload = (id, file) => {
     if (file) {
       const previewUrl = URL.createObjectURL(file)
@@ -190,12 +285,12 @@ function EditEventAdmin({ role = 'admin' }) {
     }
   }
 
-  // Tambah Blok Denah Baru (Klik area dashed box)
   const handleAddDenahBlock = () => {
     setDenahList((prev) => [
       ...prev,
       {
-        id: Date.now(),
+        id: `new-${Date.now()}`,
+        isExisting: false,
         namaDenah: `Day ${prev.length + 1}: Nama Denah Baru`,
         imageFile: null,
         imagePreview: ''
@@ -203,317 +298,372 @@ function EditEventAdmin({ role = 'admin' }) {
     ])
   }
 
-  // Hapus Denah
   const handleRemoveDenahBlock = (id) => {
     if (confirm('Apakah Anda yakin ingin menghapus denah ini?')) {
       setDenahList((prev) => prev.filter((item) => item.id !== id))
     }
   }
 
-  // Handle Submit Edit Event & Perbarui Data di localStorage
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-
-    const resolvedSumber = isEO
-      ? 'Kerjasama Event Organizer'
-      : formData.sumber === 'Belum dipilih'
-      ? 'Kerjasama Event Organizer'
-      : formData.sumber
-
-    const isScrapping = resolvedSumber === 'Hasil Scrapping'
-
-    const generatedTags = [{ label: resolvedSumber, color: '#00bcd4' }]
-    if (formData.jenisEvent === 'Event Indoor') {
-      generatedTags.push({ label: 'Event Indoor', color: '#f87171' })
-    } else if (formData.jenisEvent === 'Event Outdoor') {
-      generatedTags.push({ label: 'Event Outdoor', color: '#38bdf8' })
-    } else if (formData.jenisEvent === 'Event Indoor & Outdoor') {
-      generatedTags.push({ label: 'Event Outdoor', color: '#38bdf8' })
-      generatedTags.push({ label: 'Event Indoor', color: '#f87171' })
+    if (!targetEventId || isSaving) {
+      alert('ID event tidak ditemukan.')
+      return
     }
 
-    const resolvedTitle = formData.namaEvent.trim() || 'Event Tanpa Judul'
-    const resolvedDate = formData.tanggalEvent.trim() || 'Tanggal belum diatur'
-    const targetId = incomingEvent?.id || DEFAULT_EDIT_EVENT.id
-    const originalTitle = incomingEvent?.title || DEFAULT_EDIT_EVENT.namaEvent
-
-    const updatedFields = {
-      id: targetId,
-      title: resolvedTitle,
-      namaEvent: resolvedTitle,
-      type: isScrapping ? 'scrapping' : 'eo',
-      tags: generatedTags,
-      dateRange: resolvedDate,
-      tanggalEvent: resolvedDate,
-      eventDate: resolvedDate,
-      lokasiEvent: formData.lokasiEvent.trim() || '-',
-      jenisEvent:
-        formData.jenisEvent === 'Belum dipilih' ? 'Event Indoor' : formData.jenisEvent,
-      eventOrganizer: formData.eventOrganizer.trim() || (isEO ? 'EO Esai' : '-'),
-      sumber: resolvedSumber,
-      deskripsiSingkat: formData.deskripsiSingkat.trim() || '-',
-      posterUrl: posterPreview,
-      denahList: denahList.map((d, idx) => ({
-        id: d.id,
-        title: d.namaDenah.trim() || `Denah ${idx + 1}`,
-        namaDenah: d.namaDenah.trim() || `Denah ${idx + 1}`,
-        mapUrl: d.imagePreview || '',
-        imageUrl: d.imagePreview || ''
-      }))
-    }
-
-    // Perbarui item terkait di localStorage agar DaftarEvent & DetailEvent langsung terupdate
-    const storageKey = isEO ? 'festnav_eo_events' : 'festnav_admin_events'
+    setIsSaving(true)
     try {
-      const savedList = JSON.parse(localStorage.getItem(storageKey) || '[]')
-      if (Array.isArray(savedList) && savedList.length > 0) {
-        const updatedList = savedList.map((item) =>
-          item.id === targetId || item.title === originalTitle
-            ? { ...item, ...updatedFields }
-            : item
+      const resolvedSumber = isEO
+        ? 'eo'
+        : formData.sumber === 'Hasil Scrapping'
+        ? 'scraping'
+        : 'eo'
+
+      const resolvedJenis =
+        formData.jenisEvent === 'Belum dipilih'
+          ? 'Event Indoor & Outdoor'
+          : formData.jenisEvent
+
+      const { tanggal_mulai, tanggal_selesai } = parseDateRangeInput(
+        formData.tanggalEvent,
+        eventObj?.tanggal_mulai,
+        eventObj?.tanggal_selesai
+      )
+
+      const finalPosterUrl = posterFile
+        ? await fileToDataUrl(posterFile)
+        : posterPreview || null
+
+      // 1. Update data utama Event ke PostgreSQL
+      const resEvent = await fetch(`${API_BASE}/api/events/${targetEventId}`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(true),
+        body: JSON.stringify({
+          nama_event: formData.namaEvent.trim() || 'Event Tanpa Judul',
+          tanggal_mulai,
+          tanggal_selesai,
+          lokasi: formData.lokasiEvent.trim() || null,
+          jenis_event: resolvedJenis,
+          tipe_lokasi: mapJenisToTipeLokasi(resolvedJenis),
+          nama_organizer: formData.eventOrganizer.trim() || null,
+          sumber: resolvedSumber,
+          deskripsi: formData.deskripsiSingkat.trim() || null,
+          poster_url: finalPosterUrl
+        })
+      })
+      const updatedEvent = await resEvent.json().catch(() => ({}))
+      if (!resEvent.ok) {
+        throw new Error(updatedEvent.detail || 'Gagal menyimpan perubahan event')
+      }
+
+      // 2. Sinkronisasi daftar denah (hapus yang dibuang, update existing, buat baru)
+      const remainingExistingIds = denahList
+        .filter((d) => d.isExisting)
+        .map((d) => d.id)
+      const deletedMapIds = initialMapIds.filter(
+        (idMap) => !remainingExistingIds.includes(idMap)
+      )
+
+      await Promise.all(
+        deletedMapIds.map((idMap) =>
+          fetch(`${API_BASE}/api/maps/${idMap}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders()
+          })
         )
-        localStorage.setItem(storageKey, JSON.stringify(updatedList))
+      )
+
+      for (let i = 0; i < denahList.length; i++) {
+        const d = denahList[i]
+        const namaMap = d.namaDenah.trim() || `Denah ${i + 1}`
+        const gambarLayout = d.imageFile
+          ? await fileToDataUrl(d.imageFile)
+          : d.imagePreview || null
+
+        if (d.isExisting) {
+          await fetch(`${API_BASE}/api/maps/${d.id}`, {
+            method: 'PATCH',
+            headers: getAuthHeaders(true),
+            body: JSON.stringify({
+              nama_map: namaMap,
+              gambar_layout: gambarLayout,
+              tampilkan_denah: Boolean(gambarLayout)
+            })
+          })
+        } else {
+          await fetch(`${API_BASE}/api/maps`, {
+            method: 'POST',
+            headers: getAuthHeaders(true),
+            body: JSON.stringify({
+              id_event: Number(targetEventId),
+              nama_map: namaMap,
+              tipe_map:
+                mapJenisToTipeLokasi(resolvedJenis) === 'indoor'
+                  ? 'indoor'
+                  : 'outdoor',
+              is_utama: initialMapIds.length === 0 && i === 0,
+              gambar_layout: gambarLayout,
+              tampilkan_denah: Boolean(gambarLayout),
+              garis_lintang_pusat: updatedEvent.garis_lintang ?? -8.6724,
+              garis_bujur_pusat: updatedEvent.garis_bujur ?? 115.2362
+            })
+          })
+        }
+      }
+
+      alert('Perubahan event berhasil disimpan!')
+      if (isEO) {
+        navigate('/detail-event-eo', {
+          state: { eventId: Number(targetEventId), id_event: Number(targetEventId) }
+        })
+      } else {
+        navigate('/detail-event', {
+          state: { eventId: Number(targetEventId), id_event: Number(targetEventId) }
+        })
       }
     } catch (err) {
-      console.error('Gagal menyimpan perubahan event:', err)
-    }
-
-    console.log('Role Pengirim:', activeRole)
-    console.log('Update Data Event:', updatedFields)
-    console.log('Poster File Baru:', posterFile)
-
-    if (isEO) {
-      alert('Perubahan event berhasil disimpan dan diajukan untuk validasi!')
-      navigate('/daftar-event-eo')
-    } else {
-      alert('Perubahan event berhasil disimpan!')
-      navigate('/daftar-event')
+      alert(err.message || 'Gagal menyimpan perubahan event')
+    } finally {
+      setIsSaving(false)
     }
   }
 
   return (
     <div className="edit-container">
-      {/* Navbar Dinamis sesuai Role */}
       {isEO ? <NavbarEO /> : <NavbarAdmin />}
 
-      {/* Hero Header */}
       <div className="edit-hero">
         <h1 className="hero-title">Edit Event</h1>
         <p className="hero-subtitle">Festival Navigation</p>
       </div>
 
-      {/* Main Content Form */}
       <main className="edit-content">
-        <form onSubmit={handleSubmit}>
-          <div className="edit-card">
-            {/* Top Grid Layout: Poster Upload + Input Details */}
-            <div className="top-form-grid">
-              {/* Poster Upload Box */}
-              <div className="poster-upload-box">
-                <label htmlFor="poster-edit-input" className="poster-upload-label">
-                  {posterPreview ? (
-                    <img src={posterPreview} alt="Poster Event" className="poster-preview-img" />
-                  ) : (
-                    <div className="upload-placeholder">
-                      <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="1.5">
-                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-                        <circle cx="12" cy="13" r="4"></circle>
-                      </svg>
-                      <span>Klik untuk Ganti Gambar Poster</span>
+        {isLoading ? (
+          <div className="edit-card" style={{ textAlign: 'center', padding: '48px' }}>
+            Memuat data event dari database...
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit}>
+            <div className="edit-card">
+              <div className="top-form-grid">
+                <div className="poster-upload-box">
+                  <label htmlFor="poster-edit-input" className="poster-upload-label">
+                    {posterPreview ? (
+                      <img
+                        src={posterPreview}
+                        alt="Poster Event"
+                        className="poster-preview-img"
+                      />
+                    ) : (
+                      <div className="upload-placeholder">
+                        <svg
+                          width="56"
+                          height="56"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="#888"
+                          strokeWidth="1.5"
+                        >
+                          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                          <circle cx="12" cy="13" r="4"></circle>
+                        </svg>
+                        <span>Klik untuk Ganti Gambar Poster</span>
+                      </div>
+                    )}
+                  </label>
+                  <input
+                    id="poster-edit-input"
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePosterUpload}
+                    style={{ display: 'none' }}
+                  />
+                </div>
+
+                <div className="form-fields">
+                  <div className="form-group">
+                    <label>Nama Event</label>
+                    <input
+                      type="text"
+                      name="namaEvent"
+                      placeholder="Nama event..."
+                      value={formData.namaEvent}
+                      onChange={handleInputChange}
+                      className="form-input"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Tanggal Event</label>
+                    <input
+                      type="text"
+                      name="tanggalEvent"
+                      placeholder="Contoh: 20 November 2026 - 22 November 2026"
+                      value={formData.tanggalEvent}
+                      onChange={handleInputChange}
+                      className="form-input"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Lokasi Event</label>
+                    <input
+                      type="text"
+                      name="lokasiEvent"
+                      placeholder="Lokasi event..."
+                      value={formData.lokasiEvent}
+                      onChange={handleInputChange}
+                      className="form-input"
+                    />
+                  </div>
+
+                  <div className="form-group" ref={jenisDropdownRef}>
+                    <label>Jenis Event</label>
+                    <div className="custom-dropdown-wrapper">
+                      <button
+                        type="button"
+                        className="form-input custom-dropdown-trigger"
+                        onClick={() =>
+                          setOpenDropdown(openDropdown === 'jenis' ? null : 'jenis')
+                        }
+                      >
+                        <span
+                          className={
+                            formData.jenisEvent === 'Belum dipilih'
+                              ? 'dropdown-placeholder'
+                              : 'dropdown-selected-text'
+                          }
+                        >
+                          {formData.jenisEvent}
+                        </span>
+                        <svg
+                          className={`dropdown-chevron ${
+                            openDropdown === 'jenis' ? 'open' : ''
+                          }`}
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="#64748b"
+                          strokeWidth="2.2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                      </button>
+
+                      {openDropdown === 'jenis' && (
+                        <div className="custom-dropdown-menu">
+                          {JENIS_EVENT_OPTIONS.map((option) => (
+                            <div
+                              key={option}
+                              className={`custom-dropdown-item ${
+                                formData.jenisEvent === option ? 'selected' : ''
+                              }`}
+                              onClick={() => handleSelectOption('jenisEvent', option)}
+                            >
+                              {option}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </label>
-                <input
-                  id="poster-edit-input"
-                  type="file"
-                  accept="image/*"
-                  onChange={handlePosterUpload}
-                  style={{ display: 'none' }}
-                />
-              </div>
-
-              {/* Form Input Fields */}
-              <div className="form-fields">
-                <div className="form-group">
-                  <label>Nama Event</label>
-                  <input
-                    type="text"
-                    name="namaEvent"
-                    placeholder="Nama event..."
-                    value={formData.namaEvent}
-                    onChange={handleInputChange}
-                    className="form-input"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Tanggal Event</label>
-                  <input
-                    type="text"
-                    name="tanggalEvent"
-                    placeholder="Tanggal event..."
-                    value={formData.tanggalEvent}
-                    onChange={handleInputChange}
-                    className="form-input"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Lokasi Event</label>
-                  <input
-                    type="text"
-                    name="lokasiEvent"
-                    placeholder="Lokasi event..."
-                    value={formData.lokasiEvent}
-                    onChange={handleInputChange}
-                    className="form-input"
-                  />
-                </div>
-
-                {/* Custom Dropdown: Jenis Event */}
-                <div className="form-group" ref={jenisDropdownRef}>
-                  <label>Jenis Event</label>
-                  <div className="custom-dropdown-wrapper">
-                    <button
-                      type="button"
-                      className="form-input custom-dropdown-trigger"
-                      onClick={() =>
-                        setOpenDropdown(openDropdown === 'jenis' ? null : 'jenis')
-                      }
-                    >
-                      <span
-                        className={
-                          formData.jenisEvent === 'Belum dipilih'
-                            ? 'dropdown-placeholder'
-                            : 'dropdown-selected-text'
-                        }
-                      >
-                        {formData.jenisEvent}
-                      </span>
-                      <svg
-                        className={`dropdown-chevron ${openDropdown === 'jenis' ? 'open' : ''}`}
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="#64748b"
-                        strokeWidth="2.2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <polyline points="6 9 12 15 18 9"></polyline>
-                      </svg>
-                    </button>
-
-                    {openDropdown === 'jenis' && (
-                      <div className="custom-dropdown-menu">
-                        {JENIS_EVENT_OPTIONS.map((option) => (
-                          <div
-                            key={option}
-                            className={`custom-dropdown-item ${
-                              formData.jenisEvent === option ? 'selected' : ''
-                            }`}
-                            onClick={() => handleSelectOption('jenisEvent', option)}
-                          >
-                            {option}
-                          </div>
-                        ))}
-                      </div>
-                    )}
                   </div>
-                </div>
 
-                <div className="form-group">
-                  <label>Event Organizer</label>
-                  <input
-                    type="text"
-                    name="eventOrganizer"
-                    placeholder="Event organizer..."
-                    value={formData.eventOrganizer}
-                    onChange={handleInputChange}
-                    className="form-input"
-                  />
-                </div>
+                  <div className="form-group">
+                    <label>Event Organizer</label>
+                    <input
+                      type="text"
+                      name="eventOrganizer"
+                      placeholder="Event organizer..."
+                      value={formData.eventOrganizer}
+                      onChange={handleInputChange}
+                      className="form-input"
+                    />
+                  </div>
 
-                {/* Custom Dropdown: Sumber */}
-                <div className="form-group" ref={sumberDropdownRef}>
-                  <label>Sumber</label>
-                  <div className="custom-dropdown-wrapper">
-                    <button
-                      type="button"
-                      className="form-input custom-dropdown-trigger"
-                      onClick={() =>
-                        setOpenDropdown(openDropdown === 'sumber' ? null : 'sumber')
-                      }
-                    >
-                      <span
-                        className={
-                          formData.sumber === 'Belum dipilih'
-                            ? 'dropdown-placeholder'
-                            : 'dropdown-selected-text'
+                  <div className="form-group" ref={sumberDropdownRef}>
+                    <label>Sumber</label>
+                    <div className="custom-dropdown-wrapper">
+                      <button
+                        type="button"
+                        className="form-input custom-dropdown-trigger"
+                        disabled={isEO}
+                        onClick={() =>
+                          !isEO &&
+                          setOpenDropdown(openDropdown === 'sumber' ? null : 'sumber')
                         }
                       >
-                        {formData.sumber}
-                      </span>
-                      <svg
-                        className={`dropdown-chevron ${openDropdown === 'sumber' ? 'open' : ''}`}
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="#64748b"
-                        strokeWidth="2.2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <polyline points="6 9 12 15 18 9"></polyline>
-                      </svg>
-                    </button>
-
-                    {openDropdown === 'sumber' && (
-                      <div className="custom-dropdown-menu">
-                        {SUMBER_EVENT_OPTIONS.map((option) => (
-                          <div
-                            key={option}
-                            className={`custom-dropdown-item ${
-                              formData.sumber === option ? 'selected' : ''
+                        <span
+                          className={
+                            formData.sumber === 'Belum dipilih'
+                              ? 'dropdown-placeholder'
+                              : 'dropdown-selected-text'
+                          }
+                        >
+                          {formData.sumber}
+                        </span>
+                        {!isEO && (
+                          <svg
+                            className={`dropdown-chevron ${
+                              openDropdown === 'sumber' ? 'open' : ''
                             }`}
-                            onClick={() => handleSelectOption('sumber', option)}
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="#64748b"
+                            strokeWidth="2.2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
                           >
-                            {option}
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                          </svg>
+                        )}
+                      </button>
+
+                      {openDropdown === 'sumber' && !isEO && (
+                        <div className="custom-dropdown-menu">
+                          {SUMBER_EVENT_OPTIONS.map((option) => (
+                            <div
+                              key={option}
+                              className={`custom-dropdown-item ${
+                                formData.sumber === option ? 'selected' : ''
+                              }`}
+                              onClick={() => handleSelectOption('sumber', option)}
+                            >
+                              {option}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Deskripsi Singkat */}
-            <div className="form-group full-width">
-              <label>Deskripsi Singkat</label>
-              <textarea
-                name="deskripsiSingkat"
-                rows="4"
-                placeholder="Tuliskan deskripsi singkat event..."
-                value={formData.deskripsiSingkat}
-                onChange={handleInputChange}
-                className="form-textarea"
-              ></textarea>
-            </div>
+              <div className="form-group full-width">
+                <label>Deskripsi Singkat</label>
+                <textarea
+                  name="deskripsiSingkat"
+                  rows="4"
+                  placeholder="Tuliskan deskripsi singkat event..."
+                  value={formData.deskripsiSingkat}
+                  onChange={handleInputChange}
+                  className="form-textarea"
+                ></textarea>
+              </div>
 
-            <hr className="form-divider" />
+              <hr className="form-divider" />
 
-            {/* Section: Denah Acara */}
-            <div className="denah-section">
-              <h2 className="section-title text-cyan">Denah Acara</h2>
+              <div className="denah-section">
+                <h2 className="section-title text-cyan">Denah Acara</h2>
 
-              {denahList.map((denah) => (
-                <div key={denah.id} className="denah-block">
-                  <div className="denah-header-actions">
-                    <label>Nama Denah</label>
-                    {denahList.length > 1 && (
+                {denahList.map((denah) => (
+                  <div key={denah.id} className="denah-block">
+                    <div className="denah-header-actions">
+                      <label>Nama Denah</label>
                       <button
                         type="button"
                         className="btn-delete-denah"
@@ -521,62 +671,96 @@ function EditEventAdmin({ role = 'admin' }) {
                       >
                         Hapus Denah Ini
                       </button>
-                    )}
-                  </div>
+                    </div>
 
-                  <input
-                    type="text"
-                    placeholder="Nama denah..."
-                    value={denah.namaDenah}
-                    onChange={(e) => handleDenahNameChange(denah.id, e.target.value)}
-                    className="form-input full-width-input"
-                  />
-
-                  <div className="form-group full-width" style={{ marginTop: '12px' }}>
-                    <label>Gambar Denah</label>
-                    <label htmlFor={`denah-edit-input-${denah.id}`} className="denah-upload-label">
-                      {denah.imagePreview ? (
-                        <img src={denah.imagePreview} alt={denah.namaDenah} className="denah-preview-img" />
-                      ) : (
-                        <div className="upload-placeholder denah-placeholder">
-                          <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="1.5">
-                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-                            <circle cx="12" cy="13" r="4"></circle>
-                          </svg>
-                          <span className="placeholder-main">[ Tempat Gambar Denah: {denah.namaDenah} ]</span>
-                          <span className="placeholder-sub">Klik untuk ganti / unggah gambar denah</span>
-                        </div>
-                      )}
-                    </label>
                     <input
-                      id={`denah-edit-input-${denah.id}`}
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleDenahImageUpload(denah.id, e.target.files[0])}
-                      style={{ display: 'none' }}
+                      type="text"
+                      placeholder="Nama denah..."
+                      value={denah.namaDenah}
+                      onChange={(e) =>
+                        handleDenahNameChange(denah.id, e.target.value)
+                      }
+                      className="form-input full-width-input"
                     />
-                  </div>
-                </div>
-              ))}
 
-              {/* Dashed Box untuk Menambah Denah Baru */}
-              <div className="add-denah-dashed-box" onClick={handleAddDenahBlock}>
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2">
-                  <line x1="12" y1="5" x2="12" y2="19"></line>
-                  <line x1="5" y1="12" x2="19" y2="12"></line>
-                </svg>
-                <span>Klik di bagian ini untuk menambahkan denah baru</span>
+                    <div
+                      className="form-group full-width"
+                      style={{ marginTop: '12px' }}
+                    >
+                      <label>Gambar Denah</label>
+                      <label
+                        htmlFor={`denah-edit-input-${denah.id}`}
+                        className="denah-upload-label"
+                      >
+                        {denah.imagePreview ? (
+                          <img
+                            src={denah.imagePreview}
+                            alt={denah.namaDenah}
+                            className="denah-preview-img"
+                          />
+                        ) : (
+                          <div className="upload-placeholder denah-placeholder">
+                            <svg
+                              width="56"
+                              height="56"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="#888"
+                              strokeWidth="1.5"
+                            >
+                              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                              <circle cx="12" cy="13" r="4"></circle>
+                            </svg>
+                            <span className="placeholder-main">
+                              [ Tempat Gambar Denah: {denah.namaDenah} ]
+                            </span>
+                            <span className="placeholder-sub">
+                              Klik untuk ganti / unggah gambar denah
+                            </span>
+                          </div>
+                        )}
+                      </label>
+                      <input
+                        id={`denah-edit-input-${denah.id}`}
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) =>
+                          handleDenahImageUpload(denah.id, e.target.files[0])
+                        }
+                        style={{ display: 'none' }}
+                      />
+                    </div>
+                  </div>
+                ))}
+
+                <div className="add-denah-dashed-box" onClick={handleAddDenahBlock}>
+                  <svg
+                    width="32"
+                    height="32"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#666"
+                    strokeWidth="2"
+                  >
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                  <span>Klik di bagian ini untuk menambahkan denah baru</span>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Bottom Submit Button */}
-          <div className="edit-actions">
-            <button type="submit" className="btn-cyan-submit">
-              Simpan
-            </button>
-          </div>
-        </form>
+            <div className="edit-actions">
+              <button
+                type="submit"
+                className="btn-cyan-submit"
+                disabled={isSaving}
+              >
+                {isSaving ? 'Menyimpan...' : 'Simpan'}
+              </button>
+            </div>
+          </form>
+        )}
       </main>
     </div>
   )

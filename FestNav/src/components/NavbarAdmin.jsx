@@ -6,15 +6,29 @@ function NavbarAdmin() {
   const navigate = useNavigate()
   const [showLogoutModal, setShowLogoutModal] = useState(false)
 
+  let displayName = 'Admin'
+  try {
+    const u = JSON.parse(localStorage.getItem('user') || 'null')
+    if (u?.nama) displayName = u.nama
+  } catch {
+    // Abaikan
+  }
+
   const handleConfirmLogout = () => {
     setShowLogoutModal(false)
+    localStorage.removeItem('access_token')
+    localStorage.removeItem('token')
+    localStorage.removeItem('user_type')
+    localStorage.removeItem('peran')
+    localStorage.removeItem('role')
+    localStorage.removeItem('user')
+    sessionStorage.removeItem('festnav_editor_ctx')
     navigate('/login')
   }
 
   return (
     <>
       <header className="admin-navbar">
-        {/* Klik FestNav -> Redirect ke Dashboard Admin */}
         <div
           className="nav-brand"
           onClick={() => navigate('/dashboard')}
@@ -39,18 +53,16 @@ function NavbarAdmin() {
             + Tambah Peta baru
           </button>
 
-          {/* User Profile & Logout */}
           <div className="user-profile">
             <div
               className="user-info-clickable"
               onClick={() => navigate('/profile-admin')}
               title="Lihat Profil Admin"
             >
-              <span className="user-name">Admin Esai</span>
+              <span className="user-name">{displayName}</span>
               <div className="avatar-placeholder">👤</div>
             </div>
 
-            {/* Tombol Icon Logout */}
             <button
               type="button"
               className="logout-btn"
@@ -76,7 +88,6 @@ function NavbarAdmin() {
         </div>
       </header>
 
-      {/* OVERLAY MODAL PERINGATAN LOG OUT */}
       {showLogoutModal && (
         <div className="logout-modal-overlay">
           <div className="logout-modal-card">

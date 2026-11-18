@@ -4,9 +4,17 @@ import './common.css';
 import './GalleryEvent.css';
 import NavbarEditing from '../components/NavbarEditing';
 
+const API_BASE =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
+  'http://127.0.0.1:8000';
+
 /* gambar_event: id_gambar, id_event, url_gambar, public_id, jenis_gambar, keterangan, waktu_diunggah
    jenis_gambar hanya: foto_venue | jadwal | lainnya (poster utama disimpan di event.poster_url) */
-const JENIS = [['foto_venue', 'Foto Venue'], ['jadwal', 'Jadwal'], ['lainnya', 'Lainnya']];
+const JENIS = [
+  ['foto_venue', 'Foto Venue'],
+  ['jadwal', 'Jadwal'],
+  ['lainnya', 'Lainnya'],
+];
 const LABEL = Object.fromEntries(JENIS);
 const JENIS_AWAL = 'lainnya';
 const GRAD = {
@@ -22,109 +30,146 @@ const thumb = (u) =>
     ? u.replace('/upload/', '/upload/c_fill,w_600,h_330,q_auto,f_auto/')
     : u;
 const tgl = (iso) =>
-  new Date(iso).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+  iso
+    ? new Date(iso).toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      })
+    : '-';
 
-/* ---------- API ----------
-   Bawaan: data tiruan di memori. Ganti dengan httpApi saat backend siap: <GalleryEvent api={httpApi} />
-   list -> { gambar:[...gambar_event], poster_url }
-   Jadikan Denah / Jadikan Poster = DIPINDAH (bukan disalin):
-   - Jadikan Poster: baris gambar_event dihapus, file pindah ke event.poster_url
-   - Jadikan Denah : baris gambar_event dihapus, membuat baris baru di tabel map (nama_map, gambar_layout) */
-const SEED = [
-  ['Foto Panggung Utama', 'foto_venue'],
-  ['Jadwal Acara Hari 1', 'jadwal'],
-  ['Foto Area Kuliner', 'foto_venue'],
-  ['Jadwal Acara Hari 2', 'jadwal'],
-  ['Spanduk Sponsor', 'lainnya'],
-  ['Denah Parkir', 'lainnya'],
-].map(([k, j], i) => ({
-  id_gambar: i + 1,
-  id_event: 1,
-  url_gambar: '',
-  public_id: null,
-  jenis_gambar: j,
-  keterangan: k,
-  waktu_diunggah: new Date(Date.now() - i * 864e5).toISOString(),
-}));
+const getAuthHeaders = (withJson = false) => {
+  const token =
+    localStorage.getItem('access_token') || localStorage.getItem('token') || '';
+  const h = {};
+  if (withJson) h['Content-Type'] = 'application/json';
+  if (token) h.Authorization = `Bearer ${token}`;
+  return h;
+};
 
-const mockApi = (() => {
-  let rows = [...SEED];
-  let poster = null;
-  let peta = [
-    { id_map: 1, nama_map: 'Day 1: Lapangan Rektorat', punya_denah: true },
-    { id_map: 2, nama_map: 'Day 2: Gedung Rektorat', punya_denah: false },
-  ];
-  return {
-    list: async () => ({ gambar: rows, peta, poster_url: poster }),
-    upload: async (idEvent, { file, keterangan, jenis }) => {
-      const r = {
-        id_gambar: Date.now(),
-        id_event: idEvent,
-        url_gambar: URL.createObjectURL(file),
+const getEditorContext = () => {
+  try {
+    return JSON.parse(sessionStorage.getItem('festnav_editor_ctx') || 'null') || {};
+  } catch {
+    return {};
+  }
+};
+
+const fileToDataUrl = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error('Gagal membaca file gambar.'));
+    reader.readAsDataURL(file);
+  });
+
+const parseJsonOrThrow = async (res, fallbackMsg) => {
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.detail || fallbackMsg);
+  }
+  return data;
+};
+
+export const httpApi = {
+  list: async (idEvent) => {
+    const headers = getAuthHeaders();
+    const [resGambar, resEv] = await Promise.all([
+      fetch(`${API_BASE}/api/events/${idEvent}/gambar`, { headers }),
+      fetch(`${API_BASE}/api/events/${idEvent}`, { headers }),
+    ]);
+    const gambar = await parseJsonOrThrow(
+      resGambar,
+      'Gagal memuat gambar event.'
+    );
+    const ev = resEv.ok ? await resEv.json() : null;
+    return {
+      gambar,
+      poster_url: ev?.poster_url ?? null,
+      event: ev,
+    };
+  },
+
+  upload: async (idEvent, { file, imageUrl, keterangan, jenis }) => {
+    const finalUrl = imageUrl?.trim()
+      ? imageUrl.trim()
+      : await fileToDataUrl(file);
+
+    const res = await fetch(`${API_BASE}/api/events/${idEvent}/gambar`, {
+      method: 'POST',
+      headers: getAuthHeaders(true),
+      body: JSON.stringify({
+        url_gambar: finalUrl,
         public_id: null,
         jenis_gambar: jenis,
         keterangan,
-        waktu_diunggah: new Date().toISOString(),
-      };
-      rows = [...rows, r];
-      return r;
-    },
-    remove: async (ids) => {
-      rows = rows.filter((r) => !ids.includes(r.id_gambar));
-    },
-    jadikanPoster: async (idGambar) => {
-      const g = rows.find((r) => r.id_gambar === idGambar);
-      poster = g?.url_gambar || 'poster-contoh';
-      rows = rows.filter((r) => r.id_gambar !== idGambar);
-    },
-    jadikanDenah: async (idGambar, namaMap) => {
-      rows = rows.filter((r) => r.id_gambar !== idGambar);
-      peta = [...peta, { id_map: Date.now(), nama_map: namaMap, punya_denah: true }];
-    },
-  };
-})();
-
-const ok = (r) => {
-  if (!r.ok) throw new Error();
-  return r;
-};
-const H = { 'Content-Type': 'application/json' };
-
-export const httpApi = {
-  list: (idEvent) => fetch(`/api/events/${idEvent}/gambar`).then(ok).then((r) => r.json()),
-  upload: (idEvent, { file, keterangan, jenis }) => {
-    const fd = new FormData();
-    fd.append('file', file);
-    fd.append('keterangan', keterangan);
-    fd.append('jenis_gambar', jenis);
-    return fetch(`/api/events/${idEvent}/gambar`, { method: 'POST', body: fd })
-      .then(ok)
-      .then((r) => r.json());
+      }),
+    });
+    return parseJsonOrThrow(res, 'Gagal mengunggah gambar event.');
   },
-  remove: (ids) =>
-    fetch('/api/gambar', { method: 'DELETE', headers: H, body: JSON.stringify({ ids }) }).then(ok),
-  jadikanPoster: (idGambar) =>
-    fetch(`/api/gambar/${idGambar}/jadikan-poster`, { method: 'POST' }).then(ok),
-  jadikanDenah: (idGambar, namaMap) =>
-    fetch(`/api/gambar/${idGambar}/jadikan-denah`, {
+
+  remove: async (ids) => {
+    const headers = getAuthHeaders();
+    await Promise.all(
+      ids.map(async (idGambar) => {
+        const res = await fetch(`${API_BASE}/api/gambar/${idGambar}`, {
+          method: 'DELETE',
+          headers,
+        });
+        if (!res.ok && res.status !== 404) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.detail || `Gagal menghapus gambar #${idGambar}.`);
+        }
+      })
+    );
+  },
+
+  jadikanPoster: async (idGambar) => {
+    const res = await fetch(
+      `${API_BASE}/api/gambar/${idGambar}/jadikan-poster`,
+      {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+      }
+    );
+    return parseJsonOrThrow(res, 'Gagal menjadikan gambar sebagai poster.');
+  },
+
+  jadikanDenah: async (idGambar, namaMap) => {
+    const res = await fetch(`${API_BASE}/api/gambar/${idGambar}/jadikan-denah`, {
       method: 'POST',
-      headers: H,
+      headers: getAuthHeaders(true),
       body: JSON.stringify({ nama_map: namaMap }),
-    }).then(ok),
+    });
+    return parseJsonOrThrow(res, 'Gagal menjadikan gambar sebagai denah.');
+  },
 };
 
 export default function GalleryEvent({
   idEvent,
   namaEvent = 'Dies Natalis Udayana 2026',
-  api = mockApi,
+  api = httpApi,
 }) {
   const params = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const editorCtx = getEditorContext();
+  const navState = location.state || {};
 
-  const id = idEvent ?? location.state?.idEvent ?? params.idEvent ?? 1;
-  const judulEvent = location.state?.namaEvent || namaEvent;
-  const asalReview = location.state?.from;
+  const id =
+    idEvent ??
+    navState.eventId ??
+    navState.idEvent ??
+    navState.id_event ??
+    params.idEvent ??
+    editorCtx.eventId ??
+    editorCtx.id_event ??
+    1;
+
+  const [judulEvent, setJudulEvent] = useState(
+    navState.eventTitle || navState.namaEvent || editorCtx.eventTitle || namaEvent
+  );
+  const asalReview = navState.from;
 
   const [items, setItems] = useState([]);
   const [adaPoster, setAdaPoster] = useState(false);
@@ -139,21 +184,31 @@ export default function GalleryEvent({
   const [modal, setModal] = useState(null); // 'tambah' | 'hapus' | 'poster' | 'denah'
   const [item, setItem] = useState(null); // gambar untuk Jadikan Poster / Denah
   const [namaDenah, setNamaDenah] = useState('');
-  const [form, setForm] = useState({ file: null, preview: '', keterangan: '', jenis: JENIS_AWAL });
+  const [form, setForm] = useState({
+    file: null,
+    imageUrl: '',
+    preview: '',
+    keterangan: '',
+    jenis: JENIS_AWAL,
+  });
   const [formErr, setFormErr] = useState('');
   const [busy, setBusy] = useState(false);
   const input = useRef();
 
   const muat = () =>
     api.list(id).then((r) => {
-      setItems(r.gambar);
+      setItems(r.gambar || []);
       setAdaPoster(!!r.poster_url);
+      if (r.event?.nama_event) {
+        setJudulEvent(r.event.nama_event);
+      }
     });
 
   useEffect(() => {
     setLoading(true);
+    setError('');
     muat()
-      .catch(() => setError('Gagal memuat gambar event.'))
+      .catch((err) => setError(err.message || 'Gagal memuat gambar event.'))
       .finally(() => setLoading(false));
     /* eslint-disable-next-line */
   }, [id, api]);
@@ -173,11 +228,17 @@ export default function GalleryEvent({
 
   const tutup = () => {
     if (busy) return;
-    if (form.preview) URL.revokeObjectURL(form.preview);
+    if (form.preview && form.file) URL.revokeObjectURL(form.preview);
     setModal(null);
     setItem(null);
     setNamaDenah('');
-    setForm({ file: null, preview: '', keterangan: '', jenis: JENIS_AWAL });
+    setForm({
+      file: null,
+      imageUrl: '',
+      preview: '',
+      keterangan: '',
+      jenis: JENIS_AWAL,
+    });
     setFormErr('');
   };
 
@@ -185,30 +246,40 @@ export default function GalleryEvent({
     const f = e.target.files?.[0];
     e.target.value = '';
     if (!f) return;
-    if (!TIPE.includes(f.type)) return setFormErr('Format harus JPG, PNG, atau WebP.');
-    if (f.size > MAKS_MB * 1048576) return setFormErr(`Ukuran maksimal ${MAKS_MB} MB.`);
-    if (form.preview) URL.revokeObjectURL(form.preview);
+    if (!TIPE.includes(f.type))
+      return setFormErr('Format harus JPG, PNG, atau WebP.');
+    if (f.size > MAKS_MB * 1048576)
+      return setFormErr(`Ukuran maksimal ${MAKS_MB} MB.`);
+    if (form.preview && form.file) URL.revokeObjectURL(form.preview);
     setFormErr('');
-    setForm({ ...form, file: f, preview: URL.createObjectURL(f) });
+    setForm({
+      ...form,
+      file: f,
+      imageUrl: '',
+      preview: URL.createObjectURL(f),
+    });
   };
 
   const unggah = async () => {
-    if (!form.file) return setFormErr('Pilih gambar terlebih dahulu.');
+    if (!form.file && !form.imageUrl.trim())
+      return setFormErr('Pilih file gambar atau tempel URL gambar terlebih dahulu.');
     if (!form.keterangan.trim()) return setFormErr('Nama gambar wajib diisi.');
     setBusy(true);
     setFormErr('');
     try {
       const baru = await api.upload(id, {
         file: form.file,
+        imageUrl: form.imageUrl,
         keterangan: form.keterangan.trim(),
         jenis: form.jenis,
       });
       setItems((s) => [...s, baru]);
       setBusy(false);
       tutup();
-    } catch {
+      flash('Gambar berhasil ditambahkan ke galeri event.');
+    } catch (err) {
       setBusy(false);
-      setFormErr('Gagal mengunggah. Coba lagi.');
+      setFormErr(err.message || 'Gagal mengunggah. Coba lagi.');
     }
   };
 
@@ -227,9 +298,9 @@ export default function GalleryEvent({
       setModeHapus(false);
       setBusy(false);
       setModal(null);
-    } catch {
+    } catch (err) {
       setBusy(false);
-      setError('Gagal menghapus gambar.');
+      setError(err.message || 'Gagal menghapus gambar.');
       setModal(null);
     }
   };
@@ -244,7 +315,8 @@ export default function GalleryEvent({
   const pindah = async () => {
     const nama = namaDenah.trim();
     if (modal === 'denah' && !nama) return setFormErr('Nama denah wajib diisi.');
-    if (modal === 'denah' && nama.length > 100) return setFormErr('Nama denah maksimal 100 karakter.');
+    if (modal === 'denah' && nama.length > 100)
+      return setFormErr('Nama denah maksimal 100 karakter.');
 
     setBusy(true);
     setFormErr('');
@@ -252,8 +324,28 @@ export default function GalleryEvent({
       if (modal === 'poster') {
         await api.jadikanPoster(item.id_gambar);
       } else {
-        await api.jadikanDenah(item.id_gambar, nama);
+        const resDenah = await api.jadikanDenah(item.id_gambar, nama);
         setDenahDipilih(nama);
+        if (resDenah?.id_map) {
+          try {
+            const nextCtx = {
+              ...editorCtx,
+              eventId: id,
+              id_event: id,
+              id_map: resDenah.id_map,
+              eventTitle: judulEvent,
+              selectedDenah: {
+                id: resDenah.id_map,
+                id_map: resDenah.id_map,
+                title: resDenah.nama_map,
+                namaDenah: resDenah.nama_map,
+              },
+            };
+            sessionStorage.setItem('festnav_editor_ctx', JSON.stringify(nextCtx));
+          } catch {
+            // Abaikan
+          }
+        }
       }
       await muat();
       setBusy(false);
@@ -265,9 +357,9 @@ export default function GalleryEvent({
           ? 'Gambar dipindahkan menjadi poster event.'
           : `Gambar ditambahkan menjadi denah "${nama}".`
       );
-    } catch {
+    } catch (err) {
       setBusy(false);
-      setFormErr('Gagal memindahkan gambar. Coba lagi.');
+      setFormErr(err.message || 'Gagal memindahkan gambar. Coba lagi.');
     }
   };
 
@@ -275,7 +367,7 @@ export default function GalleryEvent({
     navigate(asalReview || '/scraping', {
       state: {
         view: 'review',
-        idScraping: location.state?.idScraping,
+        idScraping: navState.idScraping,
         posterSudahDiatur: adaPoster,
         denahSudahDiatur: denahDipilih,
       },
@@ -284,7 +376,12 @@ export default function GalleryEvent({
 
   const Img = ({ d, cls }) =>
     d.url_gambar ? (
-      <img className={cls} src={thumb(d.url_gambar)} alt={d.keterangan ?? ''} loading="lazy" />
+      <img
+        className={cls}
+        src={thumb(d.url_gambar)}
+        alt={d.keterangan ?? ''}
+        loading="lazy"
+      />
     ) : (
       <div
         className={`${cls} ph`}
@@ -300,7 +397,10 @@ export default function GalleryEvent({
       <div className="fn-sub">
         <span className="fn-title">{judulEvent}</span>
         <div className="fn-actions">
-          <button className={`btn btn-red ${modeHapus ? 'on' : ''}`} onClick={klikHapus}>
+          <button
+            className={`btn btn-red ${modeHapus ? 'on' : ''}`}
+            onClick={klikHapus}
+          >
             {modeHapus && dipilih.length ? `Hapus (${dipilih.length})` : 'Hapus'}
           </button>
           <button
@@ -365,7 +465,9 @@ export default function GalleryEvent({
                     {d.keterangan}
                   </div>
                   <div className="gal-meta">
-                    <span className="gal-badge">{LABEL[d.jenis_gambar] ?? d.jenis_gambar}</span>
+                    <span className="gal-badge">
+                      {LABEL[d.jenis_gambar] ?? d.jenis_gambar}
+                    </span>
                     {tgl(d.waktu_diunggah)}
                   </div>
                 </div>
@@ -382,8 +484,12 @@ export default function GalleryEvent({
               </figcaption>
               {!modeHapus && (
                 <div className="gal-act">
-                  <button onClick={() => bukaAksi('poster', d)}>Jadikan Poster</button>
-                  <button onClick={() => bukaAksi('denah', d)}>Jadikan Denah</button>
+                  <button onClick={() => bukaAksi('poster', d)}>
+                    Jadikan Poster
+                  </button>
+                  <button onClick={() => bukaAksi('denah', d)}>
+                    Jadikan Denah
+                  </button>
                 </div>
               )}
             </figure>
@@ -407,7 +513,12 @@ export default function GalleryEvent({
 
       {modal === 'tambah' && (
         <div className="overlay" onClick={tutup}>
-          <div className="modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h2 style={{ fontSize: 26 }}>Upload Gambar Event</h2>
             <button className="drop" onClick={() => input.current.click()}>
               {form.preview ? (
@@ -416,18 +527,43 @@ export default function GalleryEvent({
                 <span>
                   <span className="plus">+</span>
                   <br />
-                  Klik bagian ini untuk menambah gambar
+                  Klik bagian ini untuk memilih file gambar
                 </span>
               )}
             </button>
-            <input ref={input} type="file" accept={TIPE.join(',')} hidden onChange={pilihFile} />
+            <input
+              ref={input}
+              type="file"
+              accept={TIPE.join(',')}
+              hidden
+              onChange={pilihFile}
+            />
             <input
               className="field"
-              style={{ marginTop: 14 }}
+              style={{ marginTop: 10 }}
+              placeholder="Atau tempel URL gambar (https://...)..."
+              aria-label="URL gambar"
+              value={form.imageUrl}
+              onChange={(e) => {
+                const url = e.target.value;
+                setForm({
+                  ...form,
+                  file: null,
+                  imageUrl: url,
+                  preview: url.trim(),
+                });
+                setFormErr('');
+              }}
+            />
+            <input
+              className="field"
+              style={{ marginTop: 10 }}
               placeholder="Tambahkan nama gambar..."
               aria-label="Nama gambar"
               value={form.keterangan}
-              onChange={(e) => setForm({ ...form, keterangan: e.target.value })}
+              onChange={(e) =>
+                setForm({ ...form, keterangan: e.target.value })
+              }
             />
             <select
               className="field"
@@ -448,10 +584,18 @@ export default function GalleryEvent({
               </p>
             )}
             <div className="modal-actions" style={{ marginTop: 12 }}>
-              <button className="btn btn-ghost" onClick={tutup} disabled={busy}>
+              <button
+                className="btn btn-ghost"
+                onClick={tutup}
+                disabled={busy}
+              >
                 Batal
               </button>
-              <button className="btn btn-solid" onClick={unggah} disabled={busy}>
+              <button
+                className="btn btn-solid"
+                onClick={unggah}
+                disabled={busy}
+              >
                 {busy ? 'Mengunggah…' : 'Unggah'}
               </button>
             </div>
@@ -461,9 +605,16 @@ export default function GalleryEvent({
 
       {(modal === 'poster' || modal === 'denah') && item && (
         <div className="overlay" onClick={tutup}>
-          <div className="modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h2 style={{ fontSize: 26 }}>
-              {modal === 'poster' ? 'Jadikan Poster Event?' : 'Jadikan Denah Event?'}
+              {modal === 'poster'
+                ? 'Jadikan Poster Event?'
+                : 'Jadikan Denah Event?'}
             </h2>
             <Img d={item} cls="confirm-img" />
             <div className="field" style={{ lineHeight: '44px' }}>
@@ -489,10 +640,13 @@ export default function GalleryEvent({
               </>
             )}
             {modal === 'poster' && adaPoster && (
-              <p className="gal-warn">Event ini sudah punya poster. Poster lama akan diganti.</p>
+              <p className="gal-warn">
+                Event ini sudah punya poster. Poster lama akan diganti.
+              </p>
             )}
             <p className="gal-note">
-              Gambar dipindahkan, bukan disalin: setelah ini ia hilang dari galeri.
+              Gambar dipindahkan, bukan disalin: setelah ini ia hilang dari
+              galeri.
             </p>
             {formErr && (
               <p className="form-err" role="alert">
@@ -500,11 +654,23 @@ export default function GalleryEvent({
               </p>
             )}
             <div className="modal-actions">
-              <button className="btn btn-ghost" onClick={tutup} disabled={busy}>
+              <button
+                className="btn btn-ghost"
+                onClick={tutup}
+                disabled={busy}
+              >
                 Batal
               </button>
-              <button className="btn btn-solid" onClick={pindah} disabled={busy}>
-                {busy ? 'Memindahkan…' : modal === 'poster' ? 'Jadikan Poster' : 'Jadikan Denah'}
+              <button
+                className="btn btn-solid"
+                onClick={pindah}
+                disabled={busy}
+              >
+                {busy
+                  ? 'Memindahkan…'
+                  : modal === 'poster'
+                  ? 'Jadikan Poster'
+                  : 'Jadikan Denah'}
               </button>
             </div>
           </div>
@@ -520,14 +686,18 @@ export default function GalleryEvent({
             onClick={(e) => e.stopPropagation()}
           >
             <h2 style={{ fontSize: 26 }}>
-              Yakin ingin menghapus {terpilih.length > 1 ? `${terpilih.length} gambar` : 'gambar'}{' '}
+              Yakin ingin menghapus{' '}
+              {terpilih.length > 1 ? `${terpilih.length} gambar` : 'gambar'}{' '}
               ini?
             </h2>
             <div className="confirm-list">
               {terpilih.map((d) => (
                 <div key={d.id_gambar}>
                   <Img d={d} cls="confirm-img" />
-                  <div className="field" style={{ lineHeight: '44px', marginBottom: 10 }}>
+                  <div
+                    className="field"
+                    style={{ lineHeight: '44px', marginBottom: 10 }}
+                  >
                     {d.keterangan}
                   </div>
                 </div>
@@ -537,10 +707,18 @@ export default function GalleryEvent({
               File juga dihapus dari penyimpanan dan tidak dapat dikembalikan.
             </p>
             <div className="modal-actions">
-              <button className="btn btn-red" onClick={() => setModal(null)} disabled={busy}>
+              <button
+                className="btn btn-red"
+                onClick={() => setModal(null)}
+                disabled={busy}
+              >
                 Batal
               </button>
-              <button className="btn btn-red on" onClick={hapus} disabled={busy}>
+              <button
+                className="btn btn-red on"
+                onClick={hapus}
+                disabled={busy}
+              >
                 {busy ? 'Menghapus…' : 'Yakin'}
               </button>
             </div>

@@ -3,6 +3,10 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import './ScrapingMonitor.css';
 import NavbarScraping from '../components/NavbarScraping';
 
+const API_BASE =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
+  'http://127.0.0.1:8000';
+
 /* sumber_scraping: satu baris = satu job.
    status_job    : antri | berjalan | selesai | gagal | dibatalkan   (diubah otomatis oleh backend/bot)
    status_review : menunggu_review | disimpan | dibuang                (diubah admin di halaman Review) */
@@ -11,6 +15,7 @@ const STATUS_JOB = { antri: ['Antri', 'a'], berjalan: ['Berjalan', 'c'], selesai
 const STATUS_REVIEW = { menunggu_review: ['Menunggu Review', 'w'], disimpan: ['Disimpan', 'g'], dibuang: ['Dibuang', 'r'] };
 const SIBUK = ['antri', 'berjalan'];
 const PER_HALAMAN = 5;
+const DRAFT_LINK_STORAGE_KEY = 'festnav_scraping_draft_links';
 
 const hostDari = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return null; } };
 const thumb = (u) => (u?.includes('res.cloudinary.com') ? u.replace('/upload/', '/upload/c_fill,w_500,h_300,q_auto,f_auto/') : u);
@@ -38,9 +43,252 @@ const formatRentangTanggal = (mulai, selesai) => {
   return fmt(mulai) || '-';
 };
 
-/* ---------- API ----------
-   Bawaan: simulasi di memori (job antri -> berjalan -> selesai berjalan sendiri, supaya perubahan status bisa dicoba).
-   Ganti dengan httpApi saat backend siap: <ScrapingMonitor api={httpApi} />                       */
+const getAuthHeaders = (withJson = false) => {
+  const token =
+    localStorage.getItem('access_token') || localStorage.getItem('token') || '';
+  const h = {};
+  if (withJson) h['Content-Type'] = 'application/json';
+  if (token) h.Authorization = `Bearer ${token}`;
+  return h;
+};
+
+function getStoredAdminName() {
+  try {
+    const user = JSON.parse(localStorage.getItem('user') || 'null');
+    return user?.nama || user?.username || 'Admin';
+  } catch {
+    return 'Admin';
+  }
+}
+
+function getLinkedEventId(idScraping) {
+  try {
+    const map = JSON.parse(sessionStorage.getItem(DRAFT_LINK_STORAGE_KEY) || '{}');
+    return map[idScraping] || null;
+  } catch {
+    return null;
+  }
+}
+
+function setLinkedEventId(idScraping, idEvent) {
+  try {
+    const map = JSON.parse(sessionStorage.getItem(DRAFT_LINK_STORAGE_KEY) || '{}');
+    map[idScraping] = idEvent;
+    sessionStorage.setItem(DRAFT_LINK_STORAGE_KEY, JSON.stringify(map));
+  } catch {
+    // Abaikan error storage
+  }
+}
+
+function normalizeJob(j) {
+  const raw = j.hasil_mentah || {};
+  const linkedEvId = j.id_event || getLinkedEventId(j.id_scraping);
+  return {
+    ...j,
+    id_event: linkedEvId,
+    nama_event:
+      j.nama_event ||
+      raw.nama_event ||
+      j.nama_sumber ||
+      hostDari(j.url_sumber) ||
+      'Event Hasil Scraping',
+  };
+}
+
+function extractRawImages(hasilMentah) {
+  if (!hasilMentah) return [];
+  if (Array.isArray(hasilMentah.gambar) && hasilMentah.gambar.length > 0) {
+    return hasilMentah.gambar
+      .map((g, idx) => ({
+        id_gambar: g.id_gambar || idx + 1,
+        url_gambar: g.secure_url || g.url_asli || g.url_gambar || '',
+        public_id: g.public_id || null,
+        jenis_gambar: g.jenis_gambar || 'lainnya',
+        keterangan: g.keterangan || g.alt || `Gambar kandidat #${idx + 1}`,
+      }))
+      .filter((g) => g.url_gambar);
+  }
+  if (Array.isArray(hasilMentah.gambar_kandidat)) {
+    return hasilMentah.gambar_kandidat
+      .filter(Boolean)
+      .map((url, idx) => ({
+        id_gambar: idx + 1,
+        url_gambar: url,
+        public_id: null,
+        jenis_gambar: 'lainnya',
+        keterangan: `Gambar kandidat #${idx + 1}`,
+      }));
+  }
+  return [];
+}
+
+/* ---------- HTTP API (Terhubung ke FastAPI & PostgreSQL) ---------- */
+const checkOk = async (res) => {
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `HTTP ${res.status}`);
+  }
+  return res;
+};
+
+export const httpApi = {
+  list: async () => {
+    const res = await fetch(`${API_BASE}/api/scraping`, {
+      headers: getAuthHeaders(),
+    }).then(checkOk);
+    const data = await res.json();
+    const list = Array.isArray(data) ? data : data.jobs || [];
+    return { jobs: list.map(normalizeJob) };
+  },
+
+  tambah: async (body) => {
+    const res = await fetch(`${API_BASE}/api/scraping`, {
+      method: 'POST',
+      headers: getAuthHeaders(true),
+      body: JSON.stringify(body),
+    }).then(checkOk);
+    return res.json();
+  },
+
+  batal: async (id) => {
+    const res = await fetch(`${API_BASE}/api/scraping/${id}/batal`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+    }).then(checkOk);
+    return res.json();
+  },
+
+  ulang: async (id) => {
+    const detailRes = await fetch(`${API_BASE}/api/scraping/${id}`, {
+      headers: getAuthHeaders(),
+    }).then(checkOk);
+    const oldJob = await detailRes.json();
+    const res = await fetch(`${API_BASE}/api/scraping`, {
+      method: 'POST',
+      headers: getAuthHeaders(true),
+      body: JSON.stringify({
+        nama_sumber: oldJob.nama_sumber || null,
+        url_sumber: oldJob.url_sumber,
+      }),
+    }).then(checkOk);
+    return res.json();
+  },
+
+  detail: async (id) => {
+    const res = await fetch(`${API_BASE}/api/scraping/${id}`, {
+      headers: getAuthHeaders(),
+    }).then(checkOk);
+    const rawJob = await res.json();
+    const job = normalizeJob(rawJob);
+    const raw = job.hasil_mentah || {};
+
+    if (job.id_event) {
+      const headers = getAuthHeaders();
+      const [resEv, resMaps, resImg] = await Promise.all([
+        fetch(`${API_BASE}/api/events/${job.id_event}`, { headers }),
+        fetch(`${API_BASE}/api/maps/event/${job.id_event}`, { headers }),
+        fetch(`${API_BASE}/api/gambar-event/event/${job.id_event}`, { headers }),
+      ]);
+
+      const ev = resEv.ok
+        ? await resEv.json()
+        : { id_event: job.id_event, nama_event: job.nama_event };
+      const maps = resMaps.ok ? await resMaps.json() : [];
+      const imgs = resImg.ok ? await resImg.json() : [];
+
+      return {
+        job,
+        event: {
+          id_event: ev.id_event || job.id_event,
+          nama_event: ev.nama_event || job.nama_event,
+        },
+        gambar: Array.isArray(imgs) && imgs.length > 0 ? imgs : extractRawImages(raw),
+        poster_url: ev?.poster_url || null,
+        denah: Array.isArray(maps) && maps.length > 0 ? maps[0] : null,
+      };
+    }
+
+    return {
+      job,
+      event: {
+        id_event: null,
+        nama_event: job.nama_event,
+      },
+      gambar: extractRawImages(raw),
+      poster_url: null,
+      denah: null,
+    };
+  },
+
+  siapkanDraftUntukGaleri: async (detailObj) => {
+    if (detailObj?.event?.id_event) return detailObj.event.id_event;
+
+    const job = detailObj.job;
+    const raw = job.hasil_mentah || {};
+    const today = new Date().toISOString().slice(0, 10);
+    const mulai = raw.tanggal_mulai ? String(raw.tanggal_mulai).slice(0, 10) : today;
+    const selesai = raw.tanggal_selesai ? String(raw.tanggal_selesai).slice(0, 10) : mulai;
+
+    const resEv = await fetch(`${API_BASE}/api/events`, {
+      method: 'POST',
+      headers: getAuthHeaders(true),
+      body: JSON.stringify({
+        nama_event: (raw.nama_event || job.nama_event || 'Event Hasil Scraping').slice(0, 150),
+        deskripsi: raw.deskripsi || null,
+        tanggal_mulai: mulai,
+        tanggal_selesai: selesai < mulai ? mulai : selesai,
+        lokasi: raw.lokasi_teks || raw.lokasi || null,
+        garis_lintang: raw.garis_lintang ?? -8.6724,
+        garis_bujur: raw.garis_bujur ?? 115.2362,
+        jenis_event: raw.jenis_event || 'Event Outdoor',
+        tipe_lokasi: 'outdoor',
+        sumber: 'scraping',
+      }),
+    }).then(checkOk);
+    const createdEv = await resEv.json();
+    const newEventId = createdEv.id_event;
+
+    const kandidat = extractRawImages(raw);
+    for (const g of kandidat) {
+      await fetch(`${API_BASE}/api/gambar-event/event/${newEventId}`, {
+        method: 'POST',
+        headers: getAuthHeaders(true),
+        body: JSON.stringify({
+          url_gambar: g.url_gambar,
+          public_id: g.public_id || null,
+          jenis_gambar: 'lainnya',
+          keterangan: g.keterangan || 'Hasil ekstraksi otomatis bot scraping',
+        }),
+      }).catch(() => {});
+    }
+
+    setLinkedEventId(job.id_scraping, newEventId);
+    return newEventId;
+  },
+
+  simpan: async (id, linkedEventId = null) => {
+    const res = await fetch(`${API_BASE}/api/scraping/${id}/review`, {
+      method: 'POST',
+      headers: getAuthHeaders(true),
+      body: JSON.stringify({
+        status_review: 'disimpan',
+        ...(linkedEventId ? { id_event: linkedEventId } : {}),
+      }),
+    }).then(checkOk);
+    return res.json();
+  },
+
+  buang: async (id) => {
+    const res = await fetch(`${API_BASE}/api/scraping/${id}/review`, {
+      method: 'POST',
+      headers: getAuthHeaders(true),
+      body: JSON.stringify({ status_review: 'dibuang' }),
+    }).then(checkOk);
+    return res.json();
+  },
+};
+
+/* ---------- Mock API (Opsional untuk pengujian offline) ---------- */
 export const buatMockApi = (tick = 1500) => {
   let seq = 100;
   const timers = {};
@@ -85,32 +333,7 @@ export const buatMockApi = (tick = 1500) => {
       return { job, event: { id_event: job.id_event, nama_event: job.nama_event }, gambar: ev.gambar, poster_url: ev.poster_url ?? null, denah: ev.denah ?? null }; },
     simpan: async (id) => set(id, { status_review: 'disimpan' }),
     buang: async (id) => set(id, { status_review: 'dibuang' }),
-    /* khusus contoh tanpa backend: menyinkronkan poster & denah yang diatur di Galeri Gambar Event */
-    simulasiLengkap: async (idEvent, { poster, denah } = {}) => {
-      const e = events[idEvent];
-      if (!e) return;
-      if (poster && !e.poster_url) {
-        e.poster_url = 'poster';
-        e.gambar = e.gambar.slice(1);
-      }
-      if (denah && !e.denah) {
-        e.denah = { nama_map: denah, gambar_layout: 'denah' };
-        e.gambar = e.gambar.slice(1);
-      }
-    },
   };
-};
-const mockApi = buatMockApi();
-const ok = (r) => { if (!r.ok) throw new Error(); return r; };
-const H = { 'Content-Type': 'application/json' };
-export const httpApi = {
-  list: () => fetch('/api/scraping').then(ok).then((r) => r.json()),
-  tambah: (b) => fetch('/api/scraping', { method: 'POST', headers: H, body: JSON.stringify(b) }).then(ok),
-  batal: (id) => fetch(`/api/scraping/${id}/batal`, { method: 'POST' }).then(ok),
-  ulang: (id) => fetch(`/api/scraping/${id}/ulang`, { method: 'POST' }).then(ok),
-  detail: (id) => fetch(`/api/scraping/${id}`).then(ok).then((r) => r.json()),
-  simpan: (id) => fetch(`/api/scraping/${id}/simpan`, { method: 'POST' }).then(ok),
-  buang: (id) => fetch(`/api/scraping/${id}/buang`, { method: 'POST' }).then(ok),
 };
 
 function Header({ judul, namaAdmin }) {
@@ -140,9 +363,10 @@ function Modal({ judul, bahaya, children, aksi, onTutup }) {
   );
 }
 
-export default function ScrapingMonitor({ namaAdmin = 'Admin Esai', api = mockApi, viewAwal = 'sumber', idAwal = null, onNavigasi, onBukaGaleri, interval = 4000 }) {
+export default function ScrapingMonitor({ namaAdmin, api = httpApi, viewAwal = 'sumber', idAwal = null, onNavigasi, onBukaGaleri, interval = 4000 }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const resolvedAdminName = namaAdmin || getStoredAdminName();
 
   const [view, setView] = useState(location.state?.view || viewAwal);          // sumber | hasil | tambah | review | lihat
   const [idAktif, setIdAktif] = useState(location.state?.idScraping ?? idAwal); // id_scraping yang sedang direview / dilihat
@@ -168,7 +392,7 @@ export default function ScrapingMonitor({ namaAdmin = 'Admin Esai', api = mockAp
     if (location.state?.idScraping != null) setIdAktif(location.state.idScraping);
   }, [location.state]);
 
-  useEffect(() => { muat().catch(() => setError('Gagal memuat daftar scraping.')).finally(() => setLoading(false)); }, [muat]);
+  useEffect(() => { muat().catch((err) => setError(err.message || 'Gagal memuat daftar scraping.')).finally(() => setLoading(false)); }, [muat]);
 
   // status job berubah otomatis di backend -> baca ulang berkala selama ada job antri/berjalan
   useEffect(() => {
@@ -176,31 +400,43 @@ export default function ScrapingMonitor({ namaAdmin = 'Admin Esai', api = mockAp
     const t = setInterval(() => muat().catch(() => {}), interval); return () => clearInterval(t);
   }, [view, jobs, muat, interval]);
 
-  // halaman review/lihat: muat detail, dan muat ulang saat admin kembali dari Galeri Gambar Event
-  const muatDetail = useCallback(() => api.detail(idAktif).then(setDetail).catch(() => setError('Gagal memuat detail event.')), [api, idAktif]);
+  // halaman review/lihat: muat detail dari database, dan muat ulang saat admin kembali dari Galeri Gambar Event
+  const muatDetail = useCallback(() => {
+    if (idAktif == null) return Promise.resolve();
+    return api.detail(idAktif).then(setDetail).catch((err) => setError(err.message || 'Gagal memuat detail event.'));
+  }, [api, idAktif]);
+
   useEffect(() => {
     if (!['review', 'lihat'].includes(view) || idAktif == null) return undefined;
-    muatDetail(); const f = () => muatDetail(); window.addEventListener('focus', f); document.addEventListener('visibilitychange', f);
-    return () => { window.removeEventListener('focus', f); document.removeEventListener('visibilitychange', f); };
-  }, [view, idAktif, muatDetail]);
+    muatDetail();
+    const f = () => muatDetail();
+    window.addEventListener('focus', f);
+    document.addEventListener('visibilitychange', f);
+    return () => {
+      window.removeEventListener('focus', f);
+      document.removeEventListener('visibilitychange', f);
+    };
+  }, [view, idAktif, muatDetail, location.state]);
 
-  // Sinkronkan status poster & denah saat kembali dari Galeri Gambar Event (khusus mockApi)
-  useEffect(() => {
-    const posterBaru = location.state?.posterSudahDiatur && !detail?.poster_url;
-    const denahBaru = location.state?.denahSudahDiatur && !detail?.denah;
-    if ((posterBaru || denahBaru) && detail?.event?.id_event) {
-      api
-        .simulasiLengkap?.(detail.event.id_event, {
-          poster: location.state?.posterSudahDiatur,
-          denah: location.state?.denahSudahDiatur,
-        })
-        .then(() => muatDetail());
+  const stat = {
+    jalan: jobs.filter((j) => SIBUK.includes(j.status_job)).length,
+    review: jobs.filter((j) => j.status_job === 'selesai' && j.status_review === 'menunggu_review').length,
+    ok: jobs.filter((j) => j.status_job === 'selesai').length,
+    gagal: jobs.filter((j) => j.status_job === 'gagal').length,
+  };
+
+  const aksi = async (fn, pesan) => {
+    setBusy(true);
+    try {
+      await fn();
+      await muat();
+      if (pesan) flash(pesan);
+    } catch (err) {
+      setError(err.message || 'Aksi gagal. Coba lagi.');
     }
-  }, [location.state, detail, api, muatDetail]);
-
-  const stat = { jalan: jobs.filter((j) => SIBUK.includes(j.status_job)).length, review: jobs.filter((j) => j.status_job === 'selesai' && j.id_event && j.status_review === 'menunggu_review').length,
-    ok: jobs.filter((j) => j.status_job === 'selesai').length, gagal: jobs.filter((j) => j.status_job === 'gagal').length };
-  const aksi = async (fn, pesan) => { setBusy(true); try { await fn(); await muat(); if (pesan) flash(pesan); } catch { setError('Aksi gagal. Coba lagi.'); } setBusy(false); setModal(null); };
+    setBusy(false);
+    setModal(null);
+  };
 
   const mulai = async () => {
     const url = form.url_sumber.trim(); let u;
@@ -208,52 +444,57 @@ export default function ScrapingMonitor({ namaAdmin = 'Admin Esai', api = mockAp
     if (!/^https?:$/.test(u.protocol)) return setFormErr('URL harus diawali http:// atau https://');
     if (jobs.some((j) => j.url_sumber === url && SIBUK.includes(j.status_job))) return setFormErr('URL ini sedang diproses. Tunggu sampai selesai.');
     setBusy(true); setFormErr('');
-    try { await api.tambah({ nama_sumber: form.nama_sumber.trim() || null, url_sumber: url }); await muat(); setForm({ nama_sumber: '', url_sumber: '' }); setBusy(false); go('sumber'); flash('Scraping dimulai. Status akan berubah otomatis.'); }
-    catch { setBusy(false); setFormErr('Gagal memulai scraping. Coba lagi.'); }
-  };
-
-  // Arahkan ke halaman Galeri Gambar Event (/galeri)
-  const bukaGaleri = () => {
-    if (onBukaGaleri) {
-      onBukaGaleri(detail.event.id_event);
-    } else {
-      navigate('/galeri', {
-        state: {
-          from: '/scraping',
-          idScraping: detail.job.id_scraping,
-          idEvent: detail.event.id_event,
-          namaEvent: detail.event.nama_event,
-        },
-      });
+    try {
+      await api.tambah({ nama_sumber: form.nama_sumber.trim() || null, url_sumber: url });
+      await muat();
+      setForm({ nama_sumber: '', url_sumber: '' });
+      setBusy(false);
+      go('sumber');
+      flash('Scraping dimulai. Status akan berubah otomatis.');
+    } catch (err) {
+      setBusy(false);
+      setFormErr(err.message || 'Gagal memulai scraping. Coba lagi.');
     }
   };
 
-  // Simpan event dari Review Event dan arahkan ke /daftar-event (tab Hasil Scrapping) dengan format rapi
-  const handleSimpanEvent = async (d) => {
-    const mentah = d.job.hasil_mentah || {};
-    const eventRapi = {
-      id: d.event.id_event || Date.now(),
-      title: mentah.nama_event || d.event.nama_event,
-      type: 'scrapping',
-      tags: [
-        { label: 'Hasil Scrapping', color: '#00bcd4' },
-        { label: 'Event Outdoor', color: '#38bdf8' },
-      ],
-      status: 'Draft',
-      statusColor: '#3730a3',
-      dateRange: formatRentangTanggal(mentah.tanggal_mulai, mentah.tanggal_selesai),
-      description: mentah.deskripsi || '',
-      location: mentah.lokasi_teks || '',
-      sourceUrl: d.job.url_sumber,
-      posterUrl: d.poster_url,
-      denah: d.denah,
-    };
+  // Arahkan ke halaman Galeri Gambar Event (/galeri) dengan id_event asli di database
+  const bukaGaleri = async () => {
+    if (!detail) return;
+    setBusy(true);
+    try {
+      const realEventId =
+        detail.event.id_event ||
+        (await api.siapkanDraftUntukGaleri?.(detail));
 
-    await aksi(() => api.simpan(d.job.id_scraping), 'Event disimpan.');
+      if (onBukaGaleri) {
+        onBukaGaleri(realEventId);
+      } else {
+        navigate('/galeri', {
+          state: {
+            from: '/scraping',
+            idScraping: detail.job.id_scraping,
+            idEvent: realEventId,
+            namaEvent: detail.event.nama_event,
+          },
+        });
+      }
+    } catch (err) {
+      setError(err.message || 'Gagal membuka galeri gambar event.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Simpan event dari Review Event dan arahkan ke /daftar-event (tab Hasil Scrapping)
+  const handleSimpanEvent = async (d) => {
+    const linkedEventId = d.event.id_event || getLinkedEventId(d.job.id_scraping);
+    await aksi(
+      () => api.simpan(d.job.id_scraping, linkedEventId),
+      'Event disimpan.'
+    );
     navigate('/daftar-event', {
       state: {
         activeTab: 'scrapping',
-        newEvent: eventRapi,
       },
     });
   };
@@ -261,7 +502,7 @@ export default function ScrapingMonitor({ namaAdmin = 'Admin Esai', api = mockAp
   const q = cari.toLowerCase();
   const daftar = view === 'sumber'
     ? jobs.filter((j) => `${j.nama_sumber ?? ''} ${j.url_sumber}`.toLowerCase().includes(q))
-    : jobs.filter((j) => j.status_job === 'selesai' && j.id_event && (j.nama_event ?? '').toLowerCase().includes(q));
+    : jobs.filter((j) => j.status_job === 'selesai' && (j.nama_event ?? '').toLowerCase().includes(q));
   const urut = [...daftar].sort((a, b) => new Date(b.waktu_scraping) - new Date(a.waktu_scraping));
   const halAktif = Math.min(hal[view] ?? 1, Math.max(1, Math.ceil(urut.length / PER_HALAMAN)));
   const baris = urut.slice((halAktif - 1) * PER_HALAMAN, halAktif * PER_HALAMAN);
@@ -269,7 +510,7 @@ export default function ScrapingMonitor({ namaAdmin = 'Admin Esai', api = mockAp
   /* ---------- Tambah sumber ---------- */
   if (view === 'tambah') return (
     <div className="sc-app">
-      <Header judul="Tambah Sumber" namaAdmin={namaAdmin} />
+      <Header judul="Tambah Sumber" namaAdmin={resolvedAdminName} />
       <main className="sc-body">
         <section className="sc-panel">
           <label htmlFor="url">URL <span className="req">*</span></label>
@@ -294,7 +535,7 @@ export default function ScrapingMonitor({ namaAdmin = 'Admin Esai', api = mockAp
 
     return (
       <div className="sc-app">
-        <Header judul={review ? 'Review Event' : 'Lihat Event'} namaAdmin={namaAdmin} />
+        <Header judul={review ? 'Review Event' : 'Lihat Event'} namaAdmin={resolvedAdminName} />
         <main className="sc-body">
           {error && <p className="sc-banner err" role="alert">{error}</p>}
           {!d ? <p className="sc-state white">Memuat…</p> : (<>
@@ -332,7 +573,7 @@ export default function ScrapingMonitor({ namaAdmin = 'Admin Esai', api = mockAp
 
             <section className="sc-panel">
               <div className="sc-ph"><h3>Gambar Hasil Scraping ({d.gambar.length})</h3>
-                {review && <button className="sc-btn cta" onClick={bukaGaleri}>Buka Galeri Gambar Event</button>}</div>
+                {review && <button className="sc-btn cta" disabled={busy} onClick={bukaGaleri}>Buka Galeri Gambar Event</button>}</div>
               {d.gambar.length ? (
                 <div className="sc-gal">{d.gambar.map((g) => (
                   <figure key={g.id_gambar}>{g.url_gambar ? <img src={thumb(g.url_gambar)} alt={g.keterangan ?? ''} loading="lazy" /> : <div className="ph" role="img" aria-label={g.keterangan ?? ''} />}<figcaption>{g.keterangan}</figcaption></figure>))}</div>
@@ -374,7 +615,7 @@ export default function ScrapingMonitor({ namaAdmin = 'Admin Esai', api = mockAp
   const isSumber = view === 'sumber';
   return (
     <div className="sc-app">
-      <Header judul="Monitor Scrapping" namaAdmin={namaAdmin} />
+      <Header judul="Monitor Scrapping" namaAdmin={resolvedAdminName} />
       <nav className="sc-tabs">
         <button className={`sc-tab ${isSumber ? 'on' : ''}`} onClick={() => go('sumber')}>Sumber Scrapping</button>
         <button className={`sc-tab ${!isSumber ? 'on' : ''}`} onClick={() => go('hasil')}>Hasil Scrapping</button>

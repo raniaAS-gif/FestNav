@@ -4,6 +4,10 @@ import NavbarAdmin from '../components/NavbarAdmin'
 import NavbarEO from '../components/NavbarEO'
 import './TambahEventAdmin.css'
 
+const API_BASE =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
+  'http://127.0.0.1:8000'
+
 const JENIS_EVENT_OPTIONS = [
   'Event Indoor',
   'Event Outdoor',
@@ -15,130 +19,110 @@ const SUMBER_EVENT_OPTIONS = [
   'Hasil Scrapping'
 ]
 
-const FALLBACK_ADMIN_EVENTS = [
-  {
-    id: 1,
-    title: 'Dies Natalis Udayana 2026',
-    type: 'eo',
-    tags: [
-      { label: 'Kerjasama Event Organizer', color: '#00bcd4' },
-      { label: 'Event Outdoor', color: '#38bdf8' },
-      { label: 'Event Indoor', color: '#f87171' }
-    ],
-    status: 'Sudah Dipublish',
-    statusColor: '#3b82f6',
-    dateRange: '21 Oktober 2025 – 31 Desember 2025'
-  },
-  {
-    id: 2,
-    title: 'Pernikahan Sita 2026',
-    type: 'eo',
-    tags: [
-      { label: 'Kerjasama Event Organizer', color: '#00bcd4' },
-      { label: 'Event Indoor', color: '#f87171' }
-    ],
-    status: 'Draft',
-    statusColor: '#3730a3',
-    dateRange: '4 November 2026 – 5 November 2026'
-  },
-  {
-    id: 3,
-    title: 'Festival Musik Lovina',
-    type: 'eo',
-    tags: [
-      { label: 'Kerjasama Event Organizer', color: '#00bcd4' },
-      { label: 'Event Outdoor', color: '#38bdf8' }
-    ],
-    status: 'Sudah Dipublish',
-    statusColor: '#3b82f6',
-    dateRange: '21 Maret 2025'
-  },
-  {
-    id: 4,
-    title: 'Bazzar Pagi Makanan',
-    type: 'eo',
-    tags: [
-      { label: 'Kerjasama Event Organizer', color: '#00bcd4' },
-      { label: 'Event Outdoor', color: '#38bdf8' }
-    ],
-    status: 'Draft',
-    statusColor: '#3730a3',
-    dateRange: '4 Januari 2025 – 5 Januari 2025'
-  },
-  {
-    id: 5,
-    title: 'Seminar Nasional Teknologi',
-    type: 'eo',
-    tags: [
-      { label: 'Kerjasama Event Organizer', color: '#00bcd4' },
-      { label: 'Event Indoor', color: '#f87171' }
-    ],
-    status: 'Sudah Dipublish',
-    statusColor: '#3b82f6',
-    dateRange: '15 Desember 2025'
-  },
-  {
-    id: 6,
-    title: 'Pameran Seni Buleleng',
-    type: 'scrapping',
-    tags: [
-      { label: 'Hasil Scrapping', color: '#00bcd4' },
-      { label: 'Event Indoor', color: '#f87171' },
-      { label: 'Event Outdoor', color: '#38bdf8' }
-    ],
-    status: 'Sudah Dipublish',
-    statusColor: '#3b82f6',
-    dateRange: '29 Februari 2024 – 3 Maret 2024'
-  },
-  {
-    id: 7,
-    title: 'Pagelaran Busana Tradisional',
-    type: 'scrapping',
-    tags: [
-      { label: 'Hasil Scrapping', color: '#00bcd4' },
-      { label: 'Event Indoor', color: '#f87171' }
-    ],
-    status: 'Draft',
-    statusColor: '#3730a3',
-    dateRange: '4 November 2026 – 5 November 2026'
-  },
-  {
-    id: 8,
-    title: 'Acara Ulang Tahun Novita',
-    type: 'scrapping',
-    tags: [
-      { label: 'Hasil Scrapping', color: '#00bcd4' },
-      { label: 'Event Outdoor', color: '#38bdf8' }
-    ],
-    status: 'Sudah Dipublish',
-    statusColor: '#3b82f6',
-    dateRange: '1 November 2026'
-  },
-  {
-    id: 9,
-    title: 'Lari Marathon 1 AU',
-    type: 'scrapping',
-    tags: [
-      { label: 'Hasil Scrapping', color: '#00bcd4' },
-      { label: 'Event Outdoor', color: '#38bdf8' }
-    ],
-    status: 'Draft',
-    statusColor: '#3730a3',
-    dateRange: '21 April 2025 – 31 Desember 2025'
-  },
-  {
-    id: 10,
-    title: 'Workshop Sintaks III',
-    type: 'scrapping',
-    tags: [
-      { label: 'Hasil Scrapping', color: '#00bcd4' },
-      { label: 'Event Indoor', color: '#f87171' }
-    ],
-    status: 'Sudah Dipublish',
-    statusColor: '#3b82f6',
-    dateRange: '5 Mei 2026'
+const BULAN_ID = {
+  januari: '01',
+  februari: '02',
+  maret: '03',
+  april: '04',
+  mei: '05',
+  juni: '06',
+  juli: '07',
+  agustus: '08',
+  september: '09',
+  oktober: '10',
+  november: '11',
+  desember: '12'
+}
+
+const getAuthHeaders = (withJson = false) => {
+  const token =
+    localStorage.getItem('access_token') || localStorage.getItem('token') || ''
+  const h = {}
+  if (withJson) h['Content-Type'] = 'application/json'
+  if (token) h.Authorization = `Bearer ${token}`
+  return h
+}
+
+function getStoredUser() {
+  try {
+    return JSON.parse(localStorage.getItem('user') || 'null')
+  } catch {
+    return null
   }
-]
+}
+
+const fileToDataUrl = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result)
+    reader.onerror = () => reject(new Error('Gagal membaca file gambar.'))
+    reader.readAsDataURL(file)
+  })
+
+function parseSingleDate(token) {
+  if (!token) return null
+  const clean = token.trim()
+
+  // Format YYYY-MM-DD
+  const isoMatch = clean.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/)
+  if (isoMatch) {
+    return `${isoMatch[1]}-${isoMatch[2].padStart(2, '0')}-${isoMatch[3].padStart(2, '0')}`
+  }
+
+  // Format DD/MM/YYYY atau DD-MM-YYYY
+  const dmyMatch = clean.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/)
+  if (dmyMatch) {
+    return `${dmyMatch[3]}-${dmyMatch[2].padStart(2, '0')}-${dmyMatch[1].padStart(2, '0')}`
+  }
+
+  // Format "21 Oktober 2026"
+  const idMatch = clean.match(/^(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})$/)
+  if (idMatch) {
+    const bulanNum = BULAN_ID[idMatch[2].toLowerCase()]
+    if (bulanNum) {
+      return `${idMatch[3]}-${bulanNum}-${idMatch[1].padStart(2, '0')}`
+    }
+  }
+
+  return null
+}
+
+function parseDateRangeInput(text) {
+  const today = new Date().toISOString().slice(0, 10)
+  const raw = (text || '').trim()
+  if (!raw) {
+    return { tanggal_mulai: today, tanggal_selesai: today }
+  }
+
+  // Format rentang ISO: "2026-11-20 - 2026-11-22"
+  const isoRange = raw.match(
+    /(\d{4}-\d{2}-\d{2})\s*(?:–|—|-|\bsampai\b|\bs\/d\b)\s*(\d{4}-\d{2}-\d{2})/i
+  )
+  if (isoRange) {
+    const start = isoRange[1]
+    const end = isoRange[2] < start ? start : isoRange[2]
+    return { tanggal_mulai: start, tanggal_selesai: end }
+  }
+
+  const parts = raw
+    .split(/\s*(?:–|—|-|\bsampai\b|\bs\/d\b)\s*/i)
+    .filter(Boolean)
+
+  const start = parseSingleDate(parts[0]) || today
+  const end =
+    (parts[1] ? parseSingleDate(parts[1]) : parseSingleDate(parts[0])) || start
+
+  return {
+    tanggal_mulai: start,
+    tanggal_selesai: end < start ? start : end
+  }
+}
+
+function mapJenisToTipeLokasi(jenisEvent) {
+  if (jenisEvent === 'Event Indoor') return 'indoor'
+  if (jenisEvent === 'Event Outdoor') return 'outdoor'
+  return 'hybrid'
+}
 
 function TambahEventAdmin({ role = 'admin' }) {
   const navigate = useNavigate()
@@ -146,6 +130,7 @@ function TambahEventAdmin({ role = 'admin' }) {
 
   const activeRole = location.state?.role || role
   const isEO = activeRole === 'eo'
+  const storedUser = getStoredUser()
 
   // State Form Utama
   const [formData, setFormData] = useState({
@@ -153,7 +138,9 @@ function TambahEventAdmin({ role = 'admin' }) {
     tanggalEvent: '',
     lokasiEvent: '',
     jenisEvent: 'Belum dipilih',
-    eventOrganizer: '',
+    eventOrganizer: isEO
+      ? storedUser?.nama_organisasi || storedUser?.nama || ''
+      : '',
     sumber: isEO ? 'Kerjasama Event Organizer' : 'Belum dipilih',
     deskripsiSingkat: ''
   })
@@ -180,6 +167,8 @@ function TambahEventAdmin({ role = 'admin' }) {
   const [denahList, setDenahList] = useState([
     { id: Date.now(), namaDenah: '', imageFile: null, imagePreview: null }
   ])
+
+  const [isSaving, setIsSaving] = useState(false)
 
   // Tutup dropdown otomatis jika klik di luar area dropdown
   useEffect(() => {
@@ -255,69 +244,106 @@ function TambahEventAdmin({ role = 'admin' }) {
     }
   }
 
-  // Handle Simpan Event & Langsung Simpan ke Daftar
-  const handleSubmit = (e) => {
+  // Handle Simpan Event ke PostgreSQL melalui FastAPI
+  const handleSubmit = async (e) => {
     e.preventDefault()
+    if (isSaving) return
 
-    const resolvedSumber = isEO
-      ? 'Kerjasama Event Organizer'
-      : formData.sumber === 'Belum dipilih'
-      ? 'Kerjasama Event Organizer'
-      : formData.sumber
-
-    const isScrapping = resolvedSumber === 'Hasil Scrapping'
-
-    // Susun badge tag agar tampilannya sama seperti kartu event
-    const generatedTags = [{ label: resolvedSumber, color: '#00bcd4' }]
-
-    if (formData.jenisEvent === 'Event Indoor') {
-      generatedTags.push({ label: 'Event Indoor', color: '#f87171' })
-    } else if (formData.jenisEvent === 'Event Outdoor') {
-      generatedTags.push({ label: 'Event Outdoor', color: '#38bdf8' })
-    } else if (formData.jenisEvent === 'Event Indoor & Outdoor') {
-      generatedTags.push({ label: 'Event Outdoor', color: '#38bdf8' })
-      generatedTags.push({ label: 'Event Indoor', color: '#f87171' })
+    const namaEventClean = formData.namaEvent.trim()
+    if (!namaEventClean) {
+      alert('Nama Event wajib diisi.')
+      return
     }
 
-    const resolvedDate = formData.tanggalEvent.trim() || 'Tanggal belum diatur'
-
-    const newEvent = {
-      id: Date.now(),
-      title: formData.namaEvent.trim() || 'Event Baru',
-      type: isScrapping ? 'scrapping' : 'eo',
-      tags: generatedTags,
-      status: isEO ? 'Belum Dipublish' : 'Draft',
-      statusColor: '#3730a3',
-      dateRange: resolvedDate,
-      eventDate: resolvedDate,
-      lokasiEvent: formData.lokasiEvent.trim() || '-',
-      jenisEvent:
-        formData.jenisEvent === 'Belum dipilih' ? 'Event Indoor' : formData.jenisEvent,
-      eventOrganizer: formData.eventOrganizer.trim() || (isEO ? 'EO Esai' : '-'),
-      sumber: resolvedSumber,
-      deskripsiSingkat: formData.deskripsiSingkat.trim() || '-'
-    }
-
-    const storageKey = isEO ? 'festnav_eo_events' : 'festnav_admin_events'
+    setIsSaving(true)
     try {
-      const rawSaved = localStorage.getItem(storageKey)
-      const currentList = rawSaved
-        ? JSON.parse(rawSaved)
-        : isEO
-        ? []
-        : FALLBACK_ADMIN_EVENTS
+      const resolvedSumber = isEO
+        ? 'eo'
+        : formData.sumber === 'Hasil Scrapping'
+        ? 'scraping'
+        : 'eo'
 
-      localStorage.setItem(storageKey, JSON.stringify([newEvent, ...currentList]))
-    } catch (err) {
-      console.error('Gagal menyimpan event:', err)
-    }
+      const resolvedJenis =
+        formData.jenisEvent === 'Belum dipilih'
+          ? 'Event Indoor & Outdoor'
+          : formData.jenisEvent
 
-    if (isEO) {
-      navigate('/daftar-event-eo', { state: { newEvent } })
-    } else {
-      navigate('/daftar-event', {
-        state: { newEvent, activeTab: isScrapping ? 'scrapping' : 'eo' }
+      const tipeLokasi = mapJenisToTipeLokasi(resolvedJenis)
+      const { tanggal_mulai, tanggal_selesai } = parseDateRangeInput(
+        formData.tanggalEvent
+      )
+
+      const posterUrl = posterFile ? await fileToDataUrl(posterFile) : null
+
+      // 1. Buat Event baru di backend
+      const resEvent = await fetch(`${API_BASE}/api/events`, {
+        method: 'POST',
+        headers: getAuthHeaders(true),
+        body: JSON.stringify({
+          nama_event: namaEventClean,
+          tanggal_mulai,
+          tanggal_selesai,
+          lokasi: formData.lokasiEvent.trim() || null,
+          jenis_event: resolvedJenis,
+          tipe_lokasi: tipeLokasi,
+          nama_organizer: formData.eventOrganizer.trim() || null,
+          sumber: resolvedSumber,
+          deskripsi: formData.deskripsiSingkat.trim() || null,
+          poster_url: posterUrl,
+          garis_lintang: -8.6724,
+          garis_bujur: 115.2362
+        })
       })
+
+      const createdEvent = await resEvent.json().catch(() => ({}))
+      if (!resEvent.ok) {
+        throw new Error(createdEvent.detail || 'Gagal menyimpan event baru')
+      }
+
+      // 2. Buat Denah Peta (Map) jika user mengisi nama denah atau mengunggah gambar denah
+      const validDenahs = denahList.filter(
+        (d) => d.namaDenah.trim() || d.imageFile
+      )
+
+      for (let i = 0; i < validDenahs.length; i++) {
+        const d = validDenahs[i]
+        const gambarLayout = d.imageFile
+          ? await fileToDataUrl(d.imageFile)
+          : null
+
+        const resMap = await fetch(`${API_BASE}/api/maps`, {
+          method: 'POST',
+          headers: getAuthHeaders(true),
+          body: JSON.stringify({
+            id_event: createdEvent.id_event,
+            nama_map: d.namaDenah.trim() || `Denah ${i + 1}`,
+            tipe_map: tipeLokasi === 'indoor' ? 'indoor' : 'outdoor',
+            is_utama: i === 0,
+            gambar_layout: gambarLayout,
+            tampilkan_denah: Boolean(gambarLayout),
+            garis_lintang_pusat: createdEvent.garis_lintang ?? -8.6724,
+            garis_bujur_pusat: createdEvent.garis_bujur ?? 115.2362
+          })
+        })
+
+        if (!resMap.ok) {
+          const errMap = await resMap.json().catch(() => ({}))
+          console.error('Gagal menyimpan denah:', errMap.detail)
+        }
+      }
+
+      alert('Event baru berhasil disimpan ke database!')
+      if (isEO) {
+        navigate('/daftar-event-eo')
+      } else {
+        navigate('/daftar-event', {
+          state: { activeTab: resolvedSumber === 'scraping' ? 'scrapping' : 'eo' }
+        })
+      }
+    } catch (err) {
+      alert(err.message || 'Gagal menyimpan event baru.')
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -342,10 +368,21 @@ function TambahEventAdmin({ role = 'admin' }) {
               <div className="poster-upload-box">
                 <label htmlFor="poster-input" className="poster-upload-label">
                   {posterPreview ? (
-                    <img src={posterPreview} alt="Preview Poster" className="poster-preview-img" />
+                    <img
+                      src={posterPreview}
+                      alt="Preview Poster"
+                      className="poster-preview-img"
+                    />
                   ) : (
                     <div className="upload-placeholder">
-                      <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="1.5">
+                      <svg
+                        width="56"
+                        height="56"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="#888"
+                        strokeWidth="1.5"
+                      >
                         <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
                         <circle cx="12" cy="13" r="4"></circle>
                       </svg>
@@ -373,6 +410,7 @@ function TambahEventAdmin({ role = 'admin' }) {
                     value={formData.namaEvent}
                     onChange={handleInputChange}
                     className="form-input"
+                    required
                   />
                 </div>
 
@@ -381,7 +419,7 @@ function TambahEventAdmin({ role = 'admin' }) {
                   <input
                     type="text"
                     name="tanggalEvent"
-                    placeholder="Tanggal event..."
+                    placeholder="Contoh: 20 November 2026 - 22 November 2026"
                     value={formData.tanggalEvent}
                     onChange={handleInputChange}
                     className="form-input"
@@ -421,7 +459,9 @@ function TambahEventAdmin({ role = 'admin' }) {
                         {formData.jenisEvent}
                       </span>
                       <svg
-                        className={`dropdown-chevron ${openDropdown === 'jenis' ? 'open' : ''}`}
+                        className={`dropdown-chevron ${
+                          openDropdown === 'jenis' ? 'open' : ''
+                        }`}
                         width="16"
                         height="16"
                         viewBox="0 0 24 24"
@@ -472,7 +512,9 @@ function TambahEventAdmin({ role = 'admin' }) {
                     <button
                       type="button"
                       className="form-input custom-dropdown-trigger"
+                      disabled={isEO}
                       onClick={() =>
+                        !isEO &&
                         setOpenDropdown(openDropdown === 'sumber' ? null : 'sumber')
                       }
                     >
@@ -485,22 +527,26 @@ function TambahEventAdmin({ role = 'admin' }) {
                       >
                         {formData.sumber}
                       </span>
-                      <svg
-                        className={`dropdown-chevron ${openDropdown === 'sumber' ? 'open' : ''}`}
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="#64748b"
-                        strokeWidth="2.2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <polyline points="6 9 12 15 18 9"></polyline>
-                      </svg>
+                      {!isEO && (
+                        <svg
+                          className={`dropdown-chevron ${
+                            openDropdown === 'sumber' ? 'open' : ''
+                          }`}
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="#64748b"
+                          strokeWidth="2.2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                      )}
                     </button>
 
-                    {openDropdown === 'sumber' && (
+                    {openDropdown === 'sumber' && !isEO && (
                       <div className="custom-dropdown-menu">
                         {SUMBER_EVENT_OPTIONS.map((option) => (
                           <div
@@ -560,24 +606,44 @@ function TambahEventAdmin({ role = 'admin' }) {
                       type="text"
                       placeholder="Nama denah..."
                       value={denah.namaDenah}
-                      onChange={(e) => handleDenahNameChange(denah.id, e.target.value)}
+                      onChange={(e) =>
+                        handleDenahNameChange(denah.id, e.target.value)
+                      }
                       className="form-input"
                     />
                   </div>
 
                   <div className="form-group full-width">
                     <label>Gambar Denah</label>
-                    <label htmlFor={`denah-input-${denah.id}`} className="denah-upload-label">
+                    <label
+                      htmlFor={`denah-input-${denah.id}`}
+                      className="denah-upload-label"
+                    >
                       {denah.imagePreview ? (
-                        <img src={denah.imagePreview} alt="Preview Denah" className="denah-preview-img" />
+                        <img
+                          src={denah.imagePreview}
+                          alt="Preview Denah"
+                          className="denah-preview-img"
+                        />
                       ) : (
                         <div className="upload-placeholder denah-placeholder">
-                          <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="1.5">
+                          <svg
+                            width="56"
+                            height="56"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="#888"
+                            strokeWidth="1.5"
+                          >
                             <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
                             <circle cx="12" cy="13" r="4"></circle>
                           </svg>
-                          <span className="placeholder-main">Unggah Gambar Denah</span>
-                          <span className="placeholder-sub">Format: JPEG, JPG, PNG</span>
+                          <span className="placeholder-main">
+                            Unggah Gambar Denah
+                          </span>
+                          <span className="placeholder-sub">
+                            Format: JPEG, JPG, PNG
+                          </span>
                         </div>
                       )}
                     </label>
@@ -585,7 +651,9 @@ function TambahEventAdmin({ role = 'admin' }) {
                       id={`denah-input-${denah.id}`}
                       type="file"
                       accept="image/*"
-                      onChange={(e) => handleDenahImageUpload(denah.id, e.target.files[0])}
+                      onChange={(e) =>
+                        handleDenahImageUpload(denah.id, e.target.files[0])
+                      }
                       style={{ display: 'none' }}
                     />
                   </div>
@@ -594,7 +662,14 @@ function TambahEventAdmin({ role = 'admin' }) {
 
               {/* Dashed Button to Add New Map */}
               <div className="add-denah-dashed-box" onClick={handleAddDenahBlock}>
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2">
+                <svg
+                  width="32"
+                  height="32"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#666"
+                  strokeWidth="2"
+                >
                   <line x1="12" y1="5" x2="12" y2="19"></line>
                   <line x1="5" y1="12" x2="19" y2="12"></line>
                 </svg>
@@ -605,8 +680,12 @@ function TambahEventAdmin({ role = 'admin' }) {
 
           {/* Bottom Submit Button */}
           <div className="tambah-actions">
-            <button type="submit" className="btn-cyan-submit">
-              Simpan
+            <button
+              type="submit"
+              className="btn-cyan-submit"
+              disabled={isSaving}
+            >
+              {isSaving ? 'Menyimpan...' : 'Simpan'}
             </button>
           </div>
         </form>

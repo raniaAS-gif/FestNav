@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import NavbarEO from '../components/NavbarEO'
 import './DetailEventEO.css'
 
-const VALIDATION_STORAGE_KEY = 'festnav_validation_requests'
+const API_BASE =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
+  'http://127.0.0.1:8000'
 
 const DEFAULT_POSTER_URL =
   'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=600&q=80'
@@ -13,363 +15,170 @@ const DEFAULT_DENAH_IMAGES = [
   'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1000&q=80'
 ]
 
-const DEFAULT_EO_EVENT = {
-  id: 1,
-  namaEvent: 'Dies Natalis Udayana 2026',
-  tanggalEvent: '21 Oktober 2025 - 31 Desember 2025',
-  lokasiEvent: 'Rektorat Universitas Udayana',
-  jenisEvent: 'Event Indoor & Outdoor',
-  eventOrganizer: 'Universitas Udayana',
-  sumber: 'Kerjasama Event Organizer',
-  status: 'Draft',
-  posterUrl: DEFAULT_POSTER_URL,
-  deskripsiSingkat:
-    'ini adalah itu, itu adalah ini, lalu dia adalah saya, saya adalh kami, kami adalah rambut, rambut adalah bok, bok adalah sayuran, sayuran adalah nama gang, dan lain sebagainya.',
-  denahList: [
-    {
-      id: 1,
-      namaDenah: 'Day 1: Lapangan Rektorat',
-      status: 'draft',
-      imageUrl: DEFAULT_DENAH_IMAGES[0]
-    },
-    {
-      id: 2,
-      namaDenah: 'Day 2: Gedung Rektorat',
-      status: 'draft',
-      imageUrl: DEFAULT_DENAH_IMAGES[1]
-    }
-  ]
+const getAuthHeaders = (withJson = false) => {
+  const token =
+    localStorage.getItem('access_token') ||
+    localStorage.getItem('token') ||
+    ''
+  const h = {}
+  if (withJson) h['Content-Type'] = 'application/json'
+  if (token) h.Authorization = `Bearer ${token}`
+  return h
 }
 
-const STATUS_BADGE_LABELS = [
-  'Sudah Dipublish',
-  'Draft',
-  'Belum Dipublish',
-  'Menunggu Publish'
-]
-
-function resolveJenisFromTags(tags = []) {
-  const labels = tags.map((t) => t.label)
-  const hasIndoor = labels.includes('Event Indoor')
-  const hasOutdoor = labels.includes('Event Outdoor')
-  if (hasIndoor && hasOutdoor) return 'Event Indoor & Outdoor'
-  if (hasIndoor) return 'Event Indoor'
-  if (hasOutdoor) return 'Event Outdoor'
-  return 'Event Indoor & Outdoor'
-}
-
-function mapStatusToInternal(statusStr) {
-  if (statusStr === 'Sudah Dipublish') return 'published'
-  if (statusStr === 'Menunggu Publish') return 'pending'
-  return 'draft'
-}
-
-function mapInternalToBadgeStatus(internalStatus) {
-  if (internalStatus === 'published') return 'Sudah Dipublish'
-  if (internalStatus === 'pending') return 'Menunggu Publish'
-  return 'Draft'
-}
-
-function formatCurrentWitaTime() {
-  const now = new Date()
-  const datePart = now.toLocaleDateString('id-ID', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric'
-  })
-  const hours = String(now.getHours()).padStart(2, '0')
-  const minutes = String(now.getMinutes()).padStart(2, '0')
-  return `${datePart} ${hours}.${minutes} WITA`
+function formatDateRange(mulai, selesai) {
+  if (!mulai && !selesai) return '-'
+  const fmt = (d) =>
+    new Date(d).toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    })
+  if (mulai && selesai && mulai !== selesai) return `${fmt(mulai)} - ${fmt(selesai)}`
+  return fmt(mulai || selesai)
 }
 
 function DetailEventEO() {
   const navigate = useNavigate()
   const location = useLocation()
 
-  const [resolvedSource] = useState(() => {
-    const navState = location.state || {}
-
-    let storedEvent = null
-    try {
-      const savedList = JSON.parse(localStorage.getItem('festnav_eo_events') || '[]')
-      if (Array.isArray(savedList)) {
-        storedEvent =
-          savedList.find(
-            (item) =>
-              (navState.eventId && item.id === navState.eventId) ||
-              (navState.eventTitle && item.title === navState.eventTitle)
-          ) || null
-      }
-    } catch {
-      storedEvent = null
-    }
-
-    const source = storedEvent || navState.eventData
-    if (!source && !navState.eventTitle) {
-      return DEFAULT_EO_EVENT
-    }
-
-    const title =
-      navState.eventTitle || source?.namaEvent || source?.title || DEFAULT_EO_EVENT.namaEvent
-    const isDefault = title === DEFAULT_EO_EVENT.namaEvent
-
-    const statusFromTags = source?.tags?.find((t) =>
-      STATUS_BADGE_LABELS.includes(t.label)
-    )?.label
-
-    const resolvedStatus =
-      storedEvent?.status || navState.eventStatus || source?.status || statusFromTags || 'Draft'
-
-    const resolvedDenah =
-      Array.isArray(source?.denahList) && source.denahList.length > 0
-        ? source.denahList.map((d, idx) => ({
-            id: d.id || idx + 1,
-            namaDenah: d.namaDenah || d.title || `Denah ${idx + 1}`,
-            status: d.status || 'draft',
-            imageUrl:
-              d.imageUrl ||
-              d.mapUrl ||
-              DEFAULT_DENAH_IMAGES[idx % DEFAULT_DENAH_IMAGES.length]
-          }))
-        : isDefault
-        ? DEFAULT_EO_EVENT.denahList
-        : [
-            {
-              id: 1,
-              namaDenah: `Denah Utama - ${title}`,
-              status: 'draft',
-              imageUrl: DEFAULT_DENAH_IMAGES[0]
-            }
-          ]
-
-    return {
-      id: source?.id || navState.eventId || Date.now(),
-      namaEvent: title,
-      tanggalEvent:
-        navState.eventDate ||
-        source?.tanggalEvent ||
-        source?.eventDate ||
-        source?.dateRange ||
-        DEFAULT_EO_EVENT.tanggalEvent,
-      lokasiEvent:
-        source?.lokasiEvent && source.lokasiEvent !== '-'
-          ? source.lokasiEvent
-          : isDefault
-          ? DEFAULT_EO_EVENT.lokasiEvent
-          : 'Bali, Indonesia',
-      jenisEvent:
-        source?.jenisEvent ||
-        (source?.tags ? resolveJenisFromTags(source.tags) : DEFAULT_EO_EVENT.jenisEvent),
-      eventOrganizer:
-        source?.eventOrganizer && source.eventOrganizer !== '-'
-          ? source.eventOrganizer
-          : isDefault
-          ? DEFAULT_EO_EVENT.eventOrganizer
-          : 'EO Esai',
-      sumber: source?.sumber || 'Kerjasama Event Organizer',
-      status: resolvedStatus,
-      posterUrl: source?.posterUrl || DEFAULT_POSTER_URL,
-      deskripsiSingkat:
-        source?.deskripsiSingkat && source.deskripsiSingkat !== '-'
-          ? source.deskripsiSingkat
-          : isDefault
-          ? DEFAULT_EO_EVENT.deskripsiSingkat
-          : `Informasi dan panduan denah resmi untuk kegiatan ${title}.`,
-      denahList: resolvedDenah
-    }
-  })
-
-  const [eventStatus, setEventStatus] = useState(() =>
-    mapStatusToInternal(resolvedSource.status)
-  )
+  const [eventData, setEventData] = useState(null)
+  const [denahList, setDenahList] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [errorMsg, setErrorMsg] = useState('')
+  const [eventStatus, setEventStatus] = useState('draft')
   const [warningDenahId, setWarningDenahId] = useState(null)
 
-  const eventInfo = {
-    id: resolvedSource.id,
-    namaEvent: resolvedSource.namaEvent,
-    tanggalEvent: resolvedSource.tanggalEvent,
-    lokasiEvent: resolvedSource.lokasiEvent,
-    jenisEvent: resolvedSource.jenisEvent,
-    eventOrganizer: resolvedSource.eventOrganizer,
-    sumber: resolvedSource.sumber,
-    posterUrl: resolvedSource.posterUrl,
-    deskripsiSingkat: resolvedSource.deskripsiSingkat
-  }
+  useEffect(() => {
+    let cancelled = false
+    const navState = location.state || {}
+    const requestedId =
+      navState.eventId || navState.id_event || navState.eventData?.id_event || navState.eventData?.id
 
-  const [denahList, setDenahList] = useState(resolvedSource.denahList)
+    const loadDetail = async () => {
+      setIsLoading(true)
+      setErrorMsg('')
+      try {
+        let ev = null
 
-  const buildTagsForBadge = (badgeStatus) => {
-    const tags = [{ label: 'Kerjasama Event Organizer', color: '#00bcd4' }]
-    if (eventInfo.jenisEvent === 'Event Indoor') {
-      tags.push({ label: 'Event Indoor', color: '#f87171' })
-    } else if (eventInfo.jenisEvent === 'Event Outdoor') {
-      tags.push({ label: 'Event Outdoor', color: '#38bdf8' })
-    } else {
-      tags.push({ label: 'Event Outdoor', color: '#38bdf8' })
-      tags.push({ label: 'Event Indoor', color: '#f87171' })
-    }
-    tags.push({ label: badgeStatus, color: '#312e81' })
-    return tags
-  }
+        if (requestedId) {
+          const resEv = await fetch(`${API_BASE}/api/events/${requestedId}`, {
+            headers: getAuthHeaders()
+          })
+          if (resEv.ok) ev = await resEv.json()
+        }
 
-  const buildFullEventPayload = (overrideBadgeStatus) => {
-    const badgeStatus = overrideBadgeStatus || mapInternalToBadgeStatus(eventStatus)
-    return {
-      ...eventInfo,
-      title: eventInfo.namaEvent,
-      dateRange: eventInfo.tanggalEvent,
-      eventDate: eventInfo.tanggalEvent,
-      status: badgeStatus,
-      tags: buildTagsForBadge(badgeStatus),
-      denahList
-    }
-  }
-
-  const syncEOStorage = (nextInternalStatus, nextDenahList = denahList) => {
-    const nextBadgeStatus = mapInternalToBadgeStatus(nextInternalStatus)
-    try {
-      const savedList = JSON.parse(localStorage.getItem('festnav_eo_events') || '[]')
-      if (Array.isArray(savedList) && savedList.length > 0) {
-        const updatedList = savedList.map((item) => {
-          if (item.id !== eventInfo.id && item.title !== eventInfo.namaEvent) {
-            return item
+        if (!ev) {
+          const resList = await fetch(`${API_BASE}/api/events?mine_only=true`, {
+            headers: getAuthHeaders()
+          })
+          if (!resList.ok) throw new Error('Gagal memuat daftar event EO')
+          const myEvents = await resList.json()
+          if (!myEvents.length) {
+            throw new Error('Belum ada data event milik Anda di database.')
           }
+          ev =
+            (navState.eventTitle &&
+              myEvents.find((item) => item.nama_event === navState.eventTitle)) ||
+            myEvents[0]
+        }
 
-          const existingTags = Array.isArray(item.tags) ? item.tags : []
-          const hasStatusTag = existingTags.some((t) =>
-            STATUS_BADGE_LABELS.includes(t.label)
-          )
-          const updatedTags = hasStatusTag
-            ? existingTags.map((t) =>
-                STATUS_BADGE_LABELS.includes(t.label)
-                  ? { ...t, label: nextBadgeStatus, color: '#312e81' }
-                  : t
-              )
-            : [...existingTags, { label: nextBadgeStatus, color: '#312e81' }]
-
-          return {
-            ...item,
-            status: nextBadgeStatus,
-            tags: updatedTags,
-            denahList: nextDenahList
-          }
+        const resMaps = await fetch(`${API_BASE}/api/maps/event/${ev.id_event}`, {
+          headers: getAuthHeaders()
         })
-        localStorage.setItem('festnav_eo_events', JSON.stringify(updatedList))
-      }
-    } catch (err) {
-      console.error('Gagal menyinkronkan status event EO:', err)
-    }
-  }
+        const maps = resMaps.ok ? await resMaps.json() : []
 
-  // Kirim entry request validasi ke Admin (festnav_validation_requests)
-  const pushValidationToAdmin = (requestTitle, requestType = 'event', denahObj = null) => {
-    try {
-      const existingValidations = JSON.parse(
-        localStorage.getItem(VALIDATION_STORAGE_KEY) || '[]'
-      )
+        if (cancelled) return
 
-      const newRequest = {
-        id: Date.now(),
-        eventId: eventInfo.id,
-        denahId: denahObj?.id || null,
-        requestType,
-        eoName: eventInfo.eventOrganizer || 'EO Esai',
-        title: requestTitle,
-        tags: buildTagsForBadge('Menunggu Publish'),
-        requestTime: formatCurrentWitaTime(),
-        eventDate: eventInfo.tanggalEvent,
-        adminStatus: 'pending',
-        status: 'Menunggu Verifikasi',
-        isModifiedByEO: false,
-        rejectionMessage: '',
-        eventData: buildFullEventPayload('Menunggu Publish')
-      }
-
-      const filteredOld = Array.isArray(existingValidations)
-        ? existingValidations.filter(
-            (req) =>
-              !(
-                req.title === requestTitle &&
-                (req.adminStatus === 'pending' || req.status === 'Menunggu Verifikasi')
-              )
-          )
-        : []
-
-      localStorage.setItem(
-        VALIDATION_STORAGE_KEY,
-        JSON.stringify([newRequest, ...filteredOld])
-      )
-    } catch (err) {
-      console.error('Gagal mengirim request validasi ke admin:', err)
-    }
-  }
-
-  // --- HANDLER PUBLISH EVENT UTAMA ---
-  const handleRequestPublishEvent = () => {
-    setEventStatus('pending')
-    setWarningDenahId(null)
-    syncEOStorage('pending', denahList)
-    pushValidationToAdmin(`${eventInfo.namaEvent} (Event)`, 'event')
-  }
-
-  const handleCancelPublishEvent = () => {
-    setEventStatus('draft')
-    const resetDenah = denahList.map((item) =>
-      item.status === 'pending' ? { ...item, status: 'draft' } : item
-    )
-    setDenahList(resetDenah)
-    syncEOStorage('draft', resetDenah)
-
-    // Hapus request yang masih pending untuk event ini
-    try {
-      const existingValidations = JSON.parse(
-        localStorage.getItem(VALIDATION_STORAGE_KEY) || '[]'
-      )
-      if (Array.isArray(existingValidations)) {
-        const cleaned = existingValidations.filter(
-          (req) =>
-            !(
-              req.eventId === eventInfo.id &&
-              (req.adminStatus === 'pending' || req.status === 'Menunggu Verifikasi')
-            )
+        setEventData(ev)
+        setEventStatus(ev.is_locked ? 'pending' : ev.status_event || 'draft')
+        setDenahList(
+          maps.map((m, idx) => ({
+            id: m.id_map,
+            id_map: m.id_map,
+            namaDenah: m.nama_map,
+            status: m.status_map,
+            imageUrl:
+              m.gambar_layout ||
+              DEFAULT_DENAH_IMAGES[idx % DEFAULT_DENAH_IMAGES.length],
+            rawMap: m
+          }))
         )
-        localStorage.setItem(VALIDATION_STORAGE_KEY, JSON.stringify(cleaned))
+      } catch (err) {
+        if (!cancelled) setErrorMsg(err.message || 'Gagal memuat detail event')
+      } finally {
+        if (!cancelled) setIsLoading(false)
       }
+    }
+
+    loadDetail()
+    return () => {
+      cancelled = true
+    }
+  }, [location.state])
+
+  const handleCreateFirstMap = async () => {
+    if (!eventData) return
+    try {
+      const res = await fetch(`${API_BASE}/api/maps`, {
+        method: 'POST',
+        headers: getAuthHeaders(true),
+        body: JSON.stringify({
+          id_event: eventData.id_event,
+          nama_map: `Denah Utama - ${eventData.nama_event}`,
+          tipe_map: eventData.tipe_lokasi === 'indoor' ? 'indoor' : 'outdoor',
+          is_utama: true,
+          garis_lintang_pusat: eventData.garis_lintang ?? -8.6724,
+          garis_bujur_pusat: eventData.garis_bujur ?? 115.2362
+        })
+      })
+      const created = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(created.detail || 'Gagal membuat denah peta baru')
+
+      setDenahList((prev) => [
+        ...prev,
+        {
+          id: created.id_map,
+          id_map: created.id_map,
+          namaDenah: created.nama_map,
+          status: created.status_map,
+          imageUrl: created.gambar_layout || DEFAULT_DENAH_IMAGES[0],
+          rawMap: created
+        }
+      ])
+    } catch (err) {
+      alert(err.message)
+    }
+  }
+
+  const handleRequestPublishDenah = (idMap) => {
+    if (eventStatus === 'draft') {
+      setWarningDenahId((prev) => (prev === idMap ? null : idMap))
+      return
+    }
+    setWarningDenahId(null)
+    setDenahList((prev) =>
+      prev.map((item) => (item.id_map === idMap ? { ...item, status: 'pending' } : item))
+    )
+  }
+
+  const openMapEditor = (denah) => {
+    const editorPayload = {
+      role: 'eo',
+      eventId: eventData.id_event,
+      id_event: eventData.id_event,
+      id_map: denah.id_map,
+      eventTitle: eventData.nama_event,
+      selectedDenah: { ...denah, title: denah.namaDenah },
+      eventData,
+      denah
+    }
+    try {
+      sessionStorage.setItem('festnav_editor_ctx', JSON.stringify(editorPayload))
     } catch {
       // Abaikan
     }
-  }
-
-  // --- HANDLER PUBLISH DENAH / PETA ---
-  const handleRequestPublishDenah = (denahId) => {
-    if (eventStatus === 'draft') {
-      setWarningDenahId((prev) => (prev === denahId ? null : denahId))
-      return
-    }
-
-    setWarningDenahId(null)
-    const targetDenah = denahList.find((d) => d.id === denahId)
-    const updatedDenah = denahList.map((item) =>
-      item.id === denahId ? { ...item, status: 'pending' } : item
-    )
-    setDenahList(updatedDenah)
-    syncEOStorage(eventStatus, updatedDenah)
-
-    if (targetDenah) {
-      pushValidationToAdmin(
-        `${eventInfo.namaEvent} (Denah: ${targetDenah.namaDenah})`,
-        'denah',
-        targetDenah
-      )
-    }
-  }
-
-  const handleCancelPublishDenah = (denahId) => {
-    const updatedDenah = denahList.map((item) =>
-      item.id === denahId ? { ...item, status: 'draft' } : item
-    )
-    setDenahList(updatedDenah)
-    syncEOStorage(eventStatus, updatedDenah)
+    navigate('/map-editor', { state: editorPayload })
   }
 
   const getStatusLabel = () => {
@@ -388,211 +197,220 @@ function DetailEventEO() {
       </div>
 
       <main className="detail-eo-content">
-        <div className="demo-simulator-bar">
-          <span className="demo-label">Status Event:</span>
-          <span className="demo-pill active" style={{ cursor: 'default' }}>
-            {getStatusLabel()}
-          </span>
-        </div>
-
-        <div className="event-top-header">
-          <h2 className="event-main-title">{eventInfo.namaEvent}</h2>
-
-          {eventStatus === 'pending' ? (
-            <button
-              type="button"
-              className="btn-red-action"
-              onClick={handleCancelPublishEvent}
-            >
-              Batalkan Request Publish
+        {isLoading ? (
+          <div className="detail-eo-card" style={{ textAlign: 'center', padding: '48px' }}>
+            Memuat detail event dari database...
+          </div>
+        ) : errorMsg || !eventData ? (
+          <div className="detail-eo-card" style={{ textAlign: 'center', padding: '48px' }}>
+            <p style={{ color: '#b91c1c', marginBottom: 16 }}>{errorMsg || 'Event tidak ditemukan'}</p>
+            <button type="button" className="btn-cyan-footer" onClick={() => navigate('/daftar-event-eo')}>
+              Kembali ke Daftar Event
             </button>
-          ) : (
-            <button
-              type="button"
-              className="btn-cyan-edit"
-              onClick={() =>
-                navigate('/edit-event', {
-                  state: { eventData: buildFullEventPayload(), role: 'eo' }
-                })
-              }
-            >
-              Edit Detail
-            </button>
-          )}
-        </div>
-
-        <div className="detail-eo-card">
-          <div className="detail-top-grid">
-            <div className="poster-box">
-              <img
-                src={eventInfo.posterUrl}
-                alt={eventInfo.namaEvent}
-                className="event-poster-img"
-              />
+          </div>
+        ) : (
+          <>
+            <div className="demo-simulator-bar">
+              <span className="demo-label">Status Event:</span>
+              <span className="demo-pill active" style={{ cursor: 'default' }}>
+                {getStatusLabel()}
+              </span>
             </div>
 
-            <div className="metadata-list">
-              <p>
-                <strong>Nama Event:</strong> {eventInfo.namaEvent}
-              </p>
-              <p>
-                <strong>Tanggal Event:</strong> {eventInfo.tanggalEvent}
-              </p>
-              <p>
-                <strong>Lokasi Event:</strong> {eventInfo.lokasiEvent}
-              </p>
-              <p>
-                <strong>Jenis Event:</strong> {eventInfo.jenisEvent}
-              </p>
-              <p>
-                <strong>Event Organizer:</strong> {eventInfo.eventOrganizer}
-              </p>
-              <p>
-                <strong>Sumber:</strong> {eventInfo.sumber}
-              </p>
-              <p>
-                <strong>Status:</strong> {getStatusLabel()}
-              </p>
+            <div className="event-top-header">
+              <h2 className="event-main-title">{eventData.nama_event}</h2>
+              {eventStatus === 'pending' ? (
+                <button
+                  type="button"
+                  className="btn-red-action"
+                  onClick={() => setEventStatus('draft')}
+                >
+                  Batalkan Request Publish
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="btn-cyan-edit"
+                  onClick={() =>
+                    navigate('/edit-event', {
+                      state: { eventId: eventData.id_event, eventData, role: 'eo' }
+                    })
+                  }
+                >
+                  Edit Detail
+                </button>
+              )}
+            </div>
 
-              <div className="deskripsi-block">
-                <strong>Deskripsi Singkat:</strong>
-                <p className="deskripsi-text">{eventInfo.deskripsiSingkat}</p>
+            <div className="detail-eo-card">
+              <div className="detail-top-grid">
+                <div className="poster-box">
+                  <img
+                    src={eventData.poster_url || DEFAULT_POSTER_URL}
+                    alt={eventData.nama_event}
+                    className="event-poster-img"
+                  />
+                </div>
+
+                <div className="metadata-list">
+                  <p>
+                    <strong>Nama Event:</strong> {eventData.nama_event}
+                  </p>
+                  <p>
+                    <strong>Tanggal Event:</strong>{' '}
+                    {formatDateRange(eventData.tanggal_mulai, eventData.tanggal_selesai)}
+                  </p>
+                  <p>
+                    <strong>Lokasi Event:</strong> {eventData.lokasi || '-'}
+                  </p>
+                  <p>
+                    <strong>Jenis Event:</strong> {eventData.jenis_event || '-'}
+                  </p>
+                  <p>
+                    <strong>Event Organizer:</strong> {eventData.nama_organizer || '-'}
+                  </p>
+                  <p>
+                    <strong>Sumber:</strong>{' '}
+                    {eventData.sumber === 'scraping' ? 'Hasil Scrapping' : 'Kerjasama Event Organizer'}
+                  </p>
+                  <p>
+                    <strong>Status:</strong> {getStatusLabel()}
+                  </p>
+
+                  <div className="deskripsi-block">
+                    <strong>Deskripsi Singkat:</strong>
+                    <p className="deskripsi-text">{eventData.deskripsi || '-'}</p>
+                  </div>
+                </div>
+              </div>
+
+              <hr className="detail-divider" />
+
+              <div className="denah-acara-section">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                  <h2 className="denah-section-heading" style={{ margin: 0 }}>Denah Acara</h2>
+                  <button type="button" className="btn-cyan-denah" onClick={handleCreateFirstMap}>
+                    + Tambah Denah Peta
+                  </button>
+                </div>
+
+                {denahList.length === 0 ? (
+                  <p style={{ color: '#64748b' }}>
+                    Event ini belum memiliki denah peta. Klik <strong>+ Tambah Denah Peta</strong> di atas untuk membuat peta baru.
+                  </p>
+                ) : (
+                  denahList.map((denah) => {
+                    const isDenahPending = denah.status === 'pending'
+                    const showWarning = warningDenahId === denah.id_map
+
+                    return (
+                      <div key={denah.id_map} className="denah-item-wrapper">
+                        <div className="denah-title-row">
+                          <h3 className="denah-item-name">{denah.namaDenah}</h3>
+                          {isDenahPending && (
+                            <button
+                              type="button"
+                              className="btn-red-action"
+                              onClick={() =>
+                                setDenahList((prev) =>
+                                  prev.map((item) =>
+                                    item.id_map === denah.id_map ? { ...item, status: 'draft' } : item
+                                  )
+                                )
+                              }
+                            >
+                              Batalkan Request Publish
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="denah-image-frame">
+                          <img
+                            src={denah.imageUrl}
+                            alt={denah.namaDenah}
+                            className="denah-map-img"
+                          />
+                        </div>
+
+                        {isDenahPending ? (
+                          <div className="waiting-verification-bar">
+                            Mohon ditunggu sampai admin memverifikasi permintaan
+                          </div>
+                        ) : (
+                          <>
+                            <div className="denah-btn-row">
+                              <button
+                                type="button"
+                                className="btn-cyan-denah"
+                                onClick={() => handleRequestPublishDenah(denah.id_map)}
+                              >
+                                Kirim Request Publish
+                              </button>
+                              <button
+                                type="button"
+                                className="btn-cyan-denah"
+                                onClick={() => openMapEditor(denah)}
+                              >
+                                Buka Map Editor
+                              </button>
+                            </div>
+
+                            {showWarning && (
+                              <div className="warning-dropdown-box">
+                                <div className="warning-dropdown-content">
+                                  <span>
+                                    <strong>Peta belum dapat dipublish!</strong> Ajukan request
+                                    publish pada event utama terlebih dahulu sebelum mengajukan
+                                    publish peta.
+                                  </span>
+                                </div>
+                                <button
+                                  type="button"
+                                  className="warning-close-btn"
+                                  onClick={() => setWarningDenahId(null)}
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    )
+                  })
+                )}
               </div>
             </div>
-          </div>
 
-          <hr className="detail-divider" />
-
-          <div className="denah-acara-section">
-            <h2 className="denah-section-heading">Denah Acara</h2>
-
-            {denahList.map((denah) => {
-              const isDenahPending = denah.status === 'pending'
-              const showWarning = warningDenahId === denah.id
-
-              return (
-                <div key={denah.id} className="denah-item-wrapper">
-                  <div className="denah-title-row">
-                    <h3 className="denah-item-name">{denah.namaDenah}</h3>
-
-                    {isDenahPending && (
-                      <button
-                        type="button"
-                        className="btn-red-action"
-                        onClick={() => handleCancelPublishDenah(denah.id)}
-                      >
-                        Batalkan Request Publish
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="denah-image-frame">
-                    <img
-                      src={denah.imageUrl}
-                      alt={denah.namaDenah}
-                      className="denah-map-img"
-                    />
-                  </div>
-
-                  {isDenahPending ? (
-                    <div className="waiting-verification-bar">
-                      Mohon ditunggu sampai admin memverifikasi permintaan
-                    </div>
-                  ) : (
-                    <>
-                      <div className="denah-btn-row">
-                        <button
-                          type="button"
-                          className="btn-cyan-denah"
-                          onClick={() => handleRequestPublishDenah(denah.id)}
-                        >
-                          Kirim Request Publish
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-cyan-denah"
-                          onClick={() =>
-                            navigate('/map-editor', {
-                              state: {
-                                role: 'eo',
-                                eventId: eventInfo.id,
-                                eventTitle: eventInfo.namaEvent,
-                                selectedDenah: { ...denah, title: denah.namaDenah },
-                                eventData: buildFullEventPayload(),
-                                denah
-                              }
-                            })
-                          }
-                        >
-                          Buka Map Editor
-                        </button>
-                      </div>
-
-                      {showWarning && (
-                        <div className="warning-dropdown-box">
-                          <div className="warning-dropdown-content">
-                            <svg
-                              width="20"
-                              height="20"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="#b91c1c"
-                              strokeWidth="2.2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            >
-                              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-                              <line x1="12" y1="9" x2="12" y2="13"></line>
-                              <line x1="12" y1="17" x2="12.01" y2="17"></line>
-                            </svg>
-                            <span>
-                              <strong>Peta belum dapat dipublish!</strong> Ajukan request
-                              publish pada event utama terlebih dahulu sebelum mengajukan
-                              publish peta.
-                            </span>
-                          </div>
-                          <button
-                            type="button"
-                            className="warning-close-btn"
-                            onClick={() => setWarningDenahId(null)}
-                            title="Tutup peringatan"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      )}
-                    </>
-                  )}
+            <div className="detail-eo-footer">
+              {eventStatus === 'pending' ? (
+                <div className="waiting-verification-bar full-footer-bar">
+                  Mohon ditunggu sampai admin memverifikasi permintaan
                 </div>
-              )
-            })}
-          </div>
-        </div>
-
-        <div className="detail-eo-footer">
-          {eventStatus === 'pending' ? (
-            <div className="waiting-verification-bar full-footer-bar">
-              Mohon ditunggu sampai admin memverifikasi permintaan
+              ) : (
+                <div className="footer-dual-buttons">
+                  <button
+                    type="button"
+                    className="btn-cyan-footer"
+                    onClick={() => {
+                      setEventStatus('pending')
+                      setWarningDenahId(null)
+                    }}
+                  >
+                    Kirim Request Publish Event
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-cyan-footer"
+                    onClick={() => navigate('/daftar-event-eo')}
+                  >
+                    Tutup
+                  </button>
+                </div>
+              )}
             </div>
-          ) : (
-            <div className="footer-dual-buttons">
-              <button
-                type="button"
-                className="btn-cyan-footer"
-                onClick={handleRequestPublishEvent}
-              >
-                Kirim Request Publish Event
-              </button>
-              <button
-                type="button"
-                className="btn-cyan-footer"
-                onClick={() => navigate('/daftar-event-eo')}
-              >
-                Tutup
-              </button>
-            </div>
-          )}
-        </div>
+          </>
+        )}
       </main>
     </div>
   )
