@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:background="#FFFFFF"
+    tools:context=".Masuk">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingBottom="50dp">
+
+        <!-- Latar Belakang Gambar Masuk -->
+        <ImageView
+            android:id="@+id/imgBackgroundMasuk"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:adjustViewBounds="true"
+            android:scaleType="fitXY"
+            android:src="@drawable/masuk"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <!-- Input Email / Username -->
+        <EditText
+            android:id="@+id/etEmailMasuk"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="28dp"
+            android:layout_marginEnd="28dp"
+            android:layout_marginTop="470dp"
+            android:background="#FFFFFF"
+            android:hint="Masukkan email atau username"
+            android:paddingStart="14dp"
+            android:paddingEnd="14dp"
+            android:textColor="#000000"
+            android:textColorHint="#9CA3AF"
+            android:textSize="14sp"
+            app:layout_constraintTop_toTopOf="@id/imgBackgroundMasuk"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <!-- Input Password -->
+        <EditText
+            android:id="@+id/etPasswordMasuk"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="28dp"
+            android:layout_marginEnd="28dp"
+            android:layout_marginTop="590dp"
+            android:background="#FFFFFF"
+            android:hint="Masukkan password"
+            android:inputType="textPassword"
+            android:paddingStart="14dp"
+            android:paddingEnd="14dp"
+            android:textColor="#000000"
+            android:textColorHint="#9CA3AF"
+            android:textSize="14sp"
+            app:layout_constraintTop_toTopOf="@id/imgBackgroundMasuk"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <!-- Tombol Lupa Sandi -->
+        <View
+            android:id="@+id/btnLupaSandi"
+            android:layout_width="120dp"
+            android:layout_height="30dp"
+            android:layout_marginTop="670dp"
+            android:layout_marginEnd="28dp"
+            android:background="@android:color/transparent"
+            app:layout_constraintTop_toTopOf="@id/imgBackgroundMasuk"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <!-- Tombol Masuk Aksi (Ungu) -->
+        <Button
+            android:id="@+id/btnMasukAksi"
+            android:layout_width="0dp"
+            android:layout_height="54dp"
+            android:layout_marginStart="28dp"
+            android:layout_marginEnd="28dp"
+            android:layout_marginTop="720dp"
+            android:backgroundTint="#6D28D9"
+            android:text="Masuk"
+            android:textAllCaps="false"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            app:layout_constraintTop_toTopOf="@id/imgBackgroundMasuk"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <!-- Tombol Tab Pindah ke Halaman Daftar -->
+        <View
+            android:id="@+id/btnTabDaftar"
+            android:layout_width="140dp"
+            android:layout_height="45dp"
+            android:layout_marginTop="800dp"
+            android:background="@android:color/transparent"
+            app:layout_constraintTop_toTopOf="@id/imgBackgroundMasuk"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</ScrollView>

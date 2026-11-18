@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:scrollbars="vertical"
+    android:background="#FFFFFF"
+    tools:context=".LupaSandi">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingBottom="40dp">
+
+        <!-- Latar Belakang Gambar Lupa Sandi -->
+        <ImageView
+            android:id="@+id/imgBackgroundLupaSandi"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:adjustViewBounds="true"
+            android:scaleType="fitXY"
+            android:src="@drawable/lupasandi"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <!-- Tombol Panah Kembali (<) di Pojok Kiri Atas -->
+        <View
+            android:id="@+id/btnKembali"
+            android:layout_width="45dp"
+            android:layout_height="45dp"
+            android:layout_marginStart="24dp"
+            android:layout_marginTop="24dp"
+            android:background="@android:color/transparent"
+            app:layout_constraintTop_toTopOf="@id/imgBackgroundLupaSandi"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <!-- Input Email Lupa Sandi -->
+        <EditText
+            android:id="@+id/etEmailLupaSandi"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
+            android:layout_marginStart="28dp"
+            android:layout_marginEnd="28dp"
+            android:layout_marginTop="540dp"
+            android:background="#FFFFFF"
+            android:hint="nama@gmail.com"
+            android:inputType="textEmailAddress"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:textColor="#000000"
+            android:textColorHint="#9CA3AF"
+            android:textSize="14sp"
+            app:layout_constraintTop_toTopOf="@id/imgBackgroundLupaSandi"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <!-- Tombol Kirim Tautan Reset -->
+        <Button
+            android:id="@+id/btnKirimReset"
+            android:layout_width="0dp"
+            android:layout_height="54dp"
+            android:layout_marginStart="28dp"
+            android:layout_marginEnd="28dp"
+            android:layout_marginTop="620dp"
+            android:backgroundTint="#6D28D9"
+            android:text="Kirim tautan reset"
+            android:textAllCaps="false"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            app:layout_constraintTop_toTopOf="@id/imgBackgroundLupaSandi"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <!-- Area Klik Teks "Ingat kata sandimu? Masuk" di Bawah -->
+        <View
+            android:id="@+id/btnKembaliMasuk"
+            android:layout_width="220dp"
+            android:layout_height="40dp"
+            android:layout_marginTop="700dp"
+            android:background="@android:color/transparent"
+            app:layout_constraintTop_toTopOf="@id/imgBackgroundLupaSandi"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</ScrollView>
