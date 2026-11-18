@@ -9,17 +9,21 @@ import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+
 public class Masuk extends AppCompatActivity {
 
     private EditText etEmailMasuk, etPasswordMasuk;
-    private DatabaseHelper dbHelper;
+    private FirebaseAuth mAuth;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_masuk);
 
-        dbHelper = new DatabaseHelper(this);
+        // Inisialisasi Firebase Auth
+        mAuth = FirebaseAuth.getInstance();
 
         // Menyesuaikan ID dengan XML layout activity_masuk.xml
         etEmailMasuk = findViewById(R.id.etEmailMasuk);
@@ -31,40 +35,47 @@ public class Masuk extends AppCompatActivity {
         // Tombol Masuk diklik
         if (btnMasukAksi != null) {
             btnMasukAksi.setOnClickListener(v -> {
-                String inputUser = etEmailMasuk.getText().toString().trim();
+                String emailInput = etEmailMasuk.getText().toString().trim();
                 String passwordInput = etPasswordMasuk.getText().toString().trim();
 
-                if (inputUser.isEmpty() || passwordInput.isEmpty()) {
-                    Toast.makeText(this, "Email/Username dan Password harus diisi!", Toast.LENGTH_SHORT).show();
+                if (emailInput.isEmpty() || passwordInput.isEmpty()) {
+                    Toast.makeText(this, "Email dan Password harus diisi!", Toast.LENGTH_SHORT).show();
                     return;
                 }
 
-                // Cek kredensial menggunakan method checkUser di DatabaseHelper
-                boolean isValid = dbHelper.checkUser(inputUser, passwordInput);
+                // Autentikasi langsung ke server online Firebase Auth
+                mAuth.signInWithEmailAndPassword(emailInput, passwordInput)
+                        .addOnCompleteListener(this, task -> {
+                            if (task.isSuccessful()) {
+                                // Ambil data user yang sedang login dari Firebase
+                                FirebaseUser currentUser = mAuth.getCurrentUser();
+                                if (currentUser != null) {
+                                    String userEmail = currentUser.getEmail();
+                                    String displayName = currentUser.getDisplayName();
+                                    if (displayName == null || displayName.isEmpty()) {
+                                        displayName = "Pengunjung";
+                                    }
 
-                if (isValid) {
-                    // Ambil data lengkap user menggunakan getUserData untuk SharedPreferences
-                    DatabaseHelper.UserData userData = dbHelper.getUserData(inputUser);
+                                    // Simpan ke SharedPreferences lokal untuk ditampilkan di profil/dashboard
+                                    SharedPreferences.Editor editor = getSharedPreferences("FestNavPrefs", MODE_PRIVATE).edit();
+                                    editor.putString("display_name", displayName);
+                                    editor.putString("email", userEmail);
+                                    editor.apply();
+                                }
 
-                    if (userData != null) {
-                        SharedPreferences.Editor editor = getSharedPreferences("FestNavPrefs", MODE_PRIVATE).edit();
-                        editor.putString("display_name", userData.displayName);
-                        editor.putString("username", userData.username);
-                        editor.putString("email", userData.email);
-                        editor.putString("telepon", userData.telepon);
-                        editor.apply();
-                    }
+                                Toast.makeText(this, "Login Berhasil!", Toast.LENGTH_SHORT).show();
 
-                    Toast.makeText(this, "Login Berhasil!", Toast.LENGTH_SHORT).show();
-
-                    // Pindah ke Dashboard dan bersihkan stack activity
-                    Intent intent = new Intent(Masuk.this, Dashboard.class);
-                    intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                    startActivity(intent);
-                    finish();
-                } else {
-                    Toast.makeText(this, "Email/Username atau Kata Sandi salah!", Toast.LENGTH_SHORT).show();
-                }
+                                // Pindah ke Dashboard dan bersihkan stack activity
+                                Intent intent = new Intent(Masuk.this, Dashboard.class);
+                                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                                startActivity(intent);
+                                finish();
+                            } else {
+                                // Jika password salah atau gagal login
+                                String errorMsg = task.getException() != null ? task.getException().getMessage() : "Gagal masuk";
+                                Toast.makeText(this, "Login Gagal: " + errorMsg, Toast.LENGTH_LONG).show();
+                            }
+                        });
             });
         }
 
