@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "353924576237",
+    "project_id": "festnav-ea869",
+    "storage_bucket": "festnav-ea869.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:353924576237:android:ced6f5a254d8bdf5bf2de4",
+        "android_client_info": {
+          "package_name": "com.example.festnav"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAPrGj8j9-hBedhg9yCXdPmUlzqom62h6s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

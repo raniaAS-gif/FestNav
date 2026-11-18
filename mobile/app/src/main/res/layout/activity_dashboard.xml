@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:scrollbars="vertical"
+    android:background="#FFFFFF"
+    tools:context=".Dashboard">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingBottom="80dp">
+
+        <!-- Latar Belakang Gambar Dashboard -->
+        <ImageView
+            android:id="@+id/imgBackgroundDashboard"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:adjustViewBounds="true"
+            android:scaleType="fitXY"
+            android:src="@drawable/dashboard"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <!-- 1. Kolom Pencarian (Bisa Diketik) -->
+        <EditText
+            android:id="@+id/etSearchDashboard"
+            android:layout_width="0dp"
+            android:layout_height="45dp"
+            android:layout_marginStart="28dp"
+            android:layout_marginEnd="28dp"
+            android:layout_marginTop="180dp"
+            android:background="@android:color/transparent"
+            android:hint="Temukan eventmu sekarang!"
+            android:paddingStart="36dp"
+            android:paddingEnd="16dp"
+            android:textColor="#000000"
+            android:textColorHint="#9CA3AF"
+            android:textSize="13sp"
+            app:layout_constraintTop_toTopOf="@id/imgBackgroundDashboard"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <!-- 2. Tombol Kartu Pertama: "Kunjungi event favoritmu" -> Membuka DetailEvent -->
+        <View
+            android:id="@+id/btnKunjungiFavorit"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="50dp"
+            android:layout_marginEnd="50dp"
+            android:layout_marginTop="250dp"
+            android:background="@android:color/transparent"
+            app:layout_constraintTop_toTopOf="@id/imgBackgroundDashboard"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <!-- 3. Tombol Kartu Kedua: "Jelajahi event disekitarmu" -->
+        <View
+            android:id="@+id/btnJelajahiEvent"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="50dp"
+            android:layout_marginEnd="50dp"
+            android:layout_marginTop="310dp"
+            android:background="@android:color/transparent"
+            app:layout_constraintTop_toTopOf="@id/imgBackgroundDashboard"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <!-- 4. Menu Navigasi Bawah (Event, Peta, Favorit, Profil) -->
+        <!-- Tombol Event -->
+        <View
+            android:id="@+id/navEvent"
+            android:layout_width="65dp"
+            android:layout_height="50dp"
+            android:layout_marginStart="30dp"
+            android:layout_marginTop="450dp"
+            android:background="@android:color/transparent"
+            app:layout_constraintTop_toTopOf="@id/imgBackgroundDashboard"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <!-- Tombol Peta -->
+        <View
+            android:id="@+id/navPeta"
+            android:layout_width="65dp"
+            android:layout_height="50dp"
+            android:layout_marginTop="450dp"
+            android:background="@android:color/transparent"
+            app:layout_constraintTop_toTopOf="@id/imgBackgroundDashboard"
+            app:layout_constraintStart_toEndOf="@id/navEvent"
+            app:layout_constraintEnd_toStartOf="@id/navFavorit" />
+
+        <!-- Tombol Favorit -> Membuka Favorit1 -->
+        <View
+            android:id="@+id/navFavorit"
+            android:layout_width="65dp"
+            android:layout_height="50dp"
+            android:layout_marginTop="450dp"
+            android:background="@android:color/transparent"
+            app:layout_constraintTop_toTopOf="@id/imgBackgroundDashboard"
+            app:layout_constraintStart_toEndOf="@id/navPeta"
+            app:layout_constraintEnd_toStartOf="@id/navProfil" />
+
+        <!-- Tombol Profil -> Membuka Profil -->
+        <View
+            android:id="@+id/navProfil"
+            android:layout_width="65dp"
+            android:layout_height="50dp"
+            android:layout_marginEnd="30dp"
+            android:layout_marginTop="450dp"
+            android:background="@android:color/transparent"
+            app:layout_constraintTop_toTopOf="@id/imgBackgroundDashboard"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</ScrollView>

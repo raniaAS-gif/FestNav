@@ -13,15 +13,15 @@ public class DenahIndoor extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_denah_indoor);
 
+        // Menggunakan Button karena di XML elemennya adalah <Button>
         Button btnLanjut = findViewById(R.id.btnLanjutDenah);
 
         if (btnLanjut != null) {
             btnLanjut.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    Intent intent = new Intent(DenahIndoor.this, MainActivity.class);
+                    Intent intent = new Intent(DenahIndoor.this, Masuk.class);
                     startActivity(intent);
-
                     overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
                 }
             });
