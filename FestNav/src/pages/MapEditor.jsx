@@ -5,7 +5,13 @@ import './MapEditor.css';
 import NavbarEditing from '../components/NavbarEditing';
 import KoordinatPetaBox from '../components/KoordinatPetaBox';
 
-const API_BASE = (typeof import.meta !== 'undefined' && import.meta.env.VITE_API_BASE_URL) || 'http://127.0.0.1:8000';
+const isLocal =
+  window.location.hostname === 'localhost' ||
+  window.location.hostname === '127.0.0.1'
+
+const API_BASE = isLocal
+  ? 'http://127.0.0.1:8000'
+  : 'https://festnav.onrender.com'
 
 const ABU = '#94a3b8';
 const AKSES = [['umum', 'Umum'], ['vip', 'VIP'], ['staf', 'Staf']]; // nilai CHECK rute.akses_penggunaan

@@ -4,9 +4,13 @@ import NavbarAdmin from '../components/NavbarAdmin'
 import NavbarEO from '../components/NavbarEO'
 import './ProfileAdmin.css'
 
-const API_BASE =
-  (typeof import.meta !== 'undefined' && import.meta.env.VITE_API_BASE_URL) ||
-  'http://127.0.0.1:8000'
+const isLocal =
+  window.location.hostname === 'localhost' ||
+  window.location.hostname === '127.0.0.1'
+
+const API_BASE = isLocal
+  ? 'http://127.0.0.1:8000'
+  : 'https://festnav.onrender.com'
 
 const MASKED_PASSWORD = '••••••••'
 

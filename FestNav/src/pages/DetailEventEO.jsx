@@ -3,9 +3,13 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import NavbarEO from '../components/NavbarEO'
 import './DetailEventEO.css'
 
-const API_BASE =
-  (typeof import.meta !== 'undefined' && import.meta.env.VITE_API_BASE_URL) ||
-  'http://127.0.0.1:8000'
+const isLocal =
+  window.location.hostname === 'localhost' ||
+  window.location.hostname === '127.0.0.1'
+
+const API_BASE = isLocal
+  ? 'http://127.0.0.1:8000'
+  : 'https://festnav.onrender.com'
 
 const DEFAULT_POSTER_URL =
   'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=600&q=80'

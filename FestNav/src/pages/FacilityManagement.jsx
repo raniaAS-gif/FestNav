@@ -4,9 +4,13 @@ import './common.css';
 import './FacilityManagement.css';
 import NavbarEditing from '../components/NavbarEditing';
 
-const API_BASE =
-  (typeof import.meta !== 'undefined' && import.meta.env.VITE_API_BASE_URL) ||
-  'http://127.0.0.1:8000';
+const isLocal =
+  window.location.hostname === 'localhost' ||
+  window.location.hostname === '127.0.0.1'
+
+const API_BASE = isLocal
+  ? 'http://127.0.0.1:8000'
+  : 'https://festnav.onrender.com'
 
 /* Pratinjau label pin. MIRIP aturan SQL inisial_label(); nilai resmi tetap dari database (kolom label_penanda).
    tiap kata -> huruf pertama, kata angka diambil utuh, nama satu kata -> 2 huruf, maksimal 4 karakter. */
