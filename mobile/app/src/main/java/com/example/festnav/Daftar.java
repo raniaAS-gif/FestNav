@@ -9,17 +9,22 @@ import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.auth.UserProfileChangeRequest;
+
 public class Daftar extends AppCompatActivity {
 
     private EditText etUsernameDaftar, etDisplayNameDaftar, etEmailDaftar, etTeleponDaftar, etPasswordDaftar, etKonfirmasiPasswordDaftar;
-    private DatabaseHelper dbHelper;
+    private FirebaseAuth mAuth;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_daftar);
 
-        dbHelper = new DatabaseHelper(this);
+        // Inisialisasi Firebase Auth
+        mAuth = FirebaseAuth.getInstance();
 
         etUsernameDaftar = findViewById(R.id.etUsernameDaftar);
         etDisplayNameDaftar = findViewById(R.id.etDisplayNameDaftar);
@@ -50,31 +55,47 @@ public class Daftar extends AppCompatActivity {
                     return;
                 }
 
-                if (dbHelper.checkUserExists(username) || dbHelper.checkUserExists(email)) {
-                    Toast.makeText(this, "Username atau Email sudah terdaftar!", Toast.LENGTH_SHORT).show();
+                if (password.length() < 6) {
+                    Toast.makeText(this, "Password minimal harus 6 karakter!", Toast.LENGTH_SHORT).show();
                     return;
                 }
 
-                // Menggunakan method insertUser sesuai DatabaseHelper
-                boolean insertSuccess = dbHelper.insertUser(username, displayName, email, telepon, password);
+                // Daftarkan akun baru langsung ke server Firebase Auth
+                mAuth.createUserWithEmailAndPassword(email, password)
+                        .addOnCompleteListener(this, task -> {
+                            if (task.isSuccessful()) {
+                                // Registrasi Berhasil di Firebase, ambil user yang baru dibuat
+                                FirebaseUser user = mAuth.getCurrentUser();
 
-                if (insertSuccess) {
-                    SharedPreferences.Editor editor = getSharedPreferences("FestNavPrefs", MODE_PRIVATE).edit();
-                    editor.putString("display_name", displayName);
-                    editor.putString("username", username);
-                    editor.putString("email", email);
-                    editor.putString("telepon", telepon);
-                    editor.apply();
+                                if (user != null) {
+                                    // Update Display Name di profil Firebase
+                                    UserProfileChangeRequest profileUpdates = new UserProfileChangeRequest.Builder()
+                                            .setDisplayName(displayName)
+                                            .build();
+                                    user.updateProfile(profileUpdates);
+                                }
 
-                    Toast.makeText(this, "Pendaftaran Berhasil!", Toast.LENGTH_SHORT).show();
+                                // Simpan data ke SharedPreferences lokal untuk preferensi tampilan
+                                SharedPreferences.Editor editor = getSharedPreferences("FestNavPrefs", MODE_PRIVATE).edit();
+                                editor.putString("display_name", displayName);
+                                editor.putString("username", username);
+                                editor.putString("email", email);
+                                editor.putString("telepon", telepon);
+                                editor.apply();
 
-                    Intent intent = new Intent(Daftar.this, Masuk.class);
-                    intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
-                    startActivity(intent);
-                    finish();
-                } else {
-                    Toast.makeText(this, "Pendaftaran Gagal!", Toast.LENGTH_SHORT).show();
-                }
+                                Toast.makeText(this, "Pendaftaran Berhasil!", Toast.LENGTH_SHORT).show();
+
+                                // Pindah ke halaman Masuk
+                                Intent intent = new Intent(Daftar.this, Masuk.class);
+                                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+                                startActivity(intent);
+                                finish();
+                            } else {
+                                // Jika gagal (misal email sudah terdaftar di server atau format salah)
+                                String errorMsg = task.getException() != null ? task.getException().getMessage() : "Pendaftaran Gagal";
+                                Toast.makeText(this, "Gagal: " + errorMsg, Toast.LENGTH_LONG).show();
+                            }
+                        });
             });
         }
 
