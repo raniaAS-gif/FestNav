@@ -4,7 +4,7 @@ import NavbarAdmin from '../components/NavbarAdmin'
 import './DetailEventAdmin.css'
 
 const API_BASE =
-  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
+  (typeof import.meta !== 'undefined' && import.meta.env.VITE_API_BASE_URL) ||
   'http://127.0.0.1:8000'
 
 const DEFAULT_POSTER_URL =

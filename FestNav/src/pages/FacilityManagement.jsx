@@ -5,7 +5,7 @@ import './FacilityManagement.css';
 import NavbarEditing from '../components/NavbarEditing';
 
 const API_BASE =
-  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
+  (typeof import.meta !== 'undefined' && import.meta.env.VITE_API_BASE_URL) ||
   'http://127.0.0.1:8000';
 
 /* Pratinjau label pin. MIRIP aturan SQL inisial_label(); nilai resmi tetap dari database (kolom label_penanda).

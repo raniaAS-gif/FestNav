@@ -5,9 +5,7 @@ import './MapEditor.css';
 import NavbarEditing from '../components/NavbarEditing';
 import KoordinatPetaBox from '../components/KoordinatPetaBox';
 
-/* Zona = bentuk (kolom fasilitas.bentuk). Pin muncul otomatis begitu zona dipilihkan fasilitasnya.
-   Nama, jenis, warna, deskripsi, dan label pin SEMUA datang dari fasilitas, bukan diketik di sini. */
-const API_BASE = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) || 'http://127.0.0.1:8000';
+const API_BASE = (typeof import.meta !== 'undefined' && import.meta.env.VITE_API_BASE_URL) || 'http://127.0.0.1:8000';
 
 const ABU = '#94a3b8';
 const AKSES = [['umum', 'Umum'], ['vip', 'VIP'], ['staf', 'Staf']]; // nilai CHECK rute.akses_penggunaan

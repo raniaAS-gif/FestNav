@@ -4,12 +4,9 @@ import './ScrapingMonitor.css';
 import NavbarScraping from '../components/NavbarScraping';
 
 const API_BASE =
-  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
+  (typeof import.meta !== 'undefined' && import.meta.env.VITE_API_BASE_URL) ||
   'http://127.0.0.1:8000';
 
-/* sumber_scraping: satu baris = satu job.
-   status_job    : antri | berjalan | selesai | gagal | dibatalkan   (diubah otomatis oleh backend/bot)
-   status_review : menunggu_review | disimpan | dibuang                (diubah admin di halaman Review) */
 const TAHAP = ['Membuka halaman', 'Mengambil teks', 'Mengunduh denah', 'Upload gambar', 'Geocoding', 'Selesai'];
 const STATUS_JOB = { antri: ['Antri', 'a'], berjalan: ['Berjalan', 'c'], selesai: ['Selesai', 'g'], gagal: ['Gagal', 'r'], dibatalkan: ['Dibatalkan', 'x'] };
 const STATUS_REVIEW = { menunggu_review: ['Menunggu Review', 'w'], disimpan: ['Disimpan', 'g'], dibuang: ['Dibuang', 'r'] };

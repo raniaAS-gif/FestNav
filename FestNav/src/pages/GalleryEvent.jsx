@@ -5,7 +5,7 @@ import './GalleryEvent.css';
 import NavbarEditing from '../components/NavbarEditing';
 
 const API_BASE =
-  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
+  (typeof import.meta !== 'undefined' && import.meta.env.VITE_API_BASE_URL) ||
   'http://127.0.0.1:8000';
 
 /* gambar_event: id_gambar, id_event, url_gambar, public_id, jenis_gambar, keterangan, waktu_diunggah
