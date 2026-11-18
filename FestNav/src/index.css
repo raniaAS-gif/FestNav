@@ -11,3 +11,9 @@ body {
   height: 100vh;
   overflow-x: hidden;
 }
+
+input,
+textarea,
+select {
+  color: #0f172a;
+}

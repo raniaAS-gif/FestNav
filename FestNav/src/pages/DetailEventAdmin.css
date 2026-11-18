@@ -1,10 +1,13 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap');
+
 .detail-container {
   min-height: 100vh;
-  width: 100vw;
-  background-color: #262768;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  width: 100%;
+  background: linear-gradient(180deg, #4338ca 0, #2e2688 60%);
+  color: #333333;
+  font-family: 'Inter', system-ui, sans-serif;
   box-sizing: border-box;
-  padding-bottom: 60px;
+  padding-bottom: 40px;
 }
 
 /* Utility Colors & Buttons */
@@ -110,33 +113,39 @@
 
 /* Hero Header */
 .detail-hero {
+  background-color: #1e293b;
   text-align: center;
-  padding: 30px 20px 15px 20px;
+  padding: 24px 24px 34px;
+  margin-bottom: 24px;
 }
 
 .hero-title {
-  font-size: 48px;
-  font-weight: 800;
-  color: #4355f5;
   margin: 0;
+  font: 800 clamp(40px, 8vw, 88px)/1 'Plus Jakarta Sans', sans-serif;
+  letter-spacing: -2px;
+  background: linear-gradient(180deg, #6366f1, #3730a3);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .hero-subtitle {
-  font-size: 26px;
-  font-weight: 700;
-  color: #4355f5;
-  margin-top: 5px;
+  margin: 4px 0 0 0;
+  font: 700 clamp(24px, 4vw, 46px) 'Plus Jakarta Sans', sans-serif;
+  background: linear-gradient(180deg, #6366f1, #3730a3);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 /* Content Wrapper */
 .detail-content {
-  max-width: 950px;
-  margin: 0 auto;
-  padding: 0 20px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0 18px;
   display: flex;
   flex-direction: column;
   gap: 20px;
-  box-sizing: border-box;
 }
 
 /* Main Event Title Bar */
@@ -335,4 +344,120 @@
   cursor: pointer;
   width: 60%;
   margin: 0 auto;
+}
+
+/* ========================================================= */
+/* OVERLAY MODAL STYLING (PUBLISH & UNPUBLISH)               */
+/* ========================================================= */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+.modal-card.success-modal {
+  background-color: #ffffff;
+  border-radius: 20px;
+  padding: 35px 30px;
+  width: 90%;
+  max-width: 480px;
+  text-align: center;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  box-sizing: border-box;
+}
+
+.success-icon-wrapper {
+  margin-bottom: 15px;
+  display: flex;
+  justify-content: center;
+}
+
+.success-message {
+  font-size: 22px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 25px 0;
+}
+
+.btn-modal.btn-kembali {
+  width: 60%;
+  margin: 0 auto;
+  padding: 10px 0;
+  border-radius: 20px;
+  border: none;
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
+  cursor: pointer;
+  background-color: #00bcd4;
+  transition: background-color 0.2s;
+  display: block;
+}
+
+.btn-modal.btn-kembali:hover {
+  background-color: #00a0b5;
+}
+
+/* ========================================================= */
+/* OVERLAY MODAL HAPUS EVENT (WARNING MODAL)                 */
+/* ========================================================= */
+.modal-card.warning-modal {
+  background-color: #ffffff;
+  border-radius: 20px;
+  padding: 30px 35px;
+  width: 90%;
+  max-width: 520px;
+  text-align: center;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  box-sizing: border-box;
+}
+
+.warning-title {
+  font-size: 26px;
+  font-weight: 800;
+  color: #000000;
+  margin: 0 0 8px 0;
+}
+
+.warning-subtitle {
+  font-size: 24px;
+  font-weight: 800;
+  color: #000000;
+  margin: 0 0 10px 0;
+}
+
+.warning-desc {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333333;
+  margin: 0 0 25px 0;
+}
+
+.modal-btn-row {
+  display: flex;
+  gap: 15px;
+}
+
+.btn-modal.btn-cyan-modal {
+  flex: 1;
+  padding: 10px 0;
+  border-radius: 20px;
+  border: none;
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
+  cursor: pointer;
+  background-color: #00bcd4;
+  transition: background-color 0.2s;
+}
+
+.btn-modal.btn-cyan-modal:hover {
+  background-color: #00a0b5;
 }

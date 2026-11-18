@@ -1,46 +1,53 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import './Login.css'
 
 function Login() {
-  const [role, setRole] = useState('admin') // 'admin' atau 'eo'
+  const navigate = useNavigate()
+
+  // State Role ('admin' atau 'eo')
+  const [role, setRole] = useState('eo')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
 
-  const handleSubmit = (e) => {
+  const handleLogin = (e) => {
     e.preventDefault()
-    console.log('Login sebagai:', role)
-    console.log('Username:', username)
-    console.log('Password:', password)
-    // Tambahkan logika autentikasi / API call Anda di sini
+
+    if (!username || !password) {
+      alert('Harap isi Username dan Password!')
+      return
+    }
+
+    // Simulasi redirect berdasarkan role yang dipilih
+    if (role === 'admin') {
+      console.log('Login sebagai Admin:', { username, password })
+      navigate('/dashboard')
+    } else {
+      console.log('Login sebagai Event Organizer:', { username, password })
+      navigate('/dashboard-eo')
+    }
   }
 
   return (
     <div className="login-container">
-      {/* Label kecil di pojok kiri atas */}
-      <span className="login-header-label">
-        Login {role === 'admin' ? 'Admin' : 'Event Organizer'}
-      </span>
+      <div className="login-box">
+        {/* Brand Title */}
+        <h1 className="login-brand">FestNav</h1>
+        <p className="login-subtitle">Festival Navigation</p>
 
-      <div className="login-card">
-        {/* Brand Logo / Title */}
-        <div className="brand-header">
-          <h1 className="brand-title">FestNav</h1>
-          <p className="brand-subtitle">Festival Navigation</p>
-        </div>
-
-        {/* Tab Switcher */}
-        <div className="role-toggle">
+        {/* Toggle Switch Admin / Event Organizer */}
+        <div className="role-toggle-wrapper">
           <button
             type="button"
-            className={`toggle-btn ${role === 'admin' ? 'active' : ''}`}
+            className={`role-toggle-btn ${role === 'admin' ? 'active' : ''}`}
             onClick={() => setRole('admin')}
           >
             Admin
           </button>
           <button
             type="button"
-            className={`toggle-btn ${role === 'eo' ? 'active' : ''}`}
+            className={`role-toggle-btn ${role === 'eo' ? 'active' : ''}`}
             onClick={() => setRole('eo')}
           >
             Event Organizer
@@ -48,57 +55,54 @@ function Login() {
         </div>
 
         {/* Form Login */}
-        <form onSubmit={handleSubmit} className="login-form">
-          <div className="form-group">
-            <label htmlFor="username">Username</label>
+        <form onSubmit={handleLogin} className="login-form">
+          <div className="login-input-group">
+            <label>Username</label>
             <input
               type="text"
-              id="username"
               placeholder="Username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              required
+              className="login-input"
             />
           </div>
 
-          <div className="form-group">
-            <label htmlFor="password">Password</label>
-            <div className="password-input-wrapper">
+          <div className="login-input-group">
+            <label>Password</label>
+            <div className="login-password-wrapper">
               <input
                 type={showPassword ? 'text' : 'password'}
-                id="password"
                 placeholder="8 digit"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                required
+                className="login-input"
               />
               <button
                 type="button"
-                className="eye-icon-btn"
+                className="login-eye-btn"
                 onClick={() => setShowPassword(!showPassword)}
-                aria-label="Toggle password visibility"
+                title={showPassword ? 'Sembunyikan Password' : 'Lihat Password'}
               >
-                {/* SVG Icon Mata */}
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                  <circle cx="12" cy="12" r="3"></circle>
-                </svg>
+                {showPassword ? (
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1e293b" strokeWidth="1.8">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                  </svg>
+                ) : (
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1e293b" strokeWidth="1.8">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                )}
               </button>
             </div>
           </div>
 
-          <button type="submit" className="login-btn">
-            Login
-          </button>
+          <div className="login-btn-container">
+            <button type="submit" className="btn-login-submit">
+              Login
+            </button>
+          </div>
         </form>
       </div>
     </div>

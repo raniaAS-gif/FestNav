@@ -1,7 +1,11 @@
 import { useState } from 'react'
+import NavbarAdmin from '../components/NavbarAdmin'
+import { useNavigate } from 'react-router-dom'
 import './DashboardAdmin.css'
 
 function DashboardAdmin() {
+  const navigate = useNavigate()
+
   // Mock Data (Nanti data ini diambil dari Backend MySQL via fetch/axios)
   const [stats, setStats] = useState({
     totalEvents: 40,
@@ -41,25 +45,7 @@ function DashboardAdmin() {
 
   return (
     <div className="dashboard-container">
-      {/* Top Navbar */}
-      <header className="dash-navbar">
-        <div className="nav-brand">FestNav</div>
-        <div className="nav-actions">
-          <button className="btn-cyan">Lihat Daftar Event</button>
-          <button className="btn-cyan">+ Tambah Peta baru</button>
-          <div className="user-profile">
-            <span className="user-name">Admin Esai</span>
-            <div className="avatar-placeholder">👤</div>
-            <button className="logout-btn" title="Logout">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                <polyline points="16 17 21 12 16 7"></polyline>
-                <line x1="21" y1="12" x2="9" y2="12"></line>
-              </svg>
-            </button>
-          </div>
-        </div>
-      </header>
+      <NavbarAdmin />
 
       {/* Main Title Section */}
       <div className="dash-hero">
@@ -125,7 +111,12 @@ function DashboardAdmin() {
           <div className="dash-card">
             <div className="card-header-flex">
               <h3 className="card-title text-cyan">Proses Scrapping</h3>
-              <button className="btn-cyan-small">Laman Scrapping</button>
+              <button
+                className="btn-cyan-small"
+                onClick={() => navigate('/scraping')}
+              >
+                Laman Scrapping
+              </button>
             </div>
             <div className="progress-header">
               <span className="progress-label">{stats.scrapingStatusText}</span>
@@ -152,7 +143,9 @@ function DashboardAdmin() {
         <section className="dash-section-card">
           <div className="section-header">
             <h3 className="section-title text-cyan">Draft Belum Dipublish</h3>
-            <button className="btn-cyan">Lihat Daftar Event</button>
+            <button className="btn-cyan" onClick={() => navigate('/daftar-event')}>
+              Lihat Daftar Event
+            </button>
           </div>
           <div className="list-container">
             {drafts.map((draft) => (
@@ -161,7 +154,16 @@ function DashboardAdmin() {
                   <h4 className="item-title">{draft.title}</h4>
                   <p className="item-sub">Terakhir diedit: {draft.lastEdited}</p>
                 </div>
-                <button className="btn-cyan-action">Lanjutkan digitasi</button>
+                <button
+                  className="btn-cyan-action"
+                  onClick={() =>
+                    navigate('/detail-event', {
+                      state: { eventId: draft.id, eventTitle: draft.title }
+                    })
+                  }
+                >
+                  Lihat Detail
+                </button>
               </div>
             ))}
           </div>
@@ -171,7 +173,7 @@ function DashboardAdmin() {
         <section className="dash-section-card">
           <div className="section-header">
             <h3 className="section-title text-cyan">Request Publish EO</h3>
-            <button className="btn-cyan">Lihat Daftar Validasi</button>
+            <button className="btn-cyan" onClick={() => navigate('/daftar-validasi')}>Lihat Daftar Validasi</button>
           </div>
           <div className="list-container">
             {requests.map((req) => (

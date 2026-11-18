@@ -157,24 +157,26 @@
             app:layout_constraintEnd_toEndOf="parent" />
 
         <!-- Tombol Daftar Ungu -->
+
+        <!-- Tombol Bawah Masuk -->
         <Button
             android:id="@+id/btnDaftarAksi"
             android:layout_width="0dp"
             android:layout_height="54dp"
             android:layout_marginStart="28dp"
+            android:layout_marginTop="1148dp"
             android:layout_marginEnd="28dp"
-            android:layout_marginTop="100dp"
             android:backgroundTint="#6D28D9"
             android:text="Daftar"
             android:textAllCaps="false"
             android:textColor="#FFFFFF"
             android:textSize="16sp"
             android:textStyle="bold"
-            app:layout_constraintTop_toTopOf="@id/imgBackgroundDaftar"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.0"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            app:layout_constraintTop_toTopOf="@id/imgBackgroundDaftar" />
 
-        <!-- Tombol Bawah Masuk -->
         <View
             android:id="@+id/btnBawahMasuk"
             android:layout_width="200dp"

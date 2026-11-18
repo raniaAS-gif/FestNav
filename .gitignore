@@ -1,1 +1,5 @@
 node_modules
+
+mobile/.gradle/
+mobile/build/
+mobile/**/build/
