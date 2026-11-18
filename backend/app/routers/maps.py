@@ -63,13 +63,18 @@ def create_map(
     db: Session = Depends(get_db),
     pengelola: Pengelola = Depends(get_current_pengelola),
 ):
-    _cek_akses_event(db, payload.id_event, pengelola)
+    ev = _cek_akses_event(db, payload.id_event, pengelola)
 
     if payload.is_utama:
         _reset_map_utama(db, payload.id_event)
 
     data = payload.model_dump()
     if data.get("status_map") == "published":
+        if ev.status_event != "published":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Event wajib dipublish terlebih dahulu sebelum denah (map) dapat dipublish.",
+            )
         data["dipublish_pada"] = datetime.now(timezone.utc)
 
     peta_baru = Map(**data)
@@ -104,14 +109,20 @@ def update_map(
             detail="Map tidak ditemukan",
         )
 
-    _cek_akses_event(db, peta.id_event, pengelola)
+    ev = _cek_akses_event(db, peta.id_event, pengelola)
 
     updates = payload.model_dump(exclude_unset=True)
     if updates.get("is_utama") is True:
         _reset_map_utama(db, peta.id_event, exclude_id_map=id_map)
 
-    if updates.get("status_map") == "published" and peta.dipublish_pada is None:
-        peta.dipublish_pada = datetime.now(timezone.utc)
+    if updates.get("status_map") == "published":
+        if ev.status_event != "published":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Event wajib dipublish terlebih dahulu sebelum denah (map) dapat dipublish.",
+            )
+        if peta.dipublish_pada is None:
+            peta.dipublish_pada = datetime.now(timezone.utc)
 
     for key, value in updates.items():
         setattr(peta, key, value)

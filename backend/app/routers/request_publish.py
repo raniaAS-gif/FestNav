@@ -32,12 +32,15 @@ def _to_utc(dt: Optional[datetime]) -> Optional[datetime]:
     return dt.astimezone(timezone.utc)
 
 
+def _target_signature(req: RequestPublish) -> tuple:
+    has_event = any(it.jenis_item == "event" for it in req.items)
+    map_ids = tuple(sorted(it.id_map for it in req.items if it.jenis_item == "map" and it.id_map))
+    return (req.id_event, has_event, map_ids)
+
+
 def _evaluasi_ubah_keputusan(db: Session, req: RequestPublish) -> tuple[bool, bool, str]:
     """
     Mengembalikan (event_diubah_setelah_ditolak, bisa_ubah_keputusan, alasan_blokir).
-    - Jika status 'menunggu': admin bebas memutuskan (bisa_ubah_keputusan = True).
-    - Jika status 'ditolak': admin hanya boleh mengubah ke 'disetujui' selama EO
-      belum mengubah detail event/denah setelah waktu_diputuskan dan belum ada request baru.
     """
     if req.status_request == "menunggu":
         return False, True, ""
@@ -49,46 +52,57 @@ def _evaluasi_ubah_keputusan(db: Session, req: RequestPublish) -> tuple[bool, bo
             f"Request sudah berstatus '{req.status_request}' dan tidak bisa diubah lagi.",
         )
 
-    # Cek apakah sudah ada request yang lebih baru untuk event yang sama
-    request_lebih_baru = (
-        db.query(RequestPublish.id_request)
+    has_event_item = any(it.jenis_item == "event" for it in req.items)
+    map_item_ids = {it.id_map for it in req.items if it.jenis_item == "map" and it.id_map}
+
+    # Cek apakah sudah ada request yang lebih baru untuk target yang sama
+    kandidat_baru = (
+        db.query(RequestPublish)
         .filter(
             RequestPublish.id_event == req.id_event,
             RequestPublish.id_request > req.id_request,
         )
-        .first()
+        .all()
     )
-    if request_lebih_baru:
-        return (
-            True,
-            False,
-            "Sudah terdapat pengajuan validasi baru untuk event ini. Gunakan pengajuan terbaru.",
-        )
+    for rb in kandidat_baru:
+        rb_event = any(it.jenis_item == "event" for it in rb.items)
+        rb_maps = {it.id_map for it in rb.items if it.jenis_item == "map" and it.id_map}
+        if (has_event_item and rb_event) or (map_item_ids & rb_maps):
+            return (
+                True,
+                False,
+                "Sudah terdapat pengajuan validasi baru untuk item ini. Gunakan pengajuan terbaru.",
+            )
 
     patokan = _to_utc(req.waktu_diputuskan) or _to_utc(req.waktu_dikirim)
     ev = db.query(Event).filter(Event.id_event == req.id_event).first()
 
     if ev and patokan:
-        waktu_ubah_ev = _to_utc(getattr(ev, "diubah_pada", None))
-        if waktu_ubah_ev and waktu_ubah_ev > patokan:
-            return (
-                True,
-                False,
-                "Event telah diubah oleh Event Organizer setelah penolakan. "
-                "Admin tidak dapat mengubah keputusan dan harus menunggu EO mengirim request validasi ulang.",
-            )
-
-        # Cek juga jika denah/map milik event diubah setelah penolakan
-        daftar_map = db.query(Map).filter(Map.id_event == req.id_event).all()
-        for peta in daftar_map:
-            waktu_ubah_map = _to_utc(getattr(peta, "diubah_pada", None))
-            if waktu_ubah_map and waktu_ubah_map > patokan:
+        if has_event_item:
+            waktu_ubah_ev = _to_utc(getattr(ev, "diubah_pada", None))
+            if waktu_ubah_ev and waktu_ubah_ev > patokan:
                 return (
                     True,
                     False,
-                    "Denah event telah diubah oleh Event Organizer setelah penolakan. "
+                    "Event telah diubah oleh Event Organizer setelah penolakan. "
                     "Admin tidak dapat mengubah keputusan dan harus menunggu EO mengirim request validasi ulang.",
                 )
+
+        if map_item_ids:
+            daftar_map = (
+                db.query(Map)
+                .filter(Map.id_event == req.id_event, Map.id_map.in_(map_item_ids))
+                .all()
+            )
+            for peta in daftar_map:
+                waktu_ubah_map = _to_utc(getattr(peta, "diubah_pada", None))
+                if waktu_ubah_map and waktu_ubah_map > patokan:
+                    return (
+                        True,
+                        False,
+                        "Denah event telah diubah oleh Event Organizer setelah penolakan. "
+                        "Admin tidak dapat mengubah keputusan dan harus menunggu EO mengirim request validasi ulang.",
+                    )
 
     return False, True, ""
 
@@ -110,6 +124,10 @@ def get_list_request_publish(
     status_request: Optional[str] = Query(
         default=None, description="Filter: menunggu, disetujui, ditolak, dibatalkan"
     ),
+    latest_per_event: bool = Query(
+        default=False,
+        description="Jika True, hanya mengembalikan 1 request terbaru per target (event / denah).",
+    ),
     db: Session = Depends(get_db),
     pengelola: Pengelola = Depends(get_current_pengelola),
 ):
@@ -120,7 +138,20 @@ def get_list_request_publish(
     if status_request:
         query = query.filter(RequestPublish.status_request == status_request)
 
-    rows = query.order_by(RequestPublish.waktu_dikirim.desc()).all()
+    rows = query.order_by(
+        RequestPublish.waktu_dikirim.desc(), RequestPublish.id_request.desc()
+    ).all()
+
+    if latest_per_event:
+        seen_targets = set()
+        unique_rows = []
+        for r in rows:
+            sig = _target_signature(r)
+            if sig not in seen_targets:
+                seen_targets.add(sig)
+                unique_rows.append(r)
+        rows = unique_rows
+
     return [_serialize_request(db, r) for r in rows]
 
 
@@ -146,14 +177,19 @@ def get_detail_request_publish(
     return _serialize_request(db, req)
 
 
-# 3. Organizer mengajukan request publish event & map
+# 3. Organizer mengajukan request publish event ATAU denah (map) secara terpisah
 @router.post("", response_model=RequestPublishResponse, status_code=status.HTTP_201_CREATED)
 def create_request_publish(
     payload: RequestPublishCreate,
     db: Session = Depends(get_db),
     pengelola: Pengelola = Depends(get_current_pengelola),
 ):
-    ev = db.query(Event).filter(Event.id_event == payload.id_event).first()
+    ev = (
+        db.query(Event)
+        .filter(Event.id_event == payload.id_event)
+        .with_for_update()
+        .first()
+    )
     if not ev:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -166,32 +202,66 @@ def create_request_publish(
             detail="Anda hanya bisa mengajukan publish untuk event milik sendiri",
         )
 
-    pending = (
+    requested_map_ids = list(dict.fromkeys(payload.map_ids or []))
+    include_event = (
+        payload.include_event
+        if payload.include_event is not None
+        else len(requested_map_ids) == 0
+    )
+
+    if not include_event and not requested_map_ids:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Pilih event atau minimal satu denah (map) yang akan diajukan publish.",
+        )
+
+    # Aturan wajib: Event harus dipublish terlebih dahulu sebelum denah/map dapat diajukan publish
+    if requested_map_ids and not include_event and ev.status_event != "published":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Event wajib dipublish terlebih dahulu sebelum denah (map) dapat diajukan untuk publish.",
+        )
+
+    if include_event and not requested_map_ids and ev.status_event == "published":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Event ini sudah berstatus published.",
+        )
+
+    daftar_map = []
+    if requested_map_ids:
+        daftar_map = (
+            db.query(Map)
+            .filter(Map.id_event == payload.id_event, Map.id_map.in_(requested_map_ids))
+            .all()
+        )
+        if len(daftar_map) != len(requested_map_ids):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Sebagian id_map tidak valid atau bukan milik event tersebut.",
+            )
+
+    # Cek pengajuan yang masih berstatus 'menunggu' untuk target yang sama
+    pending_list = (
         db.query(RequestPublish)
         .filter(
             RequestPublish.id_event == payload.id_event,
             RequestPublish.status_request == "menunggu",
         )
-        .first()
+        .all()
     )
-    if pending:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Masih ada pengajuan publish yang berstatus 'menunggu' untuk event ini",
-        )
-
-    if payload.map_ids is None:
-        daftar_map = db.query(Map).filter(Map.id_event == payload.id_event).all()
-    else:
-        daftar_map = (
-            db.query(Map)
-            .filter(Map.id_event == payload.id_event, Map.id_map.in_(payload.map_ids))
-            .all()
-        )
-        if len(daftar_map) != len(set(payload.map_ids)):
+    for pend in pending_list:
+        pend_has_event = any(it.jenis_item == "event" for it in pend.items)
+        pend_map_ids = {it.id_map for it in pend.items if it.jenis_item == "map" and it.id_map}
+        if include_event and pend_has_event:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Sebagian id_map tidak valid atau bukan milik event tersebut",
+                detail="Masih ada pengajuan publish event yang berstatus 'menunggu' untuk event ini.",
+            )
+        if set(requested_map_ids) & pend_map_ids:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Denah yang dipilih masih memiliki pengajuan publish berstatus 'menunggu'.",
             )
 
     try:
@@ -204,7 +274,7 @@ def create_request_publish(
         db.add(req_baru)
         db.flush()
 
-        if ev.status_event != "published":
+        if include_event and ev.status_event != "published":
             db.add(
                 RequestItem(
                     id_request=req_baru.id_request,
@@ -222,6 +292,12 @@ def create_request_publish(
                 )
             )
 
+        target_label = (
+            f"event '{ev.nama_event}'"
+            if include_event and not daftar_map
+            else f"denah pada event '{ev.nama_event}'"
+        )
+
         db.add(
             RiwayatRequest(
                 id_request=req_baru.id_request,
@@ -236,7 +312,7 @@ def create_request_publish(
                 aksi="ajukan_publish",
                 objek_tipe="request_publish",
                 objek_id=req_baru.id_request,
-                deskripsi=f"Mengajukan publish event '{ev.nama_event}'",
+                deskripsi=f"Mengajukan publish {target_label}",
             )
         )
 
@@ -265,7 +341,12 @@ def keputusan_request_publish(
             detail="Hanya admin yang dapat memutuskan pengajuan publish",
         )
 
-    req = db.query(RequestPublish).filter(RequestPublish.id_request == id_request).first()
+    req = (
+        db.query(RequestPublish)
+        .filter(RequestPublish.id_request == id_request)
+        .with_for_update()
+        .first()
+    )
     if not req:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -287,25 +368,36 @@ def keputusan_request_publish(
 
     try:
         sekarang = datetime.now(timezone.utc)
+        ev = db.query(Event).filter(Event.id_event == req.id_event).first()
+        has_event_item = any(it.jenis_item == "event" for it in req.items)
+        map_item_ids = [it.id_map for it in req.items if it.jenis_item == "map" and it.id_map]
+
+        if payload.status_request == "disetujui":
+            # Pastikan event sudah published jika yang divalidasi adalah denah (map)
+            if map_item_ids and not has_event_item:
+                if not ev or ev.status_event != "published":
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Event wajib dipublish terlebih dahulu sebelum denah (map) dapat dipublish.",
+                    )
+
+            if has_event_item and ev and ev.status_event != "published":
+                ev.status_event = "published"
+                ev.dipublish_pada = sekarang
+
+            for map_id in map_item_ids:
+                peta = db.query(Map).filter(Map.id_map == map_id).first()
+                if peta:
+                    peta.status_map = "published"
+                    peta.dipublish_pada = sekarang
+        else:
+            if has_event_item and ev and ev.status_event not in ("published", "draft"):
+                ev.status_event = "draft"
+
         req.status_request = payload.status_request
         req.catatan_admin = payload.catatan_admin
         req.id_pemutus = pengelola.id_pengelola
         req.waktu_diputuskan = sekarang
-
-        ev = db.query(Event).filter(Event.id_event == req.id_event).first()
-        if payload.status_request == "disetujui":
-            if ev and ev.status_event != "published":
-                ev.status_event = "published"
-                ev.dipublish_pada = sekarang
-            for item in req.items:
-                if item.jenis_item == "map" and item.id_map:
-                    peta = db.query(Map).filter(Map.id_map == item.id_map).first()
-                    if peta:
-                        peta.status_map = "published"
-                        peta.dipublish_pada = sekarang
-        else:
-            if ev and ev.status_event != "published":
-                ev.status_event = "draft"
 
         db.add(
             RiwayatRequest(
@@ -327,6 +419,9 @@ def keputusan_request_publish(
         db.commit()
         db.refresh(req)
         return _serialize_request(db, req)
+    except HTTPException:
+        db.rollback()
+        raise
     except SQLAlchemyError as exc:
         db.rollback()
         raise HTTPException(
@@ -363,7 +458,7 @@ def batalkan_request_publish(
 
     req.status_request = "dibatalkan"
     ev = db.query(Event).filter(Event.id_event == req.id_event).first()
-    if ev and ev.status_event != "published":
+    if ev and ev.status_event not in ("published", "draft"):
         ev.status_event = "draft"
 
     db.add(

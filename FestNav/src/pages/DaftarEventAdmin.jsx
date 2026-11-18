@@ -31,7 +31,9 @@ function formatDateRange(mulai, selesai) {
 }
 
 function mapEventToCard(ev) {
-  const isScrapping = ev.sumber === 'scraping'
+  const isScrapping = ['scraping', 'scrapping'].includes(
+    String(ev.sumber || '').trim().toLowerCase()
+  )
   const tags = [
     {
       label: isScrapping ? 'Hasil Scrapping' : 'Kerjasama Event Organizer',
@@ -255,6 +257,7 @@ function DaftarEventAdmin() {
                     onClick={() =>
                       navigate('/detail-event', {
                         state: {
+                          role: 'admin',
                           eventId: evt.id_event,
                           id_event: evt.id_event,
                           eventTitle: evt.title,

@@ -49,6 +49,7 @@ class EventCreate(BaseModel):
     jenis_event: Optional[str] = Field(None, max_length=50)
     tipe_lokasi: Literal["outdoor", "indoor", "campuran"] = "outdoor"
     mode_event: Literal["interaktif", "direktori"] = "interaktif"
+    sumber: Literal["manual", "scraping"] = "manual"
     poster_url: Optional[str] = None
     poster_public_id: Optional[str] = None
     id_organizer: Optional[int] = Field(
@@ -74,10 +75,11 @@ class EventUpdate(BaseModel):
     jenis_event: Optional[str] = Field(None, max_length=50)
     tipe_lokasi: Optional[Literal["outdoor", "indoor", "campuran"]] = None
     mode_event: Optional[Literal["interaktif", "direktori"]] = None
+    sumber: Optional[Literal["manual", "scraping"]] = None
     poster_url: Optional[str] = None
     poster_public_id: Optional[str] = None
     id_organizer: Optional[int] = None
-    status_event: Optional[Literal["draft", "published", "selesai"]] = None
+    status_event: Optional[Literal["published", "draft", "selesai"]] = None
 
 
 class EventResponse(BaseModel):
