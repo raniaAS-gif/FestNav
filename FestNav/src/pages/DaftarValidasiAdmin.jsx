@@ -47,7 +47,7 @@ function buildEventTags(ev, badgeLabel) {
     tags.push({ label: 'Event Indoor', color: '#f87171' })
   } else if (jenis.includes('outdoor') || tipe === 'outdoor') {
     tags.push({ label: 'Event Outdoor', color: '#38bdf8' })
-  } else if (tipe === 'hybrid') {
+  } else if (tipe === 'hybrid' || tipe === 'campuran') {
     tags.push({ label: 'Event Indoor', color: '#f87171' })
     tags.push({ label: 'Event Outdoor', color: '#38bdf8' })
   }
@@ -86,12 +86,18 @@ function mapRequestToAdminCard(req, eventMap) {
     badgeLabel = 'Dibatalkan'
   }
 
-  const updatedAt = ev?.diperbarui_pada || ev?.updated_at
-  const isModifiedByEO =
+  const updatedAt = ev?.diubah_pada || ev?.diperbarui_pada || ev?.updated_at
+  const modifiedByTimestamp =
     status === 'rejected' &&
     Boolean(req.waktu_diputuskan) &&
     Boolean(updatedAt) &&
     new Date(updatedAt).getTime() > new Date(req.waktu_diputuskan).getTime()
+
+  const isModifiedByEO =
+    status === 'rejected' &&
+    (Boolean(req.event_diubah_setelah_ditolak) ||
+      req.bisa_ubah_keputusan === false ||
+      modifiedByTimestamp)
 
   return {
     id: req.id_request,
@@ -263,7 +269,14 @@ function DaftarValidasiAdmin() {
       )
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
-        throw new Error(data.detail || 'Gagal memvalidasi permintaan publish')
+        const detailMsg = typeof data.detail === 'string' ? data.detail : ''
+        if (detailMsg.toLowerCase().includes('telah diubah oleh event organizer')) {
+          await loadValidations()
+          setShowConfirmValidateModal(false)
+          setShowCannotChangeModal(true)
+          return
+        }
+        throw new Error(detailMsg || 'Gagal memvalidasi permintaan publish')
       }
 
       await loadValidations()

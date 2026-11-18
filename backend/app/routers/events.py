@@ -258,11 +258,14 @@ def update_event(
         updates.get("jenis_event", ev.jenis_event),
     )
 
+    sekarang = datetime.now(timezone.utc)
     if target_status == "published" and ev.status_event != "published":
-        ev.dipublish_pada = datetime.now(timezone.utc)
+        ev.dipublish_pada = sekarang
 
     for field, value in updates.items():
         setattr(ev, field, value)
+
+    ev.diubah_pada = sekarang
 
     db.add(
         LogAktivitas(

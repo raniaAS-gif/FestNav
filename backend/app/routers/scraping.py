@@ -63,7 +63,7 @@ def _normalisasi_url_gambar(url_raw: Optional[str], base_url: Optional[str]) -> 
 
 def _ekstrak_daftar_gambar(raw: dict, base_url: Optional[str] = None) -> list[dict]:
     """Menormalisasi list gambar dari hasil_mentah bot scraping."""
-    sumber_list = raw.get("gambar") or raw.get("images") or []
+    sumber_list = raw.get("gambar") or raw.get("images") or raw.get("gambar_kandidat") or []
     hasil = []
     seen = set()
 
@@ -124,7 +124,6 @@ def _simpan_kandidat_gambar(
     if not daftar:
         return 0
 
-    # Kumpulkan URL yang sudah ada di galeri, poster utama, maupun denah map
     existing_urls = {
         row[0]
         for row in db.query(GambarEvent.url_gambar)
@@ -170,19 +169,14 @@ def _buat_draft_event_dari_scraping(
     payload: Optional[ScrapingReviewAction] = None,
 ) -> Event:
     raw = item.hasil_mentah or {}
-    daftar_gambar = _ekstrak_daftar_gambar(raw, item.url_sumber)
-    gambar_pertama = daftar_gambar[0] if daftar_gambar else {}
 
+    # Jangan auto-set gambar[0] ke poster_url agar semua gambar masuk ke galeri (gambar_event)
     poster_terpilih = (
         _normalisasi_url_gambar(payload.poster_url, item.url_sumber)
         if (payload and payload.poster_url)
-        else gambar_pertama.get("url")
-    )
-    poster_pid = (
-        gambar_pertama.get("public_id")
-        if not (payload and payload.poster_url)
         else None
     )
+    poster_pid = None
 
     nama_ev = (
         (payload.nama_event if payload else None)
@@ -457,9 +451,11 @@ def siapkan_galeri_scraping(
             detail="Hanya admin yang dapat mengelola galeri hasil scraping",
         )
 
+    # Kunci baris (row lock) agar request paralel tidak membuat draft event ganda
     item = (
         db.query(SumberScraping)
         .filter(SumberScraping.id_scraping == id_scraping)
+        .with_for_update()
         .first()
     )
     if not item:
@@ -467,6 +463,11 @@ def siapkan_galeri_scraping(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Data scraping tidak ditemukan",
         )
+
+    if item.id_event is not None:
+        ev_ada = db.query(Event).filter(Event.id_event == item.id_event).first()
+        if not ev_ada:
+            item.id_event = None
 
     if item.id_event is None:
         _buat_draft_event_dari_scraping(db, item, pengelola)
@@ -493,9 +494,11 @@ def review_hasil_scraping(
             detail="Hanya admin yang dapat mereview hasil scraping",
         )
 
+    # Kunci baris (row lock) agar klik ganda tombol Simpan tidak membuat event ganda
     item = (
         db.query(SumberScraping)
         .filter(SumberScraping.id_scraping == id_scraping)
+        .with_for_update()
         .first()
     )
     if not item:
@@ -506,8 +509,15 @@ def review_hasil_scraping(
 
     item.status_review = payload.status_review
 
+    if item.id_event is not None:
+        ev_ada = db.query(Event).filter(Event.id_event == item.id_event).first()
+        if not ev_ada:
+            item.id_event = None
+
     if payload.id_event and item.id_event is None:
-        item.id_event = payload.id_event
+        ev_payload = db.query(Event).filter(Event.id_event == payload.id_event).first()
+        if ev_payload:
+            item.id_event = ev_payload.id_event
 
     if payload.status_review == "disimpan":
         if item.id_event is None:

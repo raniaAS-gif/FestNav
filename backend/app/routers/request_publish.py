@@ -24,6 +24,86 @@ from app.schemas_request import (
 router = APIRouter(prefix="/api/request-publish", tags=["Request Publish"])
 
 
+def _to_utc(dt: Optional[datetime]) -> Optional[datetime]:
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
+def _evaluasi_ubah_keputusan(db: Session, req: RequestPublish) -> tuple[bool, bool, str]:
+    """
+    Mengembalikan (event_diubah_setelah_ditolak, bisa_ubah_keputusan, alasan_blokir).
+    - Jika status 'menunggu': admin bebas memutuskan (bisa_ubah_keputusan = True).
+    - Jika status 'ditolak': admin hanya boleh mengubah ke 'disetujui' selama EO
+      belum mengubah detail event/denah setelah waktu_diputuskan dan belum ada request baru.
+    """
+    if req.status_request == "menunggu":
+        return False, True, ""
+
+    if req.status_request != "ditolak":
+        return (
+            False,
+            False,
+            f"Request sudah berstatus '{req.status_request}' dan tidak bisa diubah lagi.",
+        )
+
+    # Cek apakah sudah ada request yang lebih baru untuk event yang sama
+    request_lebih_baru = (
+        db.query(RequestPublish.id_request)
+        .filter(
+            RequestPublish.id_event == req.id_event,
+            RequestPublish.id_request > req.id_request,
+        )
+        .first()
+    )
+    if request_lebih_baru:
+        return (
+            True,
+            False,
+            "Sudah terdapat pengajuan validasi baru untuk event ini. Gunakan pengajuan terbaru.",
+        )
+
+    patokan = _to_utc(req.waktu_diputuskan) or _to_utc(req.waktu_dikirim)
+    ev = db.query(Event).filter(Event.id_event == req.id_event).first()
+
+    if ev and patokan:
+        waktu_ubah_ev = _to_utc(getattr(ev, "diubah_pada", None))
+        if waktu_ubah_ev and waktu_ubah_ev > patokan:
+            return (
+                True,
+                False,
+                "Event telah diubah oleh Event Organizer setelah penolakan. "
+                "Admin tidak dapat mengubah keputusan dan harus menunggu EO mengirim request validasi ulang.",
+            )
+
+        # Cek juga jika denah/map milik event diubah setelah penolakan
+        daftar_map = db.query(Map).filter(Map.id_event == req.id_event).all()
+        for peta in daftar_map:
+            waktu_ubah_map = _to_utc(getattr(peta, "diubah_pada", None))
+            if waktu_ubah_map and waktu_ubah_map > patokan:
+                return (
+                    True,
+                    False,
+                    "Denah event telah diubah oleh Event Organizer setelah penolakan. "
+                    "Admin tidak dapat mengubah keputusan dan harus menunggu EO mengirim request validasi ulang.",
+                )
+
+    return False, True, ""
+
+
+def _serialize_request(db: Session, req: RequestPublish) -> RequestPublishResponse:
+    diubah_setelah_ditolak, bisa_ubah, _ = _evaluasi_ubah_keputusan(db, req)
+    base = RequestPublishResponse.model_validate(req)
+    return base.model_copy(
+        update={
+            "event_diubah_setelah_ditolak": diubah_setelah_ditolak,
+            "bisa_ubah_keputusan": bisa_ubah,
+        }
+    )
+
+
 # 1. Lihat daftar request publish (Admin lihat semua, Organizer lihat miliknya sendiri)
 @router.get("", response_model=List[RequestPublishResponse])
 def get_list_request_publish(
@@ -40,7 +120,8 @@ def get_list_request_publish(
     if status_request:
         query = query.filter(RequestPublish.status_request == status_request)
 
-    return query.order_by(RequestPublish.waktu_dikirim.desc()).all()
+    rows = query.order_by(RequestPublish.waktu_dikirim.desc()).all()
+    return [_serialize_request(db, r) for r in rows]
 
 
 # 2. Lihat detail 1 request publish beserta item & riwayatnya
@@ -62,7 +143,7 @@ def get_detail_request_publish(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Anda tidak memiliki akses melihat request ini",
         )
-    return req
+    return _serialize_request(db, req)
 
 
 # 3. Organizer mengajukan request publish event & map
@@ -99,7 +180,6 @@ def create_request_publish(
             detail="Masih ada pengajuan publish yang berstatus 'menunggu' untuk event ini",
         )
 
-    # Tentukan map yang ikut diajukan
     if payload.map_ids is None:
         daftar_map = db.query(Map).filter(Map.id_event == payload.id_event).all()
     else:
@@ -124,7 +204,6 @@ def create_request_publish(
         db.add(req_baru)
         db.flush()
 
-        # Simpan item event (jika belum published) & item map
         if ev.status_event != "published":
             db.add(
                 RequestItem(
@@ -163,7 +242,7 @@ def create_request_publish(
 
         db.commit()
         db.refresh(req_baru)
-        return req_baru
+        return _serialize_request(db, req_baru)
     except SQLAlchemyError as exc:
         db.rollback()
         raise HTTPException(
@@ -193,12 +272,17 @@ def keputusan_request_publish(
             detail="Request publish tidak ditemukan",
         )
 
-    if req.status_request not in ("menunggu", "ditolak") or (
-        req.status_request == "ditolak" and payload.status_request != "disetujui"
-    ):
+    if req.status_request == "ditolak" and payload.status_request != "disetujui":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Request sudah berstatus '{req.status_request}' dan tidak bisa diubah lagi",
+            detail="Request yang sudah ditolak hanya dapat diubah menjadi 'disetujui'.",
+        )
+
+    _, bisa_ubah, alasan_blokir = _evaluasi_ubah_keputusan(db, req)
+    if not bisa_ubah:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=alasan_blokir,
         )
 
     try:
@@ -242,7 +326,7 @@ def keputusan_request_publish(
 
         db.commit()
         db.refresh(req)
-        return req
+        return _serialize_request(db, req)
     except SQLAlchemyError as exc:
         db.rollback()
         raise HTTPException(
@@ -291,4 +375,4 @@ def batalkan_request_publish(
     )
     db.commit()
     db.refresh(req)
-    return req
+    return _serialize_request(db, req)
