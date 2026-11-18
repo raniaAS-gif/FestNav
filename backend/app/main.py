@@ -16,6 +16,7 @@ from app.routers import (
     rute,
     scraping,
 )
+from app.routers import favorit
 
 app = FastAPI(title="FestNav API", version="1.0.0")
 
@@ -37,7 +38,7 @@ app.include_router(request_publish.router)
 app.include_router(scraping.router)
 app.include_router(gambar_event.router)
 app.include_router(admin.router)
-
+app.include_router(favorit.router)
 
 @app.get("/")
 def root():
