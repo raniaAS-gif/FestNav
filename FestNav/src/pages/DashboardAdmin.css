@@ -160,10 +160,6 @@
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 }
 
-.dash-card.card-bordered {
-  border: 3px solid #00bcd4;
-}
-
 .card-title {
   font-size: 18px;
   font-weight: 700;
