@@ -1,56 +1,78 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView
     xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true"
-    android:scrollbars="vertical"
     android:background="#FFFFFF"
     tools:context=".EmailSandi">
 
-    <androidx.constraintlayout.widget.ConstraintLayout
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingBottom="40dp">
+        android:orientation="vertical"
+        android:padding="28dp"
+        android:gravity="center_horizontal">
 
-        <!-- Latar Belakang Gambar -->
-        <ImageView
-            android:id="@+id/imgBackgroundEmailSandi"
-            android:layout_width="0dp"
+        <!-- Judul / Header -->
+        <TextView
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:adjustViewBounds="true"
-            android:scaleType="fitXY"
-            android:src="@drawable/emailsandi"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
-
-        <!-- Tombol Panah Kembali (<) di Pojok Kiri Atas -->
-        <View
-            android:id="@+id/btnKembaliEmailSandi"
-            android:layout_width="45dp"
-            android:layout_height="45dp"
-            android:layout_marginStart="24dp"
+            android:text="FestNav"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:textColor="#7C3AED"
             android:layout_marginTop="24dp"
-            android:background="@android:color/transparent"
-            app:layout_constraintTop_toTopOf="@id/imgBackgroundEmailSandi"
-            app:layout_constraintStart_toStartOf="parent" />
+            android:layout_marginBottom="32dp"/>
 
-        <!-- Tombol "Kembali ke Masuk" di Bawah -->
-        <View
+        <!-- Ilustrasi / Ikon Amplop / Email -->
+        <FrameLayout
+            android:layout_width="90dp"
+            android:layout_height="90dp"
+            android:background="#F3F4F6"
+            android:layout_marginBottom="24dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="✉️"
+                android:textSize="40sp"
+                android:layout_gravity="center"/>
+        </FrameLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Cek Email Anda"
+            android:textSize="26sp"
+            android:textStyle="bold"
+            android:textColor="#1F2937"
+            android:layout_marginBottom="8dp"
+            android:textAlignment="center"/>
+
+        <TextView
+            android:id="@+id/tvKeteranganEmail"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Kami telah mengirimkan instruksi pemulihan kata sandi ke email Anda."
+            android:textSize="14sp"
+            android:textColor="#6B7280"
+            android:layout_marginBottom="32dp"
+            android:textAlignment="center"/>
+
+        <!-- Tombol Aksi / Kembali ke Masuk -->
+        <Button
             android:id="@+id/btnKembaliKeMasuk"
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="54dp"
-            android:layout_marginStart="28dp"
-            android:layout_marginEnd="28dp"
-            android:layout_marginTop="350dp"
-            android:background="@android:color/transparent"
-            app:layout_constraintTop_toTopOf="@id/imgBackgroundEmailSandi"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            android:backgroundTint="#7C3AED"
+            android:text="Kembali ke Masuk"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="16dp"/>
 
-    </androidx.constraintlayout.widget.ConstraintLayout>
+    </LinearLayout>
 
 </ScrollView>

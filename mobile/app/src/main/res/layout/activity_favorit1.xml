@@ -1,77 +1,256 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView
+<RelativeLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fillViewport="true"
-    android:scrollbars="vertical"
     android:background="#FFFFFF"
     tools:context=".Favorit1">
 
-    <androidx.constraintlayout.widget.ConstraintLayout
+    <!-- Konten Utama yang Bisa Di-scroll -->
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:paddingBottom="80dp">
+        android:layout_height="match_parent"
+        android:layout_above="@+id/bottomNavigation"
+        android:fillViewport="true">
 
-        <!-- Latar Belakang Gambar Favorit -->
-        <ImageView
-            android:id="@+id/imgBackgroundFavorit"
-            android:layout_width="0dp"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:adjustViewBounds="true"
-            android:scaleType="fitXY"
-            android:src="@drawable/fav1"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            android:orientation="vertical"
+            android:padding="24dp">
 
-        <!-- Menu Navigasi Bawah (Event, Peta, Favorit, Profil) -->
-        <!-- Tombol Event -->
-        <View
+            <!-- Judul Halaman Favorit -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Favorit"
+                android:textSize="26sp"
+                android:textStyle="bold"
+                android:textColor="#000000"
+                android:layout_marginBottom="4dp"/>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="2 event ditandai"
+                android:textSize="14sp"
+                android:textColor="#6B7280"
+                android:layout_marginBottom="20dp"/>
+
+            <!-- CARD FAVORIT 1: Dies Natalis Udayana -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:radius="16dp"
+                android:elevation="2dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="16dp"
+                    android:background="#FFFFFF"
+                    android:gravity="center_vertical">
+
+                    <!-- Gambar / Logo Event 1 -->
+                    <ImageView
+                        android:layout_width="70dp"
+                        android:layout_height="70dp"
+                        android:background="#EEF2FF"
+                        android:padding="12dp"
+                        android:src="@android:drawable/ic_menu_agenda"
+                        android:scaleType="centerInside"
+                        android:layout_marginRight="14dp"
+                        android:contentDescription="Logo Event 1"/>
+
+                    <!-- Informasi Event 1 -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <!-- Badge Kategori (Interaktif) -->
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text=" Interaktif "
+                            android:textSize="10sp"
+                            android:textStyle="bold"
+                            android:textColor="#FFFFFF"
+                            android:background="#0066FF"
+                            android:paddingTop="3dp"
+                            android:paddingBottom="3dp"
+                            android:layout_marginBottom="6dp"/>
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Dies Natalis Udayana"
+                            android:textSize="15sp"
+                            android:textStyle="bold"
+                            android:textColor="#000000"
+                            android:layout_marginBottom="2dp"/>
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="21 Oktober - 31 Desember 2026\nRektorat Universitas Udayana"
+                            android:textSize="11sp"
+                            android:textColor="#6B7280"/>
+                    </LinearLayout>
+
+                    <!-- Ikon Hati Merah -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="❤️"
+                        android:textSize="22sp"
+                        android:layout_marginStart="8dp"/>
+
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- CARD FAVORIT 2: Pernikahan Sita -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:radius="16dp"
+                android:elevation="2dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="16dp"
+                    android:background="#FFFFFF"
+                    android:gravity="center_vertical">
+
+                    <!-- Gambar / Logo Event 2 -->
+                    <ImageView
+                        android:layout_width="70dp"
+                        android:layout_height="70dp"
+                        android:background="#FDF2F8"
+                        android:padding="12dp"
+                        android:src="@android:drawable/ic_menu_my_calendar"
+                        android:scaleType="centerInside"
+                        android:layout_marginRight="14dp"
+                        android:contentDescription="Logo Event 2"/>
+
+                    <!-- Informasi Event 2 -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <!-- Badge Kategori (Direktori) -->
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text=" Direktori "
+                            android:textSize="10sp"
+                            android:textStyle="bold"
+                            android:textColor="#FFFFFF"
+                            android:background="#EC4899"
+                            android:paddingTop="3dp"
+                            android:paddingBottom="3dp"
+                            android:layout_marginBottom="6dp"/>
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Pernikahan Sita"
+                            android:textSize="15sp"
+                            android:textStyle="bold"
+                            android:textColor="#000000"
+                            android:layout_marginBottom="2dp"/>
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="4 November - 5 November 2026\nAula Wedding Denpasar, Lt. 2"
+                            android:textSize="11sp"
+                            android:textColor="#6B7280"/>
+                    </LinearLayout>
+
+                    <!-- Ikon Hati Merah -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="❤️"
+                        android:textSize="22sp"
+                        android:layout_marginStart="8dp"/>
+
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- Bottom Navigation Bar (4 Tombol di Bawah) -->
+    <LinearLayout
+        android:id="@+id/bottomNavigation"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:layout_alignParentBottom="true"
+        android:orientation="horizontal"
+        android:background="#FFFFFF"
+        android:elevation="8dp"
+        android:weightSum="4"
+        android:gravity="center">
+
+        <!-- 1. Tombol Event -->
+        <TextView
             android:id="@+id/navEvent"
-            android:layout_width="65dp"
-            android:layout_height="50dp"
-            android:layout_marginStart="30dp"
-            android:layout_marginTop="450dp"
-            android:background="@android:color/transparent"
-            app:layout_constraintTop_toTopOf="@id/imgBackgroundFavorit"
-            app:layout_constraintStart_toStartOf="parent" />
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="Event"
+            android:gravity="center"
+            android:textSize="12sp"
+            android:textColor="#4B5563"
+            android:textStyle="bold"/>
 
-        <!-- Tombol Peta -->
-        <View
+        <!-- 2. Tombol Peta -->
+        <TextView
             android:id="@+id/navPeta"
-            android:layout_width="65dp"
-            android:layout_height="50dp"
-            android:layout_marginTop="450dp"
-            android:background="@android:color/transparent"
-            app:layout_constraintTop_toTopOf="@id/imgBackgroundFavorit"
-            app:layout_constraintStart_toEndOf="@id/navEvent"
-            app:layout_constraintEnd_toStartOf="@id/navFavorit" />
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="Peta"
+            android:gravity="center"
+            android:textSize="12sp"
+            android:textColor="#4B5563"
+            android:textStyle="bold"/>
 
-        <!-- Tombol Favorit -->
-        <View
+        <!-- 3. Tombol Favorit -->
+        <TextView
             android:id="@+id/navFavorit"
-            android:layout_width="65dp"
-            android:layout_height="50dp"
-            android:layout_marginTop="450dp"
-            android:background="@android:color/transparent"
-            app:layout_constraintTop_toTopOf="@id/imgBackgroundFavorit"
-            app:layout_constraintStart_toEndOf="@id/navPeta"
-            app:layout_constraintEnd_toStartOf="@id/navProfil" />
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="Favorit"
+            android:gravity="center"
+            android:textSize="12sp"
+            android:textColor="#7C3AED"
+            android:textStyle="bold"/>
 
-        <!-- Tombol Profil -->
-        <View
+        <!-- 4. Tombol Profil -->
+        <TextView
             android:id="@+id/navProfil"
-            android:layout_width="65dp"
-            android:layout_height="50dp"
-            android:layout_marginEnd="30dp"
-            android:layout_marginTop="450dp"
-            android:background="@android:color/transparent"
-            app:layout_constraintTop_toTopOf="@id/imgBackgroundFavorit"
-            app:layout_constraintEnd_toEndOf="parent" />
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="Profil"
+            android:gravity="center"
+            android:textSize="12sp"
+            android:textColor="#4B5563"
+            android:textStyle="bold"/>
 
-    </androidx.constraintlayout.widget.ConstraintLayout>
+    </LinearLayout>
 
-</ScrollView>
+</RelativeLayout>

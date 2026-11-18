@@ -46,6 +46,9 @@ dependencies {
     implementation(platform("com.google.firebase:firebase-bom:33.1.0"))
     implementation("com.google.firebase:firebase-auth")
 
+    // Mengganti libs.activity.ktx dengan versi spesifik yang aman untuk SDK 34
+    implementation("androidx.activity:activity-ktx:1.9.0")
+
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")

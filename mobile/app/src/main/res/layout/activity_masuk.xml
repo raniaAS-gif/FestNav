@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView
     xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -9,104 +8,98 @@
     android:background="#FFFFFF"
     tools:context=".Masuk">
 
-    <androidx.constraintlayout.widget.ConstraintLayout
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingBottom="50dp">
+        android:orientation="vertical"
+        android:padding="28dp"
+        android:gravity="center_horizontal">
 
-        <!-- Latar Belakang Gambar Masuk (Sudah ada tulisan & kotak dari Figma) -->
-        <ImageView
-            android:id="@+id/imgBackgroundMasuk"
-            android:layout_width="0dp"
+        <!-- Header / Judul -->
+        <TextView
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:adjustViewBounds="true"
-            android:scaleType="fitXY"
-            android:src="@drawable/masuk"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            android:text="FestNav"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:textColor="#7C3AED"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="32dp"/>
 
-        <!-- EditText Email (Transparan, pas ditekan tetap bisa ngetik di atas kotak gambar) -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Selamat Datang!"
+            android:textSize="26sp"
+            android:textStyle="bold"
+            android:textColor="#1F2937"
+            android:layout_marginBottom="8dp"/>
 
-        <!-- EditText Password (Transparan, tetap bisa untuk ngetik password) -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Masuk untuk menjelajahi event favoritmu."
+            android:textSize="14sp"
+            android:textColor="#6B7280"
+            android:layout_marginBottom="32dp"/>
 
-        <!-- Tombol Lupa Sandi (Area klik transparan) -->
-
-        <!-- Tombol Masuk Aksi (Area klik transparan pas di atas tombol ungu gambar) -->
-
-        <!-- Tombol Pindah ke Halaman Daftar di bawah -->
-
+        <!-- Input Email -->
         <EditText
             android:id="@+id/etEmailMasuk"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:layout_marginStart="36dp"
-            android:layout_marginTop="452dp"
-            android:layout_marginEnd="36dp"
-            android:background="@android:color/transparent"
-            android:hint=""
-            android:paddingStart="14dp"
-            android:paddingEnd="14dp"
-            android:textColor="#000000"
-            android:textSize="14sp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintHorizontal_bias="0.0"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="@id/imgBackgroundMasuk" />
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:hint="Email"
+            android:inputType="textEmailAddress"
+            android:background="@android:drawable/edit_text"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:layout_marginBottom="16dp"/>
 
+        <!-- Input Password -->
         <EditText
             android:id="@+id/etPasswordMasuk"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:layout_marginStart="36dp"
-            android:layout_marginTop="544dp"
-            android:layout_marginEnd="36dp"
-            android:background="@android:color/transparent"
-            android:hint=""
-            android:inputType="textPassword"
-            android:paddingStart="14dp"
-            android:paddingEnd="14dp"
-            android:textColor="#000000"
-            android:textSize="14sp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintHorizontal_bias="0.0"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="@id/imgBackgroundMasuk" />
-
-        <View
-            android:id="@+id/btnLupaSandi"
-            android:layout_width="130dp"
-            android:layout_height="35dp"
-            android:layout_marginTop="620dp"
-            android:layout_marginEnd="52dp"
-            android:background="@android:color/transparent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="@id/imgBackgroundMasuk" />
-
-        <View
-            android:id="@+id/btnMasukAksi"
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="52dp"
-            android:layout_marginStart="36dp"
-            android:layout_marginTop="676dp"
-            android:layout_marginEnd="36dp"
-            android:background="@android:color/transparent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintHorizontal_bias="0.0"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="@id/imgBackgroundMasuk" />
+            android:hint="Password"
+            android:inputType="textPassword"
+            android:background="@android:drawable/edit_text"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:layout_marginBottom="12dp"/>
 
-        <View
+        <!-- Tombol Lupa Sandi -->
+        <TextView
+            android:id="@+id/btnLupaSandi"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end"
+            android:text="Lupa Sandi?"
+            android:textColor="#7C3AED"
+            android:textStyle="bold"
+            android:padding="8dp"
+            android:layout_marginBottom="24dp"/>
+
+        <!-- Tombol Masuk Asli -->
+        <Button
+            android:id="@+id/btnMasukAksi"
+            android:layout_width="match_parent"
+            android:layout_height="54dp"
+            android:backgroundTint="#7C3AED"
+            android:text="Masuk"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="24dp"/>
+
+        <!-- Tombol Pindah ke Daftar -->
+        <TextView
             android:id="@+id/btnTabDaftar"
-            android:layout_width="180dp"
-            android:layout_height="40dp"
-            android:layout_marginTop="780dp"
-            android:background="@android:color/transparent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintHorizontal_bias="0.497"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="@id/imgBackgroundMasuk" />
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Belum punya akun? Daftar di sini"
+            android:textColor="#4B5563"
+            android:padding="8dp"/>
 
-    </androidx.constraintlayout.widget.ConstraintLayout>
+    </LinearLayout>
 
 </ScrollView>

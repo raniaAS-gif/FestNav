@@ -3,79 +3,155 @@ package com.example.festnav;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 public class Profil extends AppCompatActivity {
 
-    TextView tvNamaHeader, tvUsernameHeader, tvNamaLengkapVal, tvUsernameVal, tvEmailVal, tvTeleponVal;
-    View btnKeluar;
-    View navEvent, navPeta, navFavorit, navProfil;
+    private TextView tvAvatarInisial, tvNamaHeader, tvUsernameHeader;
+    private EditText etNamaLengkap, etUsername, etEmail, etTelepon;
+    private Button btnEditSimpanProfil, btnKeluar;
+    private boolean isEditing = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_profil);
 
-        // Menghubungkan TextView dan View dengan ID di XML
+        // Inisialisasi Views
+        tvAvatarInisial = findViewById(R.id.tvAvatarInisial);
         tvNamaHeader = findViewById(R.id.tvNamaHeader);
         tvUsernameHeader = findViewById(R.id.tvUsernameHeader);
-        tvNamaLengkapVal = findViewById(R.id.tvNamaLengkapVal);
-        tvUsernameVal = findViewById(R.id.tvUsernameVal);
-        tvEmailVal = findViewById(R.id.tvEmailVal);
-        tvTeleponVal = findViewById(R.id.tvTeleponVal);
 
+        etNamaLengkap = findViewById(R.id.etProfilNamaLengkap);
+        etUsername = findViewById(R.id.etProfilUsername);
+        etEmail = findViewById(R.id.etProfilEmail);
+        etTelepon = findViewById(R.id.etProfilTelepon);
+
+        btnEditSimpanProfil = findViewById(R.id.btnEditSimpanProfil);
         btnKeluar = findViewById(R.id.btnKeluar);
-        navEvent = findViewById(R.id.navEvent);
-        navPeta = findViewById(R.id.navPeta);
-        navFavorit = findViewById(R.id.navFavorit);
-        navProfil = findViewById(R.id.navProfil);
 
-        // Memuat Data Pengguna yang disimpan saat registrasi (Daftar)
-        SharedPreferences prefs = getSharedPreferences("FestNavPrefs", MODE_PRIVATE);
-        String savedUsername = prefs.getString("username", "@username");
-        String savedDisplayName = prefs.getString("display_name", "Nama Pengunjung");
-        String savedEmail = prefs.getString("email", "nama@gmail.com");
-        String savedTelepon = prefs.getString("telepon", "08xxxxxxxxxx");
+        TextView navEvent = findViewById(R.id.navEvent);
+        TextView navPeta = findViewById(R.id.navPeta);
+        TextView navFavorit = findViewById(R.id.navFavorit);
+        TextView navProfil = findViewById(R.id.navProfil);
 
-        // Menampilkan data ke TextView Profil
-        tvNamaHeader.setText(savedDisplayName);
-        tvUsernameHeader.setText("@" + savedUsername);
-        tvNamaLengkapVal.setText(savedDisplayName);
-        tvUsernameVal.setText(savedUsername);
-        tvEmailVal.setText(savedEmail);
-        tvTeleponVal.setText(savedTelepon);
+        // Load data user dari SharedPreferences
+        loadUserData();
 
-        // Tombol Keluar (Logout) -> Kembali ke halaman Masuk
+        // 1. Tombol Edit / Simpan Profil
+        btnEditSimpanProfil.setOnClickListener(v -> {
+            if (!isEditing) {
+                // Masuk ke mode Edit (kolom bisa diketik)
+                isEditing = true;
+                setFormEnabled(true);
+                btnEditSimpanProfil.setText("Simpan Profil");
+                Toast.makeText(this, "Silakan ubah data profil Anda", Toast.LENGTH_SHORT).show();
+            } else {
+                // Simpan perubahan data ke SharedPreferences
+                saveUserData();
+                isEditing = false;
+                setFormEnabled(false);
+                btnEditSimpanProfil.setText("Edit Profil");
+                Toast.makeText(this, "Profil berhasil diperbarui!", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        // 2. Tombol Keluar (Log Out) -> Hapus sesi & kembali ke halaman Masuk
         btnKeluar.setOnClickListener(v -> {
-            Toast.makeText(this, "Keluar dari akun", Toast.LENGTH_SHORT).show();
+            SharedPreferences prefs = getSharedPreferences("FestNavPrefs", MODE_PRIVATE);
+            SharedPreferences.Editor editor = prefs.edit();
+            editor.clear(); // Hapus sesi login lokal
+            editor.apply();
+
             Intent intent = new Intent(Profil.this, Masuk.class);
-            intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+            intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
             startActivity(intent);
             finish();
         });
 
-        // Navigasi Bawah
-        navEvent.setOnClickListener(v -> {
-            Intent intent = new Intent(Profil.this, Dashboard.class);
-            intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-            startActivity(intent);
-        });
+        // 3. Navigasi 4 Tombol Bawah (Tombol Event diarahkan ke Event.class)
+        if (navEvent != null) {
+            navEvent.setOnClickListener(v -> {
+                Intent intent = new Intent(Profil.this, Event.class);
+                startActivity(intent);
+                finish();
+            });
+        }
 
-        navPeta.setOnClickListener(v -> {
-            Toast.makeText(this, "Membuka Peta", Toast.LENGTH_SHORT).show();
-        });
+        if (navPeta != null) {
+            navPeta.setOnClickListener(v -> {
+                Intent intent = new Intent(Profil.this, Peta.class);
+                startActivity(intent);
+            });
+        }
 
-        navFavorit.setOnClickListener(v -> {
-            Intent intent = new Intent(Profil.this, Favorit1.class);
-            intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-            startActivity(intent);
-        });
+        if (navFavorit != null) {
+            navFavorit.setOnClickListener(v -> {
+                Intent intent = new Intent(Profil.this, Favorit1.class);
+                startActivity(intent);
+            });
+        }
 
-        navProfil.setOnClickListener(v -> {
-            // Sedang di halaman Profil
-        });
+        if (navProfil != null) {
+            navProfil.setOnClickListener(v -> {
+                Toast.makeText(this, "Anda sudah berada di halaman Profil", Toast.LENGTH_SHORT).show();
+            });
+        }
+    }
+
+    // Mengambil data dari SharedPreferences untuk ditampilkan di Profil
+    private void loadUserData() {
+        SharedPreferences prefs = getSharedPreferences("FestNavPrefs", MODE_PRIVATE);
+        String name = prefs.getString("display_name", "Nama Pengunjung");
+        String username = prefs.getString("username", "username");
+        String email = prefs.getString("email", "nama@gmail.com");
+        String telepon = prefs.getString("telepon", "08xx xxxx xxxx");
+
+        // Set ke Header & Form EditText
+        tvNamaHeader.setText(name);
+        tvUsernameHeader.setText("@" + username);
+
+        etNamaLengkap.setText(name);
+        etUsername.setText(username);
+        etEmail.setText(email);
+        etTelepon.setText(telepon);
+
+        // Otomatis buat inisial avatar dari 2 huruf depan nama
+        if (name.length() >= 2) {
+            tvAvatarInisial.setText(name.substring(0, 2).toUpperCase());
+        } else if (!name.isEmpty()) {
+            tvAvatarInisial.setText(name.substring(0, 1).toUpperCase());
+        }
+    }
+
+    // Menyimpan pembaruan data profil ke SharedPreferences
+    private void saveUserData() {
+        String newName = etNamaLengkap.getText().toString().trim();
+        String newUsername = etUsername.getText().toString().trim();
+        String newEmail = etEmail.getText().toString().trim();
+        String newTelepon = etTelepon.getText().toString().trim();
+
+        SharedPreferences prefs = getSharedPreferences("FestNavPrefs", MODE_PRIVATE);
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putString("display_name", newName);
+        editor.putString("username", newUsername);
+        editor.putString("email", newEmail);
+        editor.putString("telepon", newTelepon);
+        editor.apply();
+
+        // Refresh tampilan header
+        loadUserData();
+    }
+
+    // Mengatur status aktif/non-aktif EditText saat mode edit
+    private void setFormEnabled(boolean enabled) {
+        etNamaLengkap.setEnabled(enabled);
+        etUsername.setEnabled(enabled);
+        etEmail.setEnabled(enabled);
+        etTelepon.setEnabled(enabled);
     }
 }

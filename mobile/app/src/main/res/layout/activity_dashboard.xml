@@ -1,122 +1,231 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView
+<RelativeLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fillViewport="true"
-    android:scrollbars="vertical"
     android:background="#FFFFFF"
     tools:context=".Dashboard">
 
-    <androidx.constraintlayout.widget.ConstraintLayout
+    <!-- Konten Utama yang Bisa Di-scroll -->
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:paddingBottom="80dp">
+        android:layout_height="match_parent"
+        android:layout_above="@+id/bottomNavigation"
+        android:fillViewport="true">
 
-        <!-- Latar Belakang Gambar Dashboard -->
-        <ImageView
-            android:id="@+id/imgBackgroundDashboard"
-            android:layout_width="0dp"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:adjustViewBounds="true"
-            android:scaleType="fitXY"
-            android:src="@drawable/dashboard"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            android:orientation="vertical"
+            android:padding="24dp">
 
-        <!-- 1. Kolom Pencarian (Bisa Diketik) -->
-        <EditText
-            android:id="@+id/etSearchDashboard"
-            android:layout_width="0dp"
-            android:layout_height="45dp"
-            android:layout_marginStart="28dp"
-            android:layout_marginEnd="28dp"
-            android:layout_marginTop="180dp"
-            android:background="@android:color/transparent"
-            android:hint="Temukan eventmu sekarang!"
-            android:paddingStart="36dp"
-            android:paddingEnd="16dp"
-            android:textColor="#000000"
-            android:textColorHint="#9CA3AF"
-            android:textSize="13sp"
-            app:layout_constraintTop_toTopOf="@id/imgBackgroundDashboard"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            <!-- Header Dashboard -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Dashboard"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:textColor="#000000"
+                android:layout_marginBottom="4dp"/>
 
-        <!-- 2. Tombol Kartu Pertama: "Kunjungi event favoritmu" -> Membuka DetailEvent -->
-        <View
-            android:id="@+id/btnKunjungiFavorit"
-            android:layout_width="0dp"
-            android:layout_height="40dp"
-            android:layout_marginStart="50dp"
-            android:layout_marginEnd="50dp"
-            android:layout_marginTop="250dp"
-            android:background="@android:color/transparent"
-            app:layout_constraintTop_toTopOf="@id/imgBackgroundDashboard"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="FestNav"
+                android:textSize="14sp"
+                android:textColor="#6B7280"
+                android:layout_marginBottom="16dp"/>
 
-        <!-- 3. Tombol Kartu Kedua: "Jelajahi event disekitarmu" -->
-        <View
-            android:id="@+id/btnJelajahiEvent"
-            android:layout_width="0dp"
-            android:layout_height="40dp"
-            android:layout_marginStart="50dp"
-            android:layout_marginEnd="50dp"
-            android:layout_marginTop="310dp"
-            android:background="@android:color/transparent"
-            app:layout_constraintTop_toTopOf="@id/imgBackgroundDashboard"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            <!-- Sapaan Display Name (Otomatis berubah sesuai user login) -->
+            <TextView
+                android:id="@+id/tvWelcomeDashboard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Selamat datang\n@displayname"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:textColor="#000000"
+                android:layout_marginBottom="6dp"/>
 
-        <!-- 4. Menu Navigasi Bawah (Event, Peta, Favorit, Profil) -->
-        <!-- Tombol Event -->
-        <View
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Masuk untuk menjelajahi event dan menemukan fasilitasnya."
+                android:textSize="13sp"
+                android:textColor="#6B7280"
+                android:layout_marginBottom="16dp"/>
+
+            <!-- Kolom Search Event -->
+            <EditText
+                android:id="@+id/etSearchEvent"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:hint="Temukan eventmu sekarang!"
+                android:inputType="text"
+                android:background="@android:drawable/edit_text"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:layout_marginBottom="20dp"/>
+
+            <!-- CARD EVENT 1: Dies Natalis Udayana (Tanpa teks Nineties) -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/cardEvent1"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:radius="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="20dp"
+                    android:background="#F9FAFB">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Dies Natalis Udayana 2026"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:textColor="#000000"
+                        android:gravity="center"
+                        android:layout_marginBottom="6dp"/>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="jadi waktu dies teman saya dapat hadiah baju dan mereka sangat bahagia"
+                        android:textSize="13sp"
+                        android:textColor="#4B5563"
+                        android:gravity="center"
+                        android:layout_marginBottom="16dp"/>
+
+                    <Button
+                        android:id="@+id/btnKunjungiFavorit"
+                        android:layout_width="match_parent"
+                        android:layout_height="45dp"
+                        android:backgroundTint="#7C3AED"
+                        android:text="Kunjungi event favoritmu"
+                        android:textColor="#FFFFFF"
+                        android:textSize="13sp"
+                        android:textStyle="bold"/>
+
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- CARD EVENT 2: Jelajahi event disekitarmu (Tanpa teks Nineties) -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/cardEvent2"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:radius="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="20dp"
+                    android:background="#F9FAFB">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Dies Natalis Udayana 2026"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:textColor="#000000"
+                        android:gravity="center"
+                        android:layout_marginBottom="6dp"/>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="jadi waktu dies teman saya dapat hadiah baju dan mereka sangat bahagia"
+                        android:textSize="13sp"
+                        android:textColor="#4B5563"
+                        android:gravity="center"
+                        android:layout_marginBottom="16dp"/>
+
+                    <Button
+                        android:id="@+id/btnJelajahiSekitar"
+                        android:layout_width="match_parent"
+                        android:layout_height="45dp"
+                        android:backgroundTint="#7C3AED"
+                        android:text="Jelajahi event disekitarmu"
+                        android:textColor="#FFFFFF"
+                        android:textSize="13sp"
+                        android:textStyle="bold"/>
+
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- Bottom Navigation Bar (4 Tombol di Bawah) -->
+    <LinearLayout
+        android:id="@+id/bottomNavigation"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:layout_alignParentBottom="true"
+        android:orientation="horizontal"
+        android:background="#FFFFFF"
+        android:elevation="8dp"
+        android:weightSum="4"
+        android:gravity="center">
+
+        <!-- 1. Tombol Event -->
+        <TextView
             android:id="@+id/navEvent"
-            android:layout_width="65dp"
-            android:layout_height="50dp"
-            android:layout_marginStart="30dp"
-            android:layout_marginTop="450dp"
-            android:background="@android:color/transparent"
-            app:layout_constraintTop_toTopOf="@id/imgBackgroundDashboard"
-            app:layout_constraintStart_toStartOf="parent" />
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="Event"
+            android:gravity="center"
+            android:textSize="12sp"
+            android:textColor="#4B5563"
+            android:textStyle="bold"/>
 
-        <!-- Tombol Peta -->
-        <View
+        <!-- 2. Tombol Peta -->
+        <TextView
             android:id="@+id/navPeta"
-            android:layout_width="65dp"
-            android:layout_height="50dp"
-            android:layout_marginTop="450dp"
-            android:background="@android:color/transparent"
-            app:layout_constraintTop_toTopOf="@id/imgBackgroundDashboard"
-            app:layout_constraintStart_toEndOf="@id/navEvent"
-            app:layout_constraintEnd_toStartOf="@id/navFavorit" />
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="Peta"
+            android:gravity="center"
+            android:textSize="12sp"
+            android:textColor="#4B5563"
+            android:textStyle="bold"/>
 
-        <!-- Tombol Favorit -> Membuka Favorit1 -->
-        <View
+        <!-- 3. Tombol Favorit -->
+        <TextView
             android:id="@+id/navFavorit"
-            android:layout_width="65dp"
-            android:layout_height="50dp"
-            android:layout_marginTop="450dp"
-            android:background="@android:color/transparent"
-            app:layout_constraintTop_toTopOf="@id/imgBackgroundDashboard"
-            app:layout_constraintStart_toEndOf="@id/navPeta"
-            app:layout_constraintEnd_toStartOf="@id/navProfil" />
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="Favorit"
+            android:gravity="center"
+            android:textSize="12sp"
+            android:textColor="#4B5563"
+            android:textStyle="bold"/>
 
-        <!-- Tombol Profil -> Membuka Profil -->
-        <View
+        <!-- 4. Tombol Profil -->
+        <TextView
             android:id="@+id/navProfil"
-            android:layout_width="65dp"
-            android:layout_height="50dp"
-            android:layout_marginEnd="30dp"
-            android:layout_marginTop="450dp"
-            android:background="@android:color/transparent"
-            app:layout_constraintTop_toTopOf="@id/imgBackgroundDashboard"
-            app:layout_constraintEnd_toEndOf="parent" />
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="Profil"
+            android:gravity="center"
+            android:textSize="12sp"
+            android:textColor="#4B5563"
+            android:textStyle="bold"/>
 
-    </androidx.constraintlayout.widget.ConstraintLayout>
+    </LinearLayout>
 
-</ScrollView>
+</RelativeLayout>

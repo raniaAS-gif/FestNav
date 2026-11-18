@@ -1,192 +1,141 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView
     xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true"
-    android:scrollbars="vertical"
     android:background="#FFFFFF"
     tools:context=".Daftar">
 
-    <androidx.constraintlayout.widget.ConstraintLayout
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingBottom="60dp">
+        android:orientation="vertical"
+        android:padding="28dp"
+        android:gravity="center_horizontal">
 
-        <!-- Latar Belakang Gambar Figma -->
-        <ImageView
-            android:id="@+id/imgBackgroundDaftar"
-            android:layout_width="0dp"
+        <!-- Judul / Header -->
+        <TextView
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:adjustViewBounds="true"
-            android:scaleType="fitXY"
-            android:src="@drawable/daftar"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            android:text="FestNav"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:textColor="#7C3AED"
+            android:layout_marginTop="12dp"
+            android:layout_marginBottom="20dp"/>
 
-        <!-- Tombol Tab Masuk di Atas -->
-        <View
-            android:id="@+id/btnTabMasuk"
-            android:layout_width="140dp"
-            android:layout_height="45dp"
-            android:layout_marginStart="160dp"
-            android:layout_marginTop="235dp"
-            android:background="@android:color/transparent"
-            app:layout_constraintTop_toTopOf="@id/imgBackgroundDaftar"
-            app:layout_constraintStart_toStartOf="parent" />
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Selamat datang &lt;3"
+            android:textSize="26sp"
+            android:textStyle="bold"
+            android:textColor="#1F2937"
+            android:layout_marginBottom="6dp"/>
 
-        <!-- Input Username -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Daftar untuk buat akun dan jelajahi event favoritmu!"
+            android:textSize="14sp"
+            android:textColor="#6B7280"
+            android:layout_marginBottom="24dp"/>
+
+        <!-- 1. Username -->
         <EditText
             android:id="@+id/etUsernameDaftar"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:layout_marginStart="28dp"
-            android:layout_marginEnd="28dp"
-            android:layout_marginTop="335dp"
-            android:background="#FFFFFF"
-            android:hint="Masukkan username"
-            android:paddingStart="14dp"
-            android:paddingEnd="14dp"
-            android:textColor="#000000"
-            android:textColorHint="#9CA3AF"
-            android:textSize="14sp"
-            app:layout_constraintTop_toTopOf="@id/imgBackgroundDaftar"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:hint="Username"
+            android:inputType="text"
+            android:background="@android:drawable/edit_text"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:layout_marginBottom="12dp"/>
 
-        <!-- Input Display Name -->
+        <!-- 2. Display Name -->
         <EditText
             android:id="@+id/etDisplayNameDaftar"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:layout_marginStart="28dp"
-            android:layout_marginEnd="28dp"
-            android:layout_marginTop="400dp"
-            android:background="#FFFFFF"
-            android:hint="Masukkan display name"
-            android:paddingStart="14dp"
-            android:paddingEnd="14dp"
-            android:textColor="#000000"
-            android:textColorHint="#9CA3AF"
-            android:textSize="14sp"
-            app:layout_constraintTop_toTopOf="@id/imgBackgroundDaftar"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:hint="Display Name"
+            android:inputType="textPersonName"
+            android:background="@android:drawable/edit_text"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:layout_marginBottom="12dp"/>
 
-        <!-- Input Email -->
+        <!-- 3. Email -->
         <EditText
             android:id="@+id/etEmailDaftar"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:layout_marginStart="28dp"
-            android:layout_marginEnd="28dp"
-            android:layout_marginTop="465dp"
-            android:background="#FFFFFF"
-            android:hint="Masukkan email aktif anda"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:hint="Email"
             android:inputType="textEmailAddress"
-            android:paddingStart="14dp"
-            android:paddingEnd="14dp"
-            android:textColor="#000000"
-            android:textColorHint="#9CA3AF"
-            android:textSize="14sp"
-            app:layout_constraintTop_toTopOf="@id/imgBackgroundDaftar"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            android:background="@android:drawable/edit_text"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:layout_marginBottom="12dp"/>
 
-        <!-- Input No Telepon -->
+        <!-- 4. No. Telepon -->
         <EditText
             android:id="@+id/etTeleponDaftar"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:layout_marginStart="28dp"
-            android:layout_marginEnd="28dp"
-            android:layout_marginTop="530dp"
-            android:background="#FFFFFF"
-            android:hint="Masukkan no telepon"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:hint="No. Telepon"
             android:inputType="phone"
-            android:paddingStart="14dp"
-            android:paddingEnd="14dp"
-            android:textColor="#000000"
-            android:textColorHint="#9CA3AF"
-            android:textSize="14sp"
-            app:layout_constraintTop_toTopOf="@id/imgBackgroundDaftar"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            android:background="@android:drawable/edit_text"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:layout_marginBottom="12dp"/>
 
-        <!-- Input Password -->
+        <!-- 5. Password -->
         <EditText
             android:id="@+id/etPasswordDaftar"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:layout_marginStart="28dp"
-            android:layout_marginEnd="28dp"
-            android:layout_marginTop="595dp"
-            android:background="#FFFFFF"
-            android:hint="Buat password anda"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:hint="Password"
             android:inputType="textPassword"
-            android:paddingStart="14dp"
-            android:paddingEnd="14dp"
-            android:textColor="#000000"
-            android:textColorHint="#9CA3AF"
-            android:textSize="14sp"
-            app:layout_constraintTop_toTopOf="@id/imgBackgroundDaftar"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            android:background="@android:drawable/edit_text"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:layout_marginBottom="12dp"/>
 
-        <!-- Konfirmasi Password -->
+        <!-- 6. Konfirmasi Password -->
         <EditText
-            android:id="@+id/etConfirmPasswordDaftar"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:layout_marginStart="28dp"
-            android:layout_marginEnd="28dp"
-            android:layout_marginTop="660dp"
-            android:background="#FFFFFF"
-            android:hint="Ulangi password anda"
+            android:id="@+id/etKonfirmasiPasswordDaftar"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:hint="Konfirmasi Password"
             android:inputType="textPassword"
-            android:paddingStart="14dp"
-            android:paddingEnd="14dp"
-            android:textColor="#000000"
-            android:textColorHint="#9CA3AF"
-            android:textSize="14sp"
-            app:layout_constraintTop_toTopOf="@id/imgBackgroundDaftar"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            android:background="@android:drawable/edit_text"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:layout_marginBottom="24dp"/>
 
-        <!-- Tombol Daftar Ungu -->
-
-        <!-- Tombol Bawah Masuk -->
+        <!-- Tombol Daftar -->
         <Button
             android:id="@+id/btnDaftarAksi"
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="54dp"
-            android:layout_marginStart="28dp"
-            android:layout_marginTop="1148dp"
-            android:layout_marginEnd="28dp"
-            android:backgroundTint="#6D28D9"
+            android:backgroundTint="#7C3AED"
             android:text="Daftar"
-            android:textAllCaps="false"
             android:textColor="#FFFFFF"
             android:textSize="16sp"
             android:textStyle="bold"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintHorizontal_bias="0.0"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="@id/imgBackgroundDaftar" />
+            android:layout_marginBottom="16dp"/>
 
-        <View
-            android:id="@+id/btnBawahMasuk"
-            android:layout_width="200dp"
-            android:layout_height="36dp"
-            android:layout_marginTop="900dp"
-            android:background="@android:color/transparent"
-            app:layout_constraintTop_toTopOf="@id/imgBackgroundDaftar"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+        <!-- Pindah ke Masuk -->
+        <TextView
+            android:id="@+id/btnTabMasuk"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Sudah punya akun? Masuk"
+            android:textColor="#4B5563"
+            android:padding="8dp"/>
 
-    </androidx.constraintlayout.widget.ConstraintLayout>
+    </LinearLayout>
 
 </ScrollView>
