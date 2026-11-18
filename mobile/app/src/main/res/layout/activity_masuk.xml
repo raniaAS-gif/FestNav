@@ -14,7 +14,7 @@
         android:layout_height="wrap_content"
         android:paddingBottom="50dp">
 
-        <!-- Latar Belakang Gambar Masuk -->
+        <!-- Latar Belakang Gambar Masuk (Sudah ada tulisan & kotak dari Figma) -->
         <ImageView
             android:id="@+id/imgBackgroundMasuk"
             android:layout_width="0dp"
@@ -26,84 +26,86 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <!-- Input Email / Username -->
+        <!-- EditText Email (Transparan, pas ditekan tetap bisa ngetik di atas kotak gambar) -->
+
+        <!-- EditText Password (Transparan, tetap bisa untuk ngetik password) -->
+
+        <!-- Tombol Lupa Sandi (Area klik transparan) -->
+
+        <!-- Tombol Masuk Aksi (Area klik transparan pas di atas tombol ungu gambar) -->
+
+        <!-- Tombol Pindah ke Halaman Daftar di bawah -->
+
         <EditText
             android:id="@+id/etEmailMasuk"
             android:layout_width="0dp"
             android:layout_height="48dp"
-            android:layout_marginStart="28dp"
-            android:layout_marginEnd="28dp"
-            android:layout_marginTop="470dp"
-            android:background="#FFFFFF"
-            android:hint="Masukkan email atau username"
+            android:layout_marginStart="36dp"
+            android:layout_marginTop="452dp"
+            android:layout_marginEnd="36dp"
+            android:background="@android:color/transparent"
+            android:hint=""
             android:paddingStart="14dp"
             android:paddingEnd="14dp"
             android:textColor="#000000"
-            android:textColorHint="#9CA3AF"
             android:textSize="14sp"
-            app:layout_constraintTop_toTopOf="@id/imgBackgroundMasuk"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.0"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            app:layout_constraintTop_toTopOf="@id/imgBackgroundMasuk" />
 
-        <!-- Input Password -->
         <EditText
             android:id="@+id/etPasswordMasuk"
             android:layout_width="0dp"
             android:layout_height="48dp"
-            android:layout_marginStart="28dp"
-            android:layout_marginEnd="28dp"
-            android:layout_marginTop="590dp"
-            android:background="#FFFFFF"
-            android:hint="Masukkan password"
+            android:layout_marginStart="36dp"
+            android:layout_marginTop="544dp"
+            android:layout_marginEnd="36dp"
+            android:background="@android:color/transparent"
+            android:hint=""
             android:inputType="textPassword"
             android:paddingStart="14dp"
             android:paddingEnd="14dp"
             android:textColor="#000000"
-            android:textColorHint="#9CA3AF"
             android:textSize="14sp"
-            app:layout_constraintTop_toTopOf="@id/imgBackgroundMasuk"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.0"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            app:layout_constraintTop_toTopOf="@id/imgBackgroundMasuk" />
 
-        <!-- Tombol Lupa Sandi -->
         <View
             android:id="@+id/btnLupaSandi"
-            android:layout_width="120dp"
-            android:layout_height="30dp"
-            android:layout_marginTop="670dp"
-            android:layout_marginEnd="28dp"
+            android:layout_width="130dp"
+            android:layout_height="35dp"
+            android:layout_marginTop="620dp"
+            android:layout_marginEnd="52dp"
             android:background="@android:color/transparent"
-            app:layout_constraintTop_toTopOf="@id/imgBackgroundMasuk"
-            app:layout_constraintEnd_toEndOf="parent" />
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@id/imgBackgroundMasuk" />
 
-        <!-- Tombol Masuk Aksi (Ungu) -->
-        <Button
+        <View
             android:id="@+id/btnMasukAksi"
             android:layout_width="0dp"
-            android:layout_height="54dp"
-            android:layout_marginStart="28dp"
-            android:layout_marginEnd="28dp"
-            android:layout_marginTop="720dp"
-            android:backgroundTint="#6D28D9"
-            android:text="Masuk"
-            android:textAllCaps="false"
-            android:textColor="#FFFFFF"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            app:layout_constraintTop_toTopOf="@id/imgBackgroundMasuk"
+            android:layout_height="52dp"
+            android:layout_marginStart="36dp"
+            android:layout_marginTop="676dp"
+            android:layout_marginEnd="36dp"
+            android:background="@android:color/transparent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.0"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            app:layout_constraintTop_toTopOf="@id/imgBackgroundMasuk" />
 
-        <!-- Tombol Tab Pindah ke Halaman Daftar -->
         <View
             android:id="@+id/btnTabDaftar"
-            android:layout_width="140dp"
-            android:layout_height="45dp"
-            android:layout_marginTop="800dp"
+            android:layout_width="180dp"
+            android:layout_height="40dp"
+            android:layout_marginTop="780dp"
             android:background="@android:color/transparent"
-            app:layout_constraintTop_toTopOf="@id/imgBackgroundMasuk"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.497"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            app:layout_constraintTop_toTopOf="@id/imgBackgroundMasuk" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

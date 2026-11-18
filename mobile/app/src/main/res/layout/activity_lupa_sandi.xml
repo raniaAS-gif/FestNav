@@ -39,13 +39,18 @@
             app:layout_constraintStart_toStartOf="parent" />
 
         <!-- Input Email Lupa Sandi -->
+
+        <!-- Tombol Kirim Tautan Reset -->
+
+        <!-- Area Klik Teks "Ingat kata sandimu? Masuk" di Bawah -->
+
         <EditText
             android:id="@+id/etEmailLupaSandi"
             android:layout_width="0dp"
             android:layout_height="50dp"
             android:layout_marginStart="28dp"
+            android:layout_marginTop="552dp"
             android:layout_marginEnd="28dp"
-            android:layout_marginTop="540dp"
             android:background="#FFFFFF"
             android:hint="nama@gmail.com"
             android:inputType="textEmailAddress"
@@ -54,29 +59,29 @@
             android:textColor="#000000"
             android:textColorHint="#9CA3AF"
             android:textSize="14sp"
-            app:layout_constraintTop_toTopOf="@id/imgBackgroundLupaSandi"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.0"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            app:layout_constraintTop_toTopOf="@id/imgBackgroundLupaSandi" />
 
-        <!-- Tombol Kirim Tautan Reset -->
         <Button
             android:id="@+id/btnKirimReset"
             android:layout_width="0dp"
             android:layout_height="54dp"
             android:layout_marginStart="28dp"
-            android:layout_marginEnd="28dp"
             android:layout_marginTop="620dp"
+            android:layout_marginEnd="28dp"
             android:backgroundTint="#6D28D9"
             android:text="Kirim tautan reset"
             android:textAllCaps="false"
             android:textColor="#FFFFFF"
             android:textSize="16sp"
             android:textStyle="bold"
-            app:layout_constraintTop_toTopOf="@id/imgBackgroundLupaSandi"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.0"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            app:layout_constraintTop_toTopOf="@id/imgBackgroundLupaSandi" />
 
-        <!-- Area Klik Teks "Ingat kata sandimu? Masuk" di Bawah -->
         <View
             android:id="@+id/btnKembaliMasuk"
             android:layout_width="220dp"
