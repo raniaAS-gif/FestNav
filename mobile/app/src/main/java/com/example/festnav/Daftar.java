@@ -1,110 +1,103 @@
 package com.example.festnav;
 
-import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.auth.UserProfileChangeRequest;
+import com.example.festnav.api.ApiClient;
+import com.example.festnav.api.ApiService;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class Daftar extends AppCompatActivity {
 
     private EditText etUsernameDaftar, etDisplayNameDaftar, etEmailDaftar, etTeleponDaftar, etPasswordDaftar, etKonfirmasiPasswordDaftar;
-    private FirebaseAuth mAuth;
+    private Button btnDaftarAksi;
+    private TextView btnTabMasuk;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_daftar);
 
-        // Inisialisasi Firebase Auth
-        mAuth = FirebaseAuth.getInstance();
-
+        // 1. Inisialisasi komponen berdasarkan ID di XML
         etUsernameDaftar = findViewById(R.id.etUsernameDaftar);
         etDisplayNameDaftar = findViewById(R.id.etDisplayNameDaftar);
         etEmailDaftar = findViewById(R.id.etEmailDaftar);
         etTeleponDaftar = findViewById(R.id.etTeleponDaftar);
         etPasswordDaftar = findViewById(R.id.etPasswordDaftar);
         etKonfirmasiPasswordDaftar = findViewById(R.id.etKonfirmasiPasswordDaftar);
+        btnDaftarAksi = findViewById(R.id.btnDaftarAksi);
+        btnTabMasuk = findViewById(R.id.btnTabMasuk);
 
-        Button btnDaftarAksi = findViewById(R.id.btnDaftarAksi);
-        TextView btnTabMasuk = findViewById(R.id.btnTabMasuk);
+        // 2. Aksi ketika tombol Daftar diklik
+        btnDaftarAksi.setOnClickListener(v -> {
+            String username = etUsernameDaftar.getText().toString().trim();
+            String displayName = etDisplayNameDaftar.getText().toString().trim();
+            String email = etEmailDaftar.getText().toString().trim();
+            String telepon = etTeleponDaftar.getText().toString().trim();
+            String password = etPasswordDaftar.getText().toString().trim();
+            String konfirmasiPassword = etKonfirmasiPasswordDaftar.getText().toString().trim();
 
-        if (btnDaftarAksi != null) {
-            btnDaftarAksi.setOnClickListener(v -> {
-                String username = etUsernameDaftar.getText().toString().trim();
-                String displayName = etDisplayNameDaftar.getText().toString().trim();
-                String email = etEmailDaftar.getText().toString().trim();
-                String telepon = etTeleponDaftar.getText().toString().trim();
-                String password = etPasswordDaftar.getText().toString().trim();
-                String konfirmasiPassword = etKonfirmasiPasswordDaftar.getText().toString().trim();
+            // Validasi agar tidak ada kolom yang kosong
+            if (username.isEmpty() || displayName.isEmpty() || email.isEmpty() || telepon.isEmpty() || password.isEmpty() || konfirmasiPassword.isEmpty()) {
+                Toast.makeText(Daftar.this, "Semua kolom harus diisi!", Toast.LENGTH_SHORT).show();
+                return;
+            }
 
-                if (username.isEmpty() || displayName.isEmpty() || email.isEmpty() || telepon.isEmpty() || password.isEmpty() || konfirmasiPassword.isEmpty()) {
-                    Toast.makeText(this, "Semua kolom harus diisi!", Toast.LENGTH_SHORT).show();
-                    return;
-                }
+            // Validasi kecocokan password
+            if (!password.equals(konfirmasiPassword)) {
+                Toast.makeText(Daftar.this, "Password dan Konfirmasi Password tidak sama!", Toast.LENGTH_SHORT).show();
+                return;
+            }
 
-                if (!password.equals(konfirmasiPassword)) {
-                    Toast.makeText(this, "Konfirmasi kata sandi tidak cocok!", Toast.LENGTH_SHORT).show();
-                    return;
-                }
+            // Panggil proses API Register
+            prosesRegister(username, displayName, email, telepon, password);
+        });
 
-                if (password.length() < 6) {
-                    Toast.makeText(this, "Password minimal harus 6 karakter!", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-
-                // Daftarkan akun baru langsung ke server Firebase Auth
-                mAuth.createUserWithEmailAndPassword(email, password)
-                        .addOnCompleteListener(this, task -> {
-                            if (task.isSuccessful()) {
-                                // Registrasi Berhasil di Firebase, ambil user yang baru dibuat
-                                FirebaseUser user = mAuth.getCurrentUser();
-
-                                if (user != null) {
-                                    // Update Display Name di profil Firebase
-                                    UserProfileChangeRequest profileUpdates = new UserProfileChangeRequest.Builder()
-                                            .setDisplayName(displayName)
-                                            .build();
-                                    user.updateProfile(profileUpdates);
-                                }
-
-                                // Simpan data ke SharedPreferences lokal untuk preferensi tampilan
-                                SharedPreferences.Editor editor = getSharedPreferences("FestNavPrefs", MODE_PRIVATE).edit();
-                                editor.putString("display_name", displayName);
-                                editor.putString("username", username);
-                                editor.putString("email", email);
-                                editor.putString("telepon", telepon);
-                                editor.apply();
-
-                                Toast.makeText(this, "Pendaftaran Berhasil!", Toast.LENGTH_SHORT).show();
-
-                                // Pindah ke halaman Masuk
-                                Intent intent = new Intent(Daftar.this, Masuk.class);
-                                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
-                                startActivity(intent);
-                                finish();
-                            } else {
-                                // Jika gagal (misal email sudah terdaftar di server atau format salah)
-                                String errorMsg = task.getException() != null ? task.getException().getMessage() : "Pendaftaran Gagal";
-                                Toast.makeText(this, "Gagal: " + errorMsg, Toast.LENGTH_LONG).show();
-                            }
-                        });
-            });
-        }
-
+        // 3. Aksi kembali ke halaman Masuk
         if (btnTabMasuk != null) {
             btnTabMasuk.setOnClickListener(v -> {
-                Intent intent = new Intent(Daftar.this, Masuk.class);
-                startActivity(intent);
                 finish();
             });
         }
+    }
+
+    private void prosesRegister(String username, String displayName, String email, String telepon, String password) {
+        RegisterRequest request = new RegisterRequest(username, displayName, email, telepon, password);
+        ApiService apiService = ApiClient.getClient().create(ApiService.class);
+
+        // Menggunakan Callback<Object> agar selaras dengan ApiService.java
+        apiService.registerUser(request).enqueue(new Callback<Object>() {
+            @Override
+            public void onResponse(Call<Object> call, Response<Object> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    Toast.makeText(Daftar.this, "Registrasi Berhasil! Silakan Masuk.", Toast.LENGTH_LONG).show();
+                    finish();
+                } else {
+                    // Menangkap pesan error mentah dari server FastAPI
+                    try {
+                        String errorBody = response.errorBody() != null ? response.errorBody().string() : "Unknown error";
+                        Log.e("API_DAFTAR", "Gagal Register | Kode: " + response.code() + " | Pesan: " + errorBody);
+                        Toast.makeText(Daftar.this, "Gagal (Kode " + response.code() + "). Cek Logcat!", Toast.LENGTH_LONG).show();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        Toast.makeText(Daftar.this, "Pendaftaran gagal.", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            }
+
+            @Override
+            public void onFailure(Call<Object> call, Throwable t) {
+                Log.e("API_DAFTAR", "Koneksi Error: " + t.getMessage());
+                Toast.makeText(Daftar.this, "Gagal terhubung ke server: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 }

@@ -1,69 +1,322 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView
+<RelativeLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fillViewport="true"
-    android:scrollbars="vertical"
     android:background="#FFFFFF"
     tools:context=".DetailEvent">
 
-    <androidx.constraintlayout.widget.ConstraintLayout
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:paddingBottom="60dp">
+        android:layout_height="match_parent"
+        android:fillViewport="true">
 
-        <!-- Latar Belakang Gambar Detail Event -->
-        <ImageView
-            android:id="@+id/imgBackgroundDetailEvent"
-            android:layout_width="0dp"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:adjustViewBounds="true"
-            android:scaleType="fitXY"
-            android:src="@drawable/detail_event"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            android:orientation="vertical"
+            android:padding="20dp">
 
-        <!-- Tombol Panah Kembali (<) di Pojok Kiri Atas -->
-        <View
-            android:id="@+id/btnKembaliDetail"
-            android:layout_width="45dp"
-            android:layout_height="45dp"
-            android:layout_marginStart="24dp"
-            android:layout_marginTop="24dp"
-            android:background="@android:color/transparent"
-            app:layout_constraintTop_toTopOf="@id/imgBackgroundDetailEvent"
-            app:layout_constraintStart_toStartOf="parent" />
+            <!-- Header Detail Event -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="16dp">
 
-        <!-- Tombol "Buka Map" Hari ke-1 -->
-        <View
-            android:id="@+id/btnBukaMap1"
-            android:layout_width="0dp"
-            android:layout_height="45dp"
-            android:layout_marginStart="50dp"
-            android:layout_marginEnd="50dp"
-            android:layout_marginTop="350dp"
-            android:background="@android:color/transparent"
-            app:layout_constraintTop_toTopOf="@id/imgBackgroundDetailEvent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+                <ImageView
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:background="@drawable/ic_launcher_background"
+                    android:layout_marginEnd="10sp"/>
 
-        <!-- Tombol "Buka Map" Hari ke-2 -->
-        <View
-            android:id="@+id/btnBukaMap2"
-            android:layout_width="0dp"
-            android:layout_height="45dp"
-            android:layout_marginStart="50dp"
-            android:layout_marginEnd="50dp"
-            android:layout_marginTop="420dp"
-            android:background="@android:color/transparent"
-            app:layout_constraintTop_toTopOf="@id/imgBackgroundDetailEvent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Detail Event"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:textColor="#000000"/>
+            </LinearLayout>
 
-    </androidx.constraintlayout.widget.ConstraintLayout>
+            <!-- Judul Utama (Dari Backend) -->
+            <TextView
+                android:id="@+id/tvJudulEvent"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Loading..."
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:textColor="#000000"
+                android:layout_marginBottom="16dp"/>
 
-</ScrollView>
+            <!-- Informasi Detail (Poster & Teks Keterangan) -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="16dp">
+
+                <!-- Placeholder Gambar Poster -->
+                <ImageView
+                    android:layout_width="100dp"
+                    android:layout_height="130dp"
+                    android:background="#E5E7EB"
+                    android:scaleType="centerCrop"
+                    android:layout_marginEnd="16dp"/>
+
+                <!-- Detail Teks (Dari Backend) -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/tvNamaEventLabel"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Nama Event:\n-"
+                        android:textSize="12sp"
+                        android:textColor="#374151"
+                        android:layout_marginBottom="6dp"/>
+
+                    <TextView
+                        android:id="@+id/tvTanggalEvent"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Tanggal Event:\n-"
+                        android:textSize="12sp"
+                        android:textColor="#374151"
+                        android:layout_marginBottom="6dp"/>
+
+                    <TextView
+                        android:id="@+id/tvLokasiEvent"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Lokasi Event:\n-"
+                        android:textSize="12sp"
+                        android:textColor="#374151"
+                        android:layout_marginBottom="6dp"/>
+
+                    <TextView
+                        android:id="@+id/tvJenisEvent"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Jenis Event:\n-"
+                        android:textSize="12sp"
+                        android:textColor="#374151"/>
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Organizer, Sumber & Status -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="12dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/tvOrganizer"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Event Organizer: -"
+                        android:textSize="12sp"
+                        android:textColor="#4B5563"/>
+
+                    <TextView
+                        android:id="@+id/tvSumber"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Sumber: -"
+                        android:textSize="12sp"
+                        android:textColor="#4B5563"/>
+                </LinearLayout>
+
+                <!-- Badge Status (Dari Backend) -->
+                <TextView
+                    android:id="@+id/tvStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Loading..."
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:textColor="#065F46"
+                    android:background="#D1FAE5"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:paddingTop="6dp"
+                    android:paddingBottom="6dp"/>
+            </LinearLayout>
+
+            <!-- Deskripsi Singkat -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Deskripsi Singkat"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="#000000"
+                android:layout_marginBottom="4dp"/>
+
+            <!-- Deskripsi (Dari Backend) -->
+            <TextView
+                android:id="@+id/tvDeskripsi"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Loading..."
+                android:textSize="12sp"
+                android:textColor="#1F2937"
+                android:background="#FCE7F3"
+                android:padding="12dp"
+                android:layout_marginBottom="20dp"/>
+
+            <!-- Bagian Denah Acara -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Denah Acara"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="#000000"
+                android:layout_marginBottom="12dp"/>
+
+            <!-- CARD DAY 1 -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="3dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="10dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Day 1 : Lapangan Rektorat"
+                            android:textStyle="bold"
+                            android:textColor="#000000"
+                            android:textSize="14sp"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Outdoor"
+                            android:textSize="10sp"
+                            android:textColor="#FFFFFF"
+                            android:background="#4B5563"
+                            android:paddingStart="8dp"
+                            android:paddingEnd="8dp"
+                            android:paddingTop="2dp"
+                            android:paddingBottom="2dp"/>
+                    </LinearLayout>
+
+                    <ImageView
+                        android:layout_width="match_parent"
+                        android:layout_height="140dp"
+                        android:background="#E5E7EB"
+                        android:scaleType="centerCrop"
+                        android:layout_marginBottom="12dp"/>
+
+                    <Button
+                        android:id="@+id/btnBukaMapDay1"
+                        android:layout_width="match_parent"
+                        android:layout_height="45dp"
+                        android:backgroundTint="#7C3AED"
+                        android:text="Buka Map"
+                        android:textColor="#FFFFFF"
+                        android:textStyle="bold"
+                        android:textSize="14sp"/>
+
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- CARD DAY 2 -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="3dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="10dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Day 2 : Gedung Rektorat"
+                            android:textStyle="bold"
+                            android:textColor="#000000"
+                            android:textSize="14sp"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Indoor"
+                            android:textSize="10sp"
+                            android:textColor="#FFFFFF"
+                            android:background="#6366F1"
+                            android:paddingStart="8dp"
+                            android:paddingEnd="8dp"
+                            android:paddingTop="2dp"
+                            android:paddingBottom="2dp"/>
+                    </LinearLayout>
+
+                    <ImageView
+                        android:layout_width="match_parent"
+                        android:layout_height="140dp"
+                        android:background="#E5E7EB"
+                        android:scaleType="centerCrop"
+                        android:layout_marginBottom="12dp"/>
+
+                    <Button
+                        android:id="@+id/btnBukaMapDay2"
+                        android:layout_width="match_parent"
+                        android:layout_height="45dp"
+                        android:backgroundTint="#7C3AED"
+                        android:text="Buka Map"
+                        android:textColor="#FFFFFF"
+                        android:textStyle="bold"
+                        android:textSize="14sp"/>
+
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+        </LinearLayout>
+    </ScrollView>
+
+</RelativeLayout>

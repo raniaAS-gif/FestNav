@@ -38,7 +38,7 @@
                 android:textColor="#6B7280"
                 android:layout_marginBottom="16dp"/>
 
-            <!-- Sapaan Display Name (Otomatis berubah sesuai user login) -->
+            <!-- Sapaan Display Name (Memiliki ID: tvWelcomeDashboard) -->
             <TextView
                 android:id="@+id/tvWelcomeDashboard"
                 android:layout_width="match_parent"
@@ -57,7 +57,7 @@
                 android:textColor="#6B7280"
                 android:layout_marginBottom="16dp"/>
 
-            <!-- Kolom Search Event -->
+            <!-- Kolom Search Event (Memiliki ID: etSearchEvent) -->
             <EditText
                 android:id="@+id/etSearchEvent"
                 android:layout_width="match_parent"
@@ -69,7 +69,7 @@
                 android:paddingEnd="16dp"
                 android:layout_marginBottom="20dp"/>
 
-            <!-- CARD EVENT 1: Dies Natalis Udayana (Tanpa teks Nineties) -->
+            <!-- CARD EVENT 1: Diambil dinamis dari Backend FastAPI -->
             <androidx.cardview.widget.CardView
                 android:id="@+id/cardEvent1"
                 android:layout_width="match_parent"
@@ -84,7 +84,9 @@
                     android:padding="20dp"
                     android:background="#F9FAFB">
 
+                    <!-- Judul Event 1 (Memiliki ID: tvCardTitle1) -->
                     <TextView
+                        android:id="@+id/tvCardTitle1"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="Dies Natalis Udayana 2026"
@@ -94,7 +96,9 @@
                         android:gravity="center"
                         android:layout_marginBottom="6dp"/>
 
+                    <!-- Deskripsi Event 1 (Memiliki ID: tvCardDesc1) -->
                     <TextView
+                        android:id="@+id/tvCardDesc1"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="jadi waktu dies teman saya dapat hadiah baju dan mereka sangat bahagia"
@@ -116,7 +120,7 @@
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-            <!-- CARD EVENT 2: Jelajahi event disekitarmu (Tanpa teks Nineties) -->
+            <!-- CARD EVENT 2 -->
             <androidx.cardview.widget.CardView
                 android:id="@+id/cardEvent2"
                 android:layout_width="match_parent"
@@ -150,6 +154,7 @@
                         android:gravity="center"
                         android:layout_marginBottom="16dp"/>
 
+                    <!-- Tombol Jelajahi Sekitar (Memiliki ID: btnJelajahiSekitar) -->
                     <Button
                         android:id="@+id/btnJelajahiSekitar"
                         android:layout_width="match_parent"
@@ -166,7 +171,7 @@
         </LinearLayout>
     </ScrollView>
 
-    <!-- Bottom Navigation Bar (4 Tombol di Bawah) -->
+    <!-- Bottom Navigation Bar (4 Tombol di Bawah dengan ID lengkap) -->
     <LinearLayout
         android:id="@+id/bottomNavigation"
         android:layout_width="match_parent"

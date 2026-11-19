@@ -1,7 +1,6 @@
 package com.example.festnav;
 
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.EditText;
@@ -9,90 +8,73 @@ import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
+import com.example.festnav.api.ApiClient;
+import com.example.festnav.api.ApiService;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class Masuk extends AppCompatActivity {
 
     private EditText etEmailMasuk, etPasswordMasuk;
-    private FirebaseAuth mAuth;
+    private Button btnMasukAksi;
+    private TextView btnTabDaftar, btnLupaSandi;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_masuk);
+        setContentView(R.layout.activity_masuk); // Pastikan nama file XML-mu sesuai
 
-        // Inisialisasi Firebase Auth
-        mAuth = FirebaseAuth.getInstance();
-
-        // Menyesuaikan ID dengan XML layout activity_masuk.xml
+        // 1. Inisialisasi komponen sesuai ID di XML-mu
         etEmailMasuk = findViewById(R.id.etEmailMasuk);
         etPasswordMasuk = findViewById(R.id.etPasswordMasuk);
-        TextView btnLupaSandi = findViewById(R.id.btnLupaSandi);
-        Button btnMasukAksi = findViewById(R.id.btnMasukAksi);
-        TextView btnTabDaftar = findViewById(R.id.btnTabDaftar);
+        btnMasukAksi = findViewById(R.id.btnMasukAksi);
+        btnTabDaftar = findViewById(R.id.btnTabDaftar);
+        btnLupaSandi = findViewById(R.id.btnLupaSandi);
 
-        // Tombol Masuk diklik
-        if (btnMasukAksi != null) {
-            btnMasukAksi.setOnClickListener(v -> {
-                String emailInput = etEmailMasuk.getText().toString().trim();
-                String passwordInput = etPasswordMasuk.getText().toString().trim();
+        // 2. Aksi ketika tombol Masuk diklik
+        btnMasukAksi.setOnClickListener(v -> {
+            String email = etEmailMasuk.getText().toString().trim();
+            String password = etPasswordMasuk.getText().toString().trim();
 
-                if (emailInput.isEmpty() || passwordInput.isEmpty()) {
-                    Toast.makeText(this, "Email dan Password harus diisi!", Toast.LENGTH_SHORT).show();
-                    return;
+            if (email.isEmpty() || password.isEmpty()) {
+                Toast.makeText(Masuk.this, "Email dan password tidak boleh kosong!", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            // Panggil proses koneksi API Login
+            prosesLogin(email, password);
+        });
+
+        // 3. (Opsional) Aksi jika teks "Belum punya akun? Daftar di sini" diklik untuk pindah halaman
+        btnTabDaftar.setOnClickListener(v -> {
+            startActivity(new Intent(Masuk.this, Daftar.class));
+        });
+    }
+
+    private void prosesLogin(String email, String password) {
+        LoginRequest request = new LoginRequest(email, password);
+        ApiService apiService = ApiClient.getClient().create(ApiService.class);
+
+        apiService.loginUser(request).enqueue(new Callback<AuthResponse>() {
+            @Override
+            public void onResponse(Call<AuthResponse> call, Response<AuthResponse> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    Toast.makeText(Masuk.this, "Login Berhasil!", Toast.LENGTH_SHORT).show();
+
+                    // Berhasil masuk, arahkan ke Dashboard
+                    startActivity(new Intent(Masuk.this, Dashboard.class));
+                    finish();
+                } else {
+                    Toast.makeText(Masuk.this, "Email atau password salah!", Toast.LENGTH_SHORT).show();
                 }
+            }
 
-                // Autentikasi langsung ke server online Firebase Auth
-                mAuth.signInWithEmailAndPassword(emailInput, passwordInput)
-                        .addOnCompleteListener(this, task -> {
-                            if (task.isSuccessful()) {
-                                // Ambil data user yang sedang login dari Firebase
-                                FirebaseUser currentUser = mAuth.getCurrentUser();
-                                if (currentUser != null) {
-                                    String userEmail = currentUser.getEmail();
-                                    String displayName = currentUser.getDisplayName();
-                                    if (displayName == null || displayName.isEmpty()) {
-                                        displayName = "Pengunjung";
-                                    }
-
-                                    // Simpan ke SharedPreferences lokal untuk ditampilkan di profil/dashboard
-                                    SharedPreferences.Editor editor = getSharedPreferences("FestNavPrefs", MODE_PRIVATE).edit();
-                                    editor.putString("display_name", displayName);
-                                    editor.putString("email", userEmail);
-                                    editor.apply();
-                                }
-
-                                Toast.makeText(this, "Login Berhasil!", Toast.LENGTH_SHORT).show();
-
-                                // Pindah ke Dashboard dan bersihkan stack activity
-                                Intent intent = new Intent(Masuk.this, Dashboard.class);
-                                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                                startActivity(intent);
-                                finish();
-                            } else {
-                                // Jika password salah atau gagal login
-                                String errorMsg = task.getException() != null ? task.getException().getMessage() : "Gagal masuk";
-                                Toast.makeText(this, "Login Gagal: " + errorMsg, Toast.LENGTH_LONG).show();
-                            }
-                        });
-            });
-        }
-
-        // Tombol Lupa Sandi diklik
-        if (btnLupaSandi != null) {
-            btnLupaSandi.setOnClickListener(v -> {
-                Intent intent = new Intent(Masuk.this, LupaSandi.class);
-                startActivity(intent);
-            });
-        }
-
-        // Tombol Pindah ke Daftar diklik
-        if (btnTabDaftar != null) {
-            btnTabDaftar.setOnClickListener(v -> {
-                Intent intent = new Intent(Masuk.this, Daftar.class);
-                startActivity(intent);
-            });
-        }
+            @Override
+            public void onFailure(Call<AuthResponse> call, Throwable t) {
+                Toast.makeText(Masuk.this, "Gagal terhubung ke server: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 }
