@@ -77,6 +77,8 @@
             android:textColor="#7C3AED"
             android:textStyle="bold"
             android:padding="8dp"
+            android:clickable="true"
+            android:focusable="true"
             android:layout_marginBottom="24dp"/>
 
         <!-- Tombol Masuk Asli -->
@@ -98,7 +100,9 @@
             android:layout_height="wrap_content"
             android:text="Belum punya akun? Daftar di sini"
             android:textColor="#4B5563"
-            android:padding="8dp"/>
+            android:padding="8dp"
+            android:clickable="true"
+            android:focusable="true"/>
 
     </LinearLayout>
 
