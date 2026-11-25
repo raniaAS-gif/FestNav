@@ -1,63 +1,76 @@
 package com.example.festnav;
 
-import com.google.gson.annotations.SerializedName;
-
 public class EventResponse {
-
-    @SerializedName("nama_event")
-    private String namaEvent;
-
-    @SerializedName("tanggal")
-    private String tanggal;
-
-    @SerializedName("lokasi")
-    private String lokasi;
-
-    @SerializedName("jenis")
-    private String jenis;
-
-    @SerializedName("organizer")
-    private String organizer;
-
-    @SerializedName("sumber")
-    private String sumber;
-
-    @SerializedName("status")
-    private String status;
-
-    @SerializedName("deskripsi")
+    private int id_event;
+    private Integer id_organizer;
+    private String nama_organizer;
+    private String nama_event;
     private String deskripsi;
+    private String tanggal_mulai;
+    private String tanggal_selesai;
+    private String lokasi;
+    private Double garis_lintang;
+    private Double garis_bujur;
+    private String jenis_event;
+    private String tipe_lokasi;
+    private String mode_event;
+    private String sumber;
+    private String status_event;
+    private String poster_url;
 
-    // Getter methods
-    public String getNamaEvent() {
-        return namaEvent;
+    public int getId_event() {
+        return id_event;
     }
 
-    public String getTanggal() {
-        return tanggal;
+    public String getNama_organizer() {
+        return nama_organizer;
+    }
+
+    public String getNama_event() {
+        return nama_event;
+    }
+
+    public String getDeskripsi() {
+        return deskripsi;
+    }
+
+    public String getTanggal_mulai() {
+        return tanggal_mulai;
+    }
+
+    public String getTanggal_selesai() {
+        return tanggal_selesai;
     }
 
     public String getLokasi() {
         return lokasi;
     }
 
-    public String getJenis() {
-        return jenis;
+    public Double getGaris_lintang() {
+        return garis_lintang;
     }
 
-    public String getOrganizer() {
-        return organizer;
+    public Double getGaris_bujur() {
+        return garis_bujur;
+    }
+
+    public String getJenis_event() {
+        return jenis_event;
+    }
+
+    public String getMode_event() {
+        return mode_event;
     }
 
     public String getSumber() {
         return sumber;
     }
 
-    public String getStatus() {
-        return status;
+    public String getStatus_event() {
+        return status_event;
     }
 
-    public String getDeskripsi() {
-        return deskripsi;
+    public String getPoster_url() {
+        return poster_url;
     }
 }
