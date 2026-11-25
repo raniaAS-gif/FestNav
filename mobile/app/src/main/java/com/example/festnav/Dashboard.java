@@ -1,150 +1,103 @@
 package com.example.festnav;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.util.Log;
+import android.text.TextUtils;
+import android.view.inputmethod.EditorInfo;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
+
 import androidx.appcompat.app.AppCompatActivity;
-
-import com.example.festnav.api.ApiClient;
-import com.example.festnav.api.ApiService;
-
-import java.util.List;
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
 
 public class Dashboard extends AppCompatActivity {
 
-    private TextView tvCardTitle1, tvCardDesc1;
-    private EventResponse eventPertamaGlobal;
-    private String namaUserGlobal = "";
+    public static final String EXTRA_SEARCH_QUERY = "extra_search_query";
+
+    private TextView tvWelcomeDashboard, tvCardTitle1, tvCardDesc1;
+    private EditText etSearchEvent;
+    private Button btnKunjungiFavorit, btnJelajahiSekitar;
+    private TextView navEvent, navPeta, navFavorit, navProfil;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_dashboard);
 
-        // 1. Inisialisasi View
-        TextView tvWelcomeDashboard = findViewById(R.id.tvWelcomeDashboard);
-        Button btnKunjungiFavorit = findViewById(R.id.btnKunjungiFavorit);
-        Button btnJelajahiSekitar = findViewById(R.id.btnJelajahiSekitar);
-
-        TextView navEvent = findViewById(R.id.navEvent);
-        TextView navPeta = findViewById(R.id.navPeta);
-        TextView navFavorit = findViewById(R.id.navFavorit);
-        TextView navProfil = findViewById(R.id.navProfil);
-
+        tvWelcomeDashboard = findViewById(R.id.tvWelcomeDashboard);
         tvCardTitle1 = findViewById(R.id.tvCardTitle1);
         tvCardDesc1 = findViewById(R.id.tvCardDesc1);
+        etSearchEvent = findViewById(R.id.etSearchEvent);
+        btnKunjungiFavorit = findViewById(R.id.btnKunjungiFavorit);
+        btnJelajahiSekitar = findViewById(R.id.btnJelajahiSekitar);
 
-        // 2. Tangkap Username yang dikirim dari Login/Register
-        namaUserGlobal = getIntent().getStringExtra("EXTRA_USERNAME");
-        if (namaUserGlobal == null || namaUserGlobal.isEmpty()) {
-            namaUserGlobal = getIntent().getStringExtra("EXTRA_NAME");
-        }
+        navEvent = findViewById(R.id.navEvent);
+        navPeta = findViewById(R.id.navPeta);
+        navFavorit = findViewById(R.id.navFavorit);
+        navProfil = findViewById(R.id.navProfil);
 
-        if (namaUserGlobal != null && !namaUserGlobal.isEmpty()) {
-            tvWelcomeDashboard.setText("Selamat datang\n@" + namaUserGlobal);
-        } else {
-            tvWelcomeDashboard.setText("Selamat datang\n@festnav_user");
-        }
-
-        // 3. Ambil data event dari backend FastAPI
-        ambilDataEventDariServer();
-
-        // 4. Aksi Tombol Card Event (Mengarahkan ke DetailEvent dengan membawa data dari backend)
-        btnKunjungiFavorit.setOnClickListener(v -> {
-            if (eventPertamaGlobal != null) {
-                Intent intent = new Intent(Dashboard.this, DetailEvent.class);
-                intent.putExtra("EXTRA_NAMA_EVENT", eventPertamaGlobal.getNamaEvent());
-                intent.putExtra("EXTRA_TANGGAL", eventPertamaGlobal.getTanggal());
-                intent.putExtra("EXTRA_LOKASI", eventPertamaGlobal.getLokasi());
-                intent.putExtra("EXTRA_JENIS", eventPertamaGlobal.getJenis());
-                intent.putExtra("EXTRA_ORGANIZER", eventPertamaGlobal.getOrganizer());
-                intent.putExtra("EXTRA_SUMBER", eventPertamaGlobal.getSumber());
-                intent.putExtra("EXTRA_STATUS", eventPertamaGlobal.getStatus());
-                intent.putExtra("EXTRA_DESKRIPSI", eventPertamaGlobal.getDeskripsi());
-                startActivity(intent);
-            } else {
-                Toast.makeText(Dashboard.this, "Data event belum dimuat dari server", Toast.LENGTH_SHORT).show();
-            }
-        });
-
-        btnJelajahiSekitar.setOnClickListener(v -> {
-            if (eventPertamaGlobal != null) {
-                Intent intent = new Intent(Dashboard.this, DetailEvent.class);
-                intent.putExtra("EXTRA_NAMA_EVENT", eventPertamaGlobal.getNamaEvent());
-                intent.putExtra("EXTRA_TANGGAL", eventPertamaGlobal.getTanggal());
-                intent.putExtra("EXTRA_LOKASI", eventPertamaGlobal.getLokasi());
-                intent.putExtra("EXTRA_JENIS", eventPertamaGlobal.getJenis());
-                intent.putExtra("EXTRA_ORGANIZER", eventPertamaGlobal.getOrganizer());
-                intent.putExtra("EXTRA_SUMBER", eventPertamaGlobal.getSumber());
-                intent.putExtra("EXTRA_STATUS", eventPertamaGlobal.getStatus());
-                intent.putExtra("EXTRA_DESKRIPSI", eventPertamaGlobal.getDeskripsi());
-                startActivity(intent);
-            } else {
-                Toast.makeText(Dashboard.this, "Data event belum dimuat dari server", Toast.LENGTH_SHORT).show();
-            }
-        });
-
-        // 5. Navigasi Bawah (Di-link ke class: Event, Peta, Favorit1, Profil)
-        navEvent.setOnClickListener(v -> {
-            Intent intent = new Intent(Dashboard.this, Event.class);
-            startActivity(intent);
-        });
-
-        navPeta.setOnClickListener(v -> {
-            Intent intent = new Intent(Dashboard.this, Peta.class);
-            startActivity(intent);
-        });
-
-        navFavorit.setOnClickListener(v -> {
-            Intent intent = new Intent(Dashboard.this, Favorit1.class);
-            startActivity(intent);
-        });
-
-        navProfil.setOnClickListener(v -> {
-            Intent intent = new Intent(Dashboard.this, Profil.class);
-            intent.putExtra("EXTRA_USERNAME", namaUserGlobal);
-            startActivity(intent);
-        });
+        tampilkanSapaanUser();
+        setupAksiKonten();
+        setupNavigasiBawah();
     }
 
-    private void ambilDataEventDariServer() {
-        ApiService apiService = ApiClient.getClient().create(ApiService.class);
+    private void tampilkanSapaanUser() {
+        SharedPreferences prefs = getSharedPreferences("FestNavPrefs", MODE_PRIVATE);
+        String nama = prefs.getString("nama", "");
+        String username = prefs.getString("username", "");
 
-        apiService.getAllEvents().enqueue(new Callback<List<EventResponse>>() {
-            @Override
-            public void onResponse(Call<List<EventResponse>> call, Response<List<EventResponse>> response) {
-                if (response.isSuccessful() && response.body() != null) {
-                    List<EventResponse> listEvent = response.body();
-                    if (!listEvent.isEmpty()) {
-                        eventPertamaGlobal = listEvent.get(0);
+        if (!TextUtils.isEmpty(nama)) {
+            tvWelcomeDashboard.setText("Selamat datang\n" + nama);
+        } else if (!TextUtils.isEmpty(username)) {
+            tvWelcomeDashboard.setText("Selamat datang\n@" + username);
+        } else {
+            tvWelcomeDashboard.setText("Selamat datang\nPengunjung");
+        }
+    }
 
-                        String nama = eventPertamaGlobal.getNamaEvent();
-                        String deskripsi = eventPertamaGlobal.getDeskripsi();
-
-                        if (tvCardTitle1 != null && nama != null) {
-                            tvCardTitle1.setText(nama);
-                        }
-                        if (tvCardDesc1 != null && deskripsi != null) {
-                            tvCardDesc1.setText(deskripsi);
-                        }
-
-                        Log.d("API_EVENT", "Berhasil memuat event: " + nama);
-                    }
-                } else {
-                    Log.e("API_EVENT", "Gagal memuat event. Kode: " + response.code());
-                }
+    private void setupAksiKonten() {
+        etSearchEvent.setOnEditorActionListener((v, actionId, event) -> {
+            if (actionId == EditorInfo.IME_ACTION_SEARCH || actionId == EditorInfo.IME_ACTION_DONE) {
+                String kataKunci = etSearchEvent.getText().toString().trim();
+                Intent intent = new Intent(Dashboard.this, Event.class);
+                intent.putExtra(EXTRA_SEARCH_QUERY, kataKunci);
+                startActivity(intent);
+                return true;
             }
-
-            @Override
-            public void onFailure(Call<List<EventResponse>> call, Throwable t) {
-                Log.e("API_EVENT", "Koneksi Error: " + t.getMessage());
-            }
+            return false;
         });
+
+        // Diarahkan ke Event sesuai kebutuhan alur map
+        btnKunjungiFavorit.setOnClickListener(v ->
+                startActivity(new Intent(Dashboard.this, Event.class))
+        );
+
+        btnJelajahiSekitar.setOnClickListener(v ->
+                startActivity(new Intent(Dashboard.this, Peta.class))
+        );
+
+        tvCardTitle1.setOnClickListener(v ->
+                Toast.makeText(this, tvCardTitle1.getText().toString(), Toast.LENGTH_SHORT).show()
+        );
+    }
+
+    private void setupNavigasiBawah() {
+        navEvent.setOnClickListener(v ->
+                startActivity(new Intent(Dashboard.this, Event.class))
+        );
+
+        navPeta.setOnClickListener(v ->
+                startActivity(new Intent(Dashboard.this, Peta.class))
+        );
+
+        navFavorit.setOnClickListener(v ->
+                startActivity(new Intent(Dashboard.this, Favorit1.class))
+        );
+
+        navProfil.setOnClickListener(v ->
+                startActivity(new Intent(Dashboard.this, Profil.class))
+        );
     }
 }

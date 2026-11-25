@@ -1,43 +1,59 @@
 package com.example.festnav.api;
 
-import com.example.festnav.AuthResponse;
+import com.example.festnav.EventGoersResponse;
 import com.example.festnav.EventResponse;
+import com.example.festnav.FavoritItemResponse;
+import com.example.festnav.FavoritStatusResponse;
 import com.example.festnav.LoginRequest;
 import com.example.festnav.RegisterRequest;
+import com.example.festnav.TokenResponse;
 
 import java.util.List;
+
 import retrofit2.Call;
 import retrofit2.http.Body;
+import retrofit2.http.DELETE;
 import retrofit2.http.GET;
+import retrofit2.http.Header;
 import retrofit2.http.POST;
+import retrofit2.http.Path;
+import retrofit2.http.Query;
 
 public interface ApiService {
 
-    // 1. Tes Koneksi ke Backend FastAPI
-    @GET("/")
-    Call<Object> testKoneksi();
-
-    // 2. Halaman Masuk (Login)
-    @POST("api/auth/event-goers/login")
-    Call<AuthResponse> loginUser(@Body LoginRequest request);
-
-    // 3. Halaman Daftar (Register) - Sesuai rute router auth FastAPI
     @POST("api/auth/event-goers/register")
-    Call<Object> registerUser(@Body RegisterRequest request);
+    Call<EventGoersResponse> registerEventGoers(@Body RegisterRequest request);
 
-    // 4. Halaman Detail Event
-    @GET("api/event/detail")
-    Call<EventResponse> getDetailEvent();
+    @POST("api/auth/event-goers/login")
+    Call<TokenResponse> loginEventGoers(@Body LoginRequest request);
 
-    // 5. Halaman Event (List semua event / daftar event)
     @GET("api/events")
-    Call<List<EventResponse>> getAllEvents();
+    Call<List<EventResponse>> getEvents(
+            @Query("search") String search,
+            @Query("jenis_event") String jenisEvent
+    );
 
-    // 6. Halaman Favorit (Daftar event yang disukai/disimpan)
-    @GET("api/favorites")
-    Call<List<EventResponse>> getFavoriteEvents();
+    @GET("api/events/{id_event}")
+    Call<EventResponse> getEventDetail(@Path("id_event") int idEvent);
 
-    // 7. Halaman Profil (Mengambil data akun user yang sedang login)
-    @GET("api/profile")
-    Call<AuthResponse> getUserProfile();
+    @GET("api/favorit")
+    Call<List<FavoritItemResponse>> getFavoritList(@Header("Authorization") String bearerToken);
+
+    @GET("api/favorit/{id_event}/status")
+    Call<FavoritStatusResponse> getFavoritStatus(
+            @Header("Authorization") String bearerToken,
+            @Path("id_event") int idEvent
+    );
+
+    @POST("api/favorit/{id_event}")
+    Call<FavoritStatusResponse> tambahFavorit(
+            @Header("Authorization") String bearerToken,
+            @Path("id_event") int idEvent
+    );
+
+    @DELETE("api/favorit/{id_event}")
+    Call<Void> hapusFavorit(
+            @Header("Authorization") String bearerToken,
+            @Path("id_event") int idEvent
+    );
 }
